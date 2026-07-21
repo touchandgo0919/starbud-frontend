@@ -18,3 +18,27 @@ npm install
 npm run dev
 npm run build
 ```
+
+## Environment
+
+Local development:
+
+```bash
+cp .env.example .env.local
+```
+
+Production should point to the deployed Worker URL:
+
+```bash
+VITE_API_BASE_URL=https://starbud-backend.<your-subdomain>.workers.dev
+```
+
+For Cloudflare Pages, set this as a Pages environment variable before building.
+
+## Cloudflare Pages Deploy
+
+```bash
+npm install
+VITE_API_BASE_URL=https://starbud-backend.<your-subdomain>.workers.dev npm run build
+npx wrangler pages deploy dist --project-name starbud-frontend
+```

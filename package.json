@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc --noEmit && vite build",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name starbud-frontend",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "vue-tsc --noEmit"
   },
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
+    "wrangler": "^4.0.0",
     "vue-tsc": "^2.2.0"
   }
 }
