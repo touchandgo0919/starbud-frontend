@@ -15,8 +15,22 @@ export interface Task {
 }
 
 export interface CreateTaskPayload {
+  childId: string;
   title: string;
   scheduleTime: string;
   repeatType: RepeatType;
   voiceEnabled: boolean;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  role: "parent" | "child";
+}
+
+export interface Child {
+  id: string;
+  name: string;
+  deviceId: string | null;
 }

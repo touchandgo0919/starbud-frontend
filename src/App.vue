@@ -1,13 +1,31 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { completeTask, createTask, getTodayTasks } from "./services/api";
-import type { CreateTaskPayload, RepeatType, Task } from "./types/task";
+import {
+  clearStoredToken,
+  completeTask,
+  createTask,
+  getChildren,
+  getMe,
+  getStoredToken,
+  getTodayTasks,
+  login
+} from "./services/api";
+import type { Child, CreateTaskPayload, RepeatType, Task, User } from "./types/task";
 
 const tasks = ref<Task[]>([]);
+const children = ref<Child[]>([]);
+const currentUser = ref<User | null>(null);
 const loading = ref(false);
 const error = ref("");
+const authError = ref("");
+
+const loginForm = reactive({
+  username: "zhaotao",
+  password: ""
+});
 
 const form = reactive<CreateTaskPayload>({
+  childId: "",
   title: "数学作业",
   scheduleTime: "19:30",
   repeatType: "daily",
@@ -23,11 +41,15 @@ const pendingCount = computed(
 );
 
 async function refreshTasks() {
+  if (!currentUser.value) {
+    return;
+  }
+
   loading.value = true;
   error.value = "";
 
   try {
-    tasks.value = await getTodayTasks();
+    tasks.value = await getTodayTasks(form.childId || undefined);
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "今日任务加载失败";
   } finally {
@@ -37,6 +59,11 @@ async function refreshTasks() {
 
 async function submitTask() {
   error.value = "";
+
+  if (!form.childId) {
+    error.value = "请选择任务对象";
+    return;
+  }
 
   try {
     const task = await createTask({ ...form });
@@ -63,7 +90,50 @@ function setRepeatType(value: Event) {
   form.repeatType = (value.target as HTMLSelectElement).value as RepeatType;
 }
 
-onMounted(refreshTasks);
+function setChildId(value: Event) {
+  form.childId = (value.target as HTMLSelectElement).value;
+  void refreshTasks();
+}
+
+async function loadSession() {
+  if (!getStoredToken()) {
+    return;
+  }
+
+  try {
+    currentUser.value = await getMe();
+    await loadChildrenAndTasks();
+  } catch {
+    clearStoredToken();
+    currentUser.value = null;
+  }
+}
+
+async function loadChildrenAndTasks() {
+  children.value = await getChildren();
+  form.childId = children.value[0]?.id || "";
+  await refreshTasks();
+}
+
+async function submitLogin() {
+  authError.value = "";
+
+  try {
+    currentUser.value = await login(loginForm.username.trim(), loginForm.password);
+    await loadChildrenAndTasks();
+  } catch (cause) {
+    authError.value = cause instanceof Error ? cause.message : "登录失败";
+  }
+}
+
+function logout() {
+  clearStoredToken();
+  currentUser.value = null;
+  children.value = [];
+  tasks.value = [];
+}
+
+onMounted(loadSession);
 </script>
 
 <template>
@@ -71,7 +141,13 @@ onMounted(refreshTasks);
     <aside class="sidebar">
       <p class="eyebrow">Starbud Parent Web</p>
       <h1>家长后台</h1>
-      <p class="sidebar-copy">管理孩子今日习惯任务，任务保存后由后端同步给儿童客户端。</p>
+      <p class="sidebar-copy">
+        {{
+          currentUser
+            ? `当前登录：${currentUser.displayName}`
+            : "登录后管理孩子今日习惯任务。"
+        }}
+      </p>
 
       <div class="stats">
         <div>
@@ -85,19 +161,63 @@ onMounted(refreshTasks);
       </div>
     </aside>
 
-    <section class="workspace">
+    <section v-if="!currentUser" class="workspace auth-workspace">
+      <form class="login-panel" @submit.prevent="submitLogin">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Login</p>
+            <h2>用户登录</h2>
+          </div>
+        </div>
+
+        <label>
+          <span>用户名</span>
+          <input v-model="loginForm.username" required autocomplete="username" />
+        </label>
+
+        <label>
+          <span>密码</span>
+          <input
+            v-model="loginForm.password"
+            required
+            type="password"
+            autocomplete="current-password"
+          />
+        </label>
+
+        <p v-if="authError" class="error">{{ authError }}</p>
+
+        <button class="primary-button" type="submit">登录</button>
+
+        <p class="hint">密码由管理员初始化配置。</p>
+      </form>
+    </section>
+
+    <section v-else class="workspace">
       <form class="task-form" @submit.prevent="submitTask">
         <div class="section-title">
           <div>
             <p class="eyebrow">Task</p>
             <h2>创建任务</h2>
           </div>
-          <button class="primary-button" type="submit">保存任务</button>
+          <div class="actions">
+            <button class="secondary-button" type="button" @click="logout">退出</button>
+            <button class="primary-button" type="submit">保存任务</button>
+          </div>
         </div>
 
         <label>
           <span>任务名称</span>
           <input v-model="form.title" required maxlength="40" />
+        </label>
+
+        <label class="target-field">
+          <span>任务对象</span>
+          <select :value="form.childId" required @change="setChildId">
+            <option v-for="child in children" :key="child.id" :value="child.id">
+              {{ child.name }}
+            </option>
+          </select>
         </label>
 
         <div class="form-row">
@@ -144,6 +264,7 @@ onMounted(refreshTasks);
               <p>
                 {{ task.repeatType === "daily" ? "每天重复" : "自定义重复" }}
                 <span v-if="task.voiceEnabled">语音开启</span>
+                <span>{{ children.find((child) => child.id === task.childId)?.name }}</span>
               </p>
             </div>
             <button

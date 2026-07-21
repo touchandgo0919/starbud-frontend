@@ -94,12 +94,23 @@ h1 {
   padding: 32px;
 }
 
+.login-panel,
 .task-form,
 .task-panel {
   padding: 22px;
   border: 1px solid #dcd6c8;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.86);
+}
+
+.login-panel {
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+}
+
+.auth-workspace {
+  align-content: center;
 }
 
 .section-title {
@@ -139,6 +150,17 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-top: 14px;
+}
+
+.target-field {
+  margin-top: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .toggle-row {
@@ -240,6 +262,11 @@ select {
 
 .empty-state strong {
   color: #202124;
+}
+
+.hint {
+  color: #646a73;
+  font-size: 13px;
 }
 
 .error {
