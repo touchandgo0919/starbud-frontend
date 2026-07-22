@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/auth";
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const pageTitle = computed(() => String(route.meta.title || "Starbud"));
+const pageTitle = computed(() => String(route.meta.title || "星芽AI助手"));
 const pageDescription = computed(() => String(route.meta.description || ""));
 const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
 
@@ -21,8 +21,8 @@ async function logout() {
   <el-container class="admin-layout">
     <el-aside width="220px" class="admin-sidebar">
       <router-link to="/home" class="brand">
-        <span class="brand-mark">S</span>
-        <span>Starbud</span>
+        <img class="brand-logo" src="/starbud-icon.png" alt="星芽AI助手" />
+        <span class="brand-name">星芽AI助手</span>
       </router-link>
 
       <div class="menu-label">工作台</div>

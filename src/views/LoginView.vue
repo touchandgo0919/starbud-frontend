@@ -27,8 +27,8 @@ async function submit() {
   <main class="login-page">
     <form class="login-card" @submit.prevent="submit">
       <div class="login-brand">
-        <span class="brand-mark brand-mark--large">S</span>
-        <span>Starbud</span>
+        <img class="brand-logo brand-logo--large" src="/starbud-icon.png" alt="星芽AI助手" />
+        <span>星芽AI助手</span>
       </div>
       <div class="login-heading">
         <h1>欢迎回来</h1>
