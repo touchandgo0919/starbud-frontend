@@ -34,3 +34,22 @@ export interface Child {
   name: string;
   deviceId: string | null;
 }
+
+export interface FamilyMember {
+  id: string;
+  username: string;
+  displayName: string;
+  role: "parent" | "child";
+  relationship: string;
+  isOwner: boolean;
+}
+
+export interface Family {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  canManage: boolean;
+  canDelete: boolean;
+  members: FamilyMember[];
+  createdAt: string;
+}

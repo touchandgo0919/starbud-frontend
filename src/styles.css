@@ -95,6 +95,7 @@ h1 {
 }
 
 .login-panel,
+.family-panel,
 .task-form,
 .task-panel {
   padding: 22px;
@@ -107,6 +108,114 @@ h1 {
   display: grid;
   gap: 16px;
   max-width: 520px;
+}
+
+.family-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.family-create-row .primary-button {
+  min-height: 44px;
+}
+
+.family-error {
+  margin-top: 16px;
+}
+
+.family-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.family-card {
+  padding: 16px;
+  border: 1px solid #dcd6c8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.family-card-header,
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.family-card-header h3 {
+  font-size: 20px;
+}
+
+.family-card-header span,
+.member-row span {
+  display: block;
+  margin-top: 3px;
+  color: #646a73;
+  font-size: 12px;
+}
+
+.family-actions,
+.member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compact-button,
+.text-button {
+  border: 0;
+  background: transparent;
+  color: #246b63;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.compact-button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #dcd6c8;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.text-button {
+  padding: 4px;
+  font-size: 12px;
+}
+
+.danger-text-button {
+  color: #8f313a;
+}
+
+.compact-button:disabled,
+.text-button:disabled,
+.family-create-row button:disabled,
+.member-add-row button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.member-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.member-row {
+  min-height: 48px;
+  padding: 8px 0;
+  border-top: 1px solid #eeeae0;
+}
+
+.member-add-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .auth-workspace {
@@ -145,6 +254,52 @@ select {
   color: #202124;
 }
 
+.password-field {
+  position: relative;
+  display: block;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #646a73;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: #f2efe7;
+  color: #202124;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid #246b63;
+  outline-offset: 1px;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -177,7 +332,8 @@ select {
 
 .primary-button,
 .secondary-button,
-.complete-button {
+.complete-button,
+.delete-button {
   min-height: 40px;
   border-radius: 8px;
   cursor: pointer;
@@ -247,6 +403,28 @@ select {
   cursor: default;
 }
 
+.task-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.delete-button {
+  min-width: 68px;
+  border: 1px solid #c76b72;
+  background: #ffffff;
+  color: #8f313a;
+}
+
+.delete-button:hover:not(:disabled) {
+  background: rgba(185, 79, 88, 0.08);
+}
+
+.delete-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .empty-state,
 .error {
   padding: 18px;
@@ -277,7 +455,9 @@ select {
 
 @media (max-width: 780px) {
   .app-shell,
-  .form-row {
+  .form-row,
+  .family-create-row,
+  .member-add-row {
     grid-template-columns: 1fr;
   }
 
@@ -287,5 +467,24 @@ select {
 
   .workspace {
     padding: 20px;
+  }
+
+  .task-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .task-actions {
+    width: 100%;
+  }
+
+  .task-actions button {
+    flex: 1;
+  }
+
+  .family-card-header,
+  .member-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
