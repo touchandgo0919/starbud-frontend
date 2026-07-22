@@ -61,7 +61,7 @@ async function submit() {
       <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading">
         登录
       </el-button>
-      <p class="login-help">初始管理员：admin · 密码：admin@2026</p>
+      <p class="login-help">初始管理员：admin</p>
     </form>
   </main>
 </template>

@@ -13,8 +13,13 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
-const form = reactive<CreateTaskPayload>({ childId: "", title: "", scheduleTime: "19:30", repeatType: "daily", voiceEnabled: true });
+const form = reactive<CreateTaskPayload>({ childId: "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
+
+function currentTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
 
 function childName(childId: string) {
   return children.value.find((child) => child.id === childId)?.name || "未知成员";
@@ -37,7 +42,7 @@ function resetFilters() {
 }
 
 function openCreate() {
-  Object.assign(form, { childId: children.value[0]?.id || "", title: "", scheduleTime: "19:30", repeatType: "daily", voiceEnabled: true });
+  Object.assign(form, { childId: children.value[0]?.id || "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true });
   dialogVisible.value = true;
 }
 
@@ -134,7 +139,7 @@ onMounted(async () => {
         <el-form-item label="任务名称" required><el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：完成数学作业" /></el-form-item>
         <el-form-item label="任务对象" required><el-select v-model="form.childId" style="width: 100%"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></el-form-item>
         <div class="dialog-form-row">
-          <el-form-item label="提醒时间" required><el-time-select v-model="form.scheduleTime" start="06:00" step="00:15" end="23:45" /></el-form-item>
+          <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <el-form-item><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
