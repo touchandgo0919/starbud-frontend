@@ -1,8 +1,10 @@
 import type {
   Child,
+  CreateChildPayload,
   CreateTaskPayload,
   Family,
   ManagedUser,
+  RegisterPayload,
   SaveUserPayload,
   Task,
   User
@@ -56,6 +58,16 @@ export async function login(username: string, password: string) {
   return body.user;
 }
 
+export async function registerParent(payload: RegisterPayload) {
+  const body = await request<{ user: User; token: string }>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  setStoredToken(body.token);
+  return body.user;
+}
+
 export async function getMe() {
   const body = await request<{ user: User }>("/api/me");
   return body.user;
@@ -101,6 +113,14 @@ export async function addFamilyMember(
   const body = await request<{ family: Family }>(`/api/families/${familyId}/members`, {
     method: "POST",
     body: JSON.stringify({ username, relationship })
+  });
+  return body.family;
+}
+
+export async function createFamilyChild(familyId: string, payload: CreateChildPayload) {
+  const body = await request<{ family: Family }>(`/api/families/${familyId}/children`, {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
   return body.family;
 }

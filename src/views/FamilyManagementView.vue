@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import {
   addFamilyMember,
+  createFamilyChild,
   createFamily,
   deleteFamily,
   getFamilies,
@@ -19,9 +20,11 @@ const families = ref<Family[]>([]);
 const loading = ref(false);
 const createVisible = ref(false);
 const memberVisible = ref(false);
+const childVisible = ref(false);
 const activeFamily = ref<Family | null>(null);
 const familyForm = reactive({ name: "" });
 const memberForm = reactive({ username: "", relationship: "" });
+const childForm = reactive({ username: "", displayName: "", password: "", relationship: "孩子" });
 
 async function loadFamilies() {
   loading.value = true;
@@ -64,6 +67,12 @@ function openMember(family: Family) {
   memberVisible.value = true;
 }
 
+function openChild(family: Family) {
+  activeFamily.value = family;
+  Object.assign(childForm, { username: "", displayName: "", password: "", relationship: "孩子" });
+  childVisible.value = true;
+}
+
 async function submitMember() {
   if (!activeFamily.value || !memberForm.username.trim()) return;
   try {
@@ -73,6 +82,23 @@ async function submitMember() {
     await loadFamilies();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "成员添加失败。");
+  }
+}
+
+async function submitChild() {
+  if (!activeFamily.value || !childForm.username.trim() || !childForm.displayName.trim() || !childForm.password) return;
+  try {
+    await createFamilyChild(activeFamily.value.id, {
+      username: childForm.username.trim(),
+      displayName: childForm.displayName.trim(),
+      password: childForm.password,
+      relationship: childForm.relationship.trim() || "孩子"
+    });
+    childVisible.value = false;
+    ElMessage.success("子女账号已创建");
+    await loadFamilies();
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "子女创建失败。");
   }
 }
 
@@ -137,6 +163,7 @@ onMounted(loadFamilies);
             </div>
           </div>
           <div v-if="family.canManage" class="family-card-actions">
+            <el-button type="primary" plain @click="openChild(family)">创建子女</el-button>
             <el-button @click="openMember(family)">添加成员</el-button>
             <el-button @click="renameFamily(family)">重命名</el-button>
             <el-button v-if="family.canDelete" type="danger" plain @click="removeFamily(family)">删除家庭</el-button>
@@ -157,6 +184,27 @@ onMounted(loadFamilies);
         <el-form-item label="家庭关系"><el-input v-model="memberForm.relationship" maxlength="20" placeholder="例如：妈妈、孩子" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="memberVisible = false">取消</el-button><el-button type="primary" @click="submitMember">添加成员</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="childVisible" title="创建子女账号" width="520px">
+      <el-form label-position="top">
+        <el-form-item label="子女用户名" required>
+          <el-input v-model="childForm.username" placeholder="用于儿童端登录，例如：child01" />
+        </el-form-item>
+        <el-form-item label="子女姓名" required>
+          <el-input v-model="childForm.displayName" maxlength="40" placeholder="例如：赵佑宁" />
+        </el-form-item>
+        <el-form-item label="初始密码" required>
+          <el-input v-model="childForm.password" type="password" show-password placeholder="至少 6 个字符" />
+        </el-form-item>
+        <el-form-item label="家庭关系">
+          <el-input v-model="childForm.relationship" maxlength="20" placeholder="例如：孩子、女儿、儿子" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="childVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitChild">创建子女</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>

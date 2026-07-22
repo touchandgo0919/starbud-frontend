@@ -44,6 +44,19 @@ export interface SaveUserPayload {
   password?: string;
 }
 
+export interface RegisterPayload {
+  username: string;
+  displayName: string;
+  password: string;
+}
+
+export interface CreateChildPayload {
+  username: string;
+  displayName: string;
+  password: string;
+  relationship: string;
+}
+
 export interface Child {
   id: string;
   name: string;

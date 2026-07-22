@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { clearStoredToken, getMe, getStoredToken, login } from "../services/api";
-import type { User } from "../types/task";
+import { clearStoredToken, getMe, getStoredToken, login, registerParent } from "../services/api";
+import type { RegisterPayload, User } from "../types/task";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<User | null>(null);
@@ -32,11 +32,22 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function register(payload: RegisterPayload) {
+    loading.value = true;
+    try {
+      user.value = await registerParent(payload);
+      initialized.value = true;
+      return user.value;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   function signOut() {
     clearStoredToken();
     user.value = null;
     initialized.value = true;
   }
 
-  return { user, initialized, loading, bootstrap, signIn, signOut };
+  return { user, initialized, loading, bootstrap, register, signIn, signOut };
 });
