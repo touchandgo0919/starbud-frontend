@@ -13,7 +13,7 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
-const form = reactive<CreateTaskPayload>({ childId: "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true });
+const form = reactive<CreateTaskPayload>({ childId: "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 
 function currentTime() {
@@ -42,7 +42,7 @@ function resetFilters() {
 }
 
 function openCreate() {
-  Object.assign(form, { childId: children.value[0]?.id || "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true });
+  Object.assign(form, { childId: children.value[0]?.id || "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
   dialogVisible.value = true;
 }
 
@@ -127,7 +127,7 @@ onMounted(async () => {
             <div><time class="time-cell">{{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
             <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
           </div>
-          <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? "语音提醒" : "静默提醒" }}</p>
+          <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音：${task.voiceContent}` : "静默提醒" }}</p>
           <div class="mobile-card-actions"><el-button link type="primary" :disabled="task.status === 'completed'" @click="markComplete(task)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(task)">删除</el-button></div>
         </article>
         <div v-if="!tasks.length && !loading" class="empty-state">没有符合条件的任务</div>
@@ -143,6 +143,16 @@ onMounted(async () => {
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <el-form-item><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
+        <el-form-item v-if="form.voiceEnabled" label="提醒语音内容">
+          <el-input
+            v-model="form.voiceContent"
+            type="textarea"
+            :rows="2"
+            maxlength="120"
+            show-word-limit
+            placeholder="例如：小朋友，该写数学作业啦（留空则使用任务名称）"
+          />
+        </el-form-item>
       </el-form>
       <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitTask">保存任务</el-button></template>
     </el-dialog>

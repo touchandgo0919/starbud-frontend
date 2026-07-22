@@ -9,6 +9,7 @@ export interface Task {
   scheduleTime: string;
   repeatType: RepeatType;
   voiceEnabled: boolean;
+  voiceContent: string;
   status: TaskStatus;
   completedAt: string | null;
   createdAt: string;
@@ -20,6 +21,7 @@ export interface CreateTaskPayload {
   scheduleTime: string;
   repeatType: RepeatType;
   voiceEnabled: boolean;
+  voiceContent: string;
 }
 
 export interface User {
