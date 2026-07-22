@@ -1,4 +1,12 @@
-import type { Child, CreateTaskPayload, Family, Task, User } from "../types/task";
+import type {
+  Child,
+  CreateTaskPayload,
+  Family,
+  ManagedUser,
+  SaveUserPayload,
+  Task,
+  User
+} from "../types/task";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 const API_BASE_URL =
@@ -124,6 +132,21 @@ export async function getTodayTasks(childId?: string) {
   return body.tasks;
 }
 
+export async function getTasks(filters: {
+  childId?: string;
+  status?: string;
+  keyword?: string;
+  repeatType?: string;
+} = {}) {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) query.set(key, value);
+  });
+  const suffix = query.size ? `?${query.toString()}` : "";
+  const body = await request<{ tasks: Task[] }>(`/api/tasks${suffix}`);
+  return body.tasks;
+}
+
 export async function createTask(payload: CreateTaskPayload) {
   const body = await request<{ task: Task }>("/api/tasks", {
     method: "POST",
@@ -145,4 +168,25 @@ export async function deleteTask(taskId: string) {
   await request<{ deleted: true }>(`/api/tasks/${taskId}`, {
     method: "DELETE"
   });
+}
+
+export async function getUsers() {
+  const body = await request<{ users: ManagedUser[] }>("/api/admin/users");
+  return body.users;
+}
+
+export async function createUser(payload: SaveUserPayload) {
+  const body = await request<{ user: ManagedUser }>("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return body.user;
+}
+
+export async function updateUser(userId: string, payload: Partial<SaveUserPayload>) {
+  const body = await request<{ user: ManagedUser }>(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+  return body.user;
 }

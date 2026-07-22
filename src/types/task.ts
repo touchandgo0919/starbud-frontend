@@ -26,7 +26,20 @@ export interface User {
   id: string;
   username: string;
   displayName: string;
-  role: "parent" | "child";
+  role: "admin" | "parent" | "child";
+}
+
+export interface ManagedUser extends User {
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SaveUserPayload {
+  username: string;
+  displayName: string;
+  role: User["role"];
+  active?: boolean;
+  password?: string;
 }
 
 export interface Child {
@@ -39,7 +52,7 @@ export interface FamilyMember {
   id: string;
   username: string;
   displayName: string;
-  role: "parent" | "child";
+  role: "admin" | "parent" | "child";
   relationship: string;
   isOwner: boolean;
 }

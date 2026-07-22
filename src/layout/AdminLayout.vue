@@ -1,18 +1,33 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRoute } from "vue-router";
-import { HomeFilled, List, Setting } from "@element-plus/icons-vue";
+import { useRoute, useRouter } from "vue-router";
+import { HomeFilled, House, List, SwitchButton, UserFilled } from "@element-plus/icons-vue";
+import { useAuthStore } from "../store/auth";
 
 const route = useRoute();
-const pageTitle = computed(() => String(route.meta.title || "任务管理"));
+const router = useRouter();
+const auth = useAuthStore();
+const pageTitle = computed(() => String(route.meta.title || "Starbud"));
+const pageDescription = computed(() => String(route.meta.description || ""));
+const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
+
+async function logout() {
+  auth.signOut();
+  await router.replace("/login");
+}
 </script>
 
 <template>
   <el-container class="admin-layout">
-    <el-aside width="210px" class="admin-sidebar">
-      <div class="brand">Starbud</div>
+    <el-aside width="220px" class="admin-sidebar">
+      <router-link to="/home" class="brand">
+        <span class="brand-mark">S</span>
+        <span>Starbud</span>
+      </router-link>
+
+      <div class="menu-label">工作台</div>
       <el-menu router :default-active="route.path" class="admin-menu">
-        <el-menu-item index="/tasks">
+        <el-menu-item index="/home">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
@@ -20,25 +35,38 @@ const pageTitle = computed(() => String(route.meta.title || "任务管理"));
           <el-icon><List /></el-icon>
           <span>任务管理</span>
         </el-menu-item>
-        <el-menu-item disabled index="/settings">
-          <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
+        <el-menu-item v-if="auth.user?.role !== 'child'" index="/families">
+          <el-icon><House /></el-icon>
+          <span>家庭管理</span>
+        </el-menu-item>
+        <el-menu-item v-if="auth.user?.role === 'admin'" index="/users">
+          <el-icon><UserFilled /></el-icon>
+          <span>用户管理</span>
         </el-menu-item>
       </el-menu>
+
+      <div class="sidebar-account">
+        <div class="account-avatar">{{ auth.user?.displayName.slice(0, 1) }}</div>
+        <div class="account-copy">
+          <strong>{{ auth.user?.displayName }}</strong>
+          <span>{{ roleLabel }}</span>
+        </div>
+        <button type="button" class="icon-button" aria-label="退出登录" title="退出登录" @click="logout">
+          <el-icon><SwitchButton /></el-icon>
+        </button>
+      </div>
     </el-aside>
 
-    <el-container>
+    <el-container class="admin-content">
       <el-header class="admin-header">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item>首页</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ pageTitle }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <div>
+          <h1>{{ pageTitle }}</h1>
+          <p>{{ pageDescription }}</p>
+        </div>
+        <div class="header-date">
+          {{ new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date()) }}
+        </div>
       </el-header>
-
-      <div class="admin-tags">
-        <router-link to="/tasks" class="admin-tag">首页</router-link>
-        <router-link to="/tasks" class="admin-tag admin-tag--active">{{ pageTitle }}</router-link>
-      </div>
 
       <el-main class="admin-main">
         <RouterView />
@@ -46,105 +74,3 @@ const pageTitle = computed(() => String(route.meta.title || "任务管理"));
     </el-container>
   </el-container>
 </template>
-
-<style scoped>
-.admin-layout {
-  min-height: 100vh;
-  background: #17191d;
-}
-
-.admin-sidebar {
-  min-height: 100vh;
-  background: #1d1f23;
-  border-right: 1px solid #303238;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  height: 62px;
-  padding: 0 28px;
-  color: #00b96b;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.admin-menu {
-  border-right: 0;
-  --el-menu-bg-color: #1d1f23;
-  --el-menu-hover-bg-color: #292c31;
-  --el-menu-text-color: #d6d8dc;
-  --el-menu-active-color: #00b96b;
-}
-
-.admin-header {
-  display: flex;
-  align-items: center;
-  height: 62px;
-  border-bottom: 1px solid #303238;
-  background: #17191d;
-}
-
-.admin-tags {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 16px;
-  border-bottom: 1px solid #303238;
-  background: #17191d;
-}
-
-.admin-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  color: #d6d8dc;
-  font-size: 12px;
-  text-decoration: none;
-  border: 1px solid #42454b;
-}
-
-.admin-tag--active {
-  color: #fff;
-  border-color: #00b96b;
-  background: #00a85f;
-}
-
-.admin-main {
-  min-height: calc(100vh - 96px);
-  padding: 20px;
-  background: #17191d;
-}
-
-@media (max-width: 760px) {
-  .admin-sidebar {
-    width: 64px !important;
-  }
-
-  .brand {
-    justify-content: center;
-    padding: 0;
-    font-size: 0;
-  }
-
-  .brand::before {
-    content: "S";
-    font-size: 20px;
-  }
-
-  .admin-menu :deep(.el-menu-item) {
-    justify-content: center;
-    padding: 0 !important;
-  }
-
-  .admin-menu :deep(.el-menu-item span) {
-    display: none;
-  }
-
-  .admin-main {
-    padding: 14px;
-  }
-}
-</style>
