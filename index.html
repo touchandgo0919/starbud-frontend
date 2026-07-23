@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' http://localhost:* http://127.0.0.1:* https: ws:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'"
+    />
     <link rel="icon" type="image/png" sizes="1024x1024" href="/starbud-icon.png" />
     <link rel="apple-touch-icon" href="/starbud-icon.png" />
     <title>星芽AI助手</title>

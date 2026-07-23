@@ -142,7 +142,10 @@ onMounted(loadFamilies);
   <div class="page-stack">
     <section class="content-panel">
       <div class="panel-heading">
-        <div><h2>家庭列表</h2><p>共 {{ families.length }} 个家庭，管理员可维护全部家庭</p></div>
+        <div>
+          <h2>家庭列表</h2>
+          <p>共 {{ families.length }} 个家庭，{{ auth.user?.role === "admin" ? "管理员可维护全部家庭" : "可维护已加入的家庭" }}</p>
+        </div>
         <el-button type="primary" :icon="Plus" @click="createVisible = true">新建家庭</el-button>
       </div>
 

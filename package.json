@@ -1,6 +1,6 @@
 {
   "name": "starbud-frontend",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -28,6 +28,9 @@
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",
     "vue-tsc": "^2.2.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.113.0"
+  },
+  "overrides": {
+    "sharp": "0.35.3"
   }
 }

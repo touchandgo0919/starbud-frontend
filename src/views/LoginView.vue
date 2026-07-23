@@ -73,7 +73,6 @@ function switchMode(nextMode: "login" | "register") {
           :type="showPassword ? 'text' : 'password'"
           autocomplete="current-password"
           placeholder="请输入密码"
-          @keyup.enter="submit"
         >
           <template #suffix>
             <button type="button" class="input-icon-button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
@@ -101,7 +100,6 @@ function switchMode(nextMode: "login" | "register") {
             :type="showPassword ? 'text' : 'password'"
             autocomplete="new-password"
             placeholder="至少 6 个字符"
-            @keyup.enter="submit"
           >
             <template #suffix>
               <button type="button" class="input-icon-button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">

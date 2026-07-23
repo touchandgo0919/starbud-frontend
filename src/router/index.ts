@@ -2,11 +2,12 @@ import { createRouter, createWebHistory } from "vue-router";
 import AdminLayout from "../layout/AdminLayout.vue";
 import pinia from "../store";
 import { useAuthStore } from "../store/auth";
-import DashboardView from "../views/DashboardView.vue";
-import FamilyManagementView from "../views/FamilyManagementView.vue";
-import LoginView from "../views/LoginView.vue";
-import TaskManagementView from "../views/TaskManagementView.vue";
-import UserManagementView from "../views/UserManagementView.vue";
+
+const DashboardView = () => import("../views/DashboardView.vue");
+const FamilyManagementView = () => import("../views/FamilyManagementView.vue");
+const LoginView = () => import("../views/LoginView.vue");
+const TaskManagementView = () => import("../views/TaskManagementView.vue");
+const UserManagementView = () => import("../views/UserManagementView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
