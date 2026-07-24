@@ -6,6 +6,8 @@ import { completeTask, createTask, deleteTask, getChildren, getTasks } from "../
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, Task } from "../types/task";
 
+type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
+
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
 const children = ref<Child[]>([]);
@@ -13,7 +15,7 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
-const form = reactive<CreateTaskPayload>({ childId: "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 
 function currentTime() {
@@ -42,20 +44,42 @@ function resetFilters() {
 }
 
 function openCreate() {
-  Object.assign(form, { childId: children.value[0]?.id || "", title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
+  Object.assign(form, { childIds: children.value[0] ? [children.value[0].id] : [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
   dialogVisible.value = true;
 }
 
 async function submitTask() {
-  if (!form.childId || !form.title.trim()) return;
+  const title = form.title.trim();
+  if (!title) {
+    ElMessage.warning("请输入任务名称");
+    return;
+  }
+  if (!form.childIds.length) {
+    ElMessage.warning("请至少选择一位小朋友");
+    return;
+  }
+
   saving.value = true;
   try {
-    await createTask({ ...form, title: form.title.trim() });
-    dialogVisible.value = false;
-    ElMessage.success("任务已创建");
-    await loadTasks();
-  } catch (cause) {
-    ElMessage.error(cause instanceof Error ? cause.message : "任务创建失败。");
+    const { childIds, ...taskPayload } = form;
+    const results = await Promise.allSettled(
+      childIds.map((childId) => createTask({ ...taskPayload, childId, title }))
+    );
+    const successCount = results.filter((result) => result.status === "fulfilled").length;
+    const failedNames = results
+      .map((result, index) => result.status === "rejected" ? childName(childIds[index]) : "")
+      .filter(Boolean);
+
+    if (successCount) await loadTasks();
+    if (!failedNames.length) {
+      dialogVisible.value = false;
+      ElMessage.success(`已为 ${successCount} 位小朋友创建任务`);
+    } else if (successCount) {
+      dialogVisible.value = false;
+      ElMessage.warning(`已创建 ${successCount} 项，${failedNames.join("、")}创建失败`);
+    } else {
+      ElMessage.error("任务创建失败，请稍后重试。");
+    }
   } finally {
     saving.value = false;
   }
@@ -137,7 +161,11 @@ onMounted(async () => {
     <el-dialog v-model="dialogVisible" title="新建任务" width="520px" class="form-dialog">
       <el-form label-position="top">
         <el-form-item label="任务名称" required><el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：完成数学作业" /></el-form-item>
-        <el-form-item label="任务对象" required><el-select v-model="form.childId" style="width: 100%"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></el-form-item>
+        <el-form-item label="任务对象" required>
+          <el-select v-model="form.childIds" multiple clearable placeholder="请选择一个或多个小朋友" style="width: 100%">
+            <el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" />
+          </el-select>
+        </el-form-item>
         <div class="dialog-form-row">
           <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
