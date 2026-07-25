@@ -44,7 +44,14 @@ function resetFilters() {
 }
 
 function openCreate() {
-  Object.assign(form, { childIds: children.value[0] ? [children.value[0].id] : [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
+  Object.assign(form, {
+    childIds: children.value.map((child) => child.id),
+    title: "",
+    scheduleTime: currentTime(),
+    repeatType: "daily",
+    voiceEnabled: true,
+    voiceContent: ""
+  });
   dialogVisible.value = true;
 }
 
