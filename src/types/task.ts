@@ -11,6 +11,7 @@ export interface Task {
   voiceEnabled: boolean;
   voiceContent: string;
   status: TaskStatus;
+  occurrenceDate: string | null;
   completedAt: string | null;
   createdAt: string;
 }

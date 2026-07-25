@@ -27,6 +27,10 @@ function childName(childId: string) {
   return children.value.find((child) => child.id === childId)?.name || "未知成员";
 }
 
+function taskRowKey(task: Task) {
+  return `${task.id}-${task.occurrenceDate || "today"}`;
+}
+
 async function loadTasks() {
   loading.value = true;
   try {
@@ -140,10 +144,11 @@ onMounted(async () => {
 
     <section class="content-panel table-panel">
       <div class="panel-heading">
-        <div><h2>任务列表</h2><p>共 {{ tasks.length }} 项当前任务</p></div>
+        <div><h2>任务列表</h2><p>共 {{ tasks.length }} 项任务</p></div>
         <el-button v-if="auth.user?.role !== 'child'" type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
       </div>
-      <el-table v-loading="loading" :data="tasks" class="data-table desktop-table" empty-text="没有符合条件的任务">
+      <el-table v-loading="loading" :data="tasks" :row-key="taskRowKey" class="data-table desktop-table" empty-text="没有符合条件的任务">
+        <el-table-column prop="occurrenceDate" label="执行日期" width="120" />
         <el-table-column label="时间" width="96"><template #default="scope"><strong class="time-cell">{{ scope.row.scheduleTime }}</strong></template></el-table-column>
         <el-table-column prop="title" label="任务名称" min-width="180" />
         <el-table-column label="任务对象" min-width="120"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
@@ -153,9 +158,9 @@ onMounted(async () => {
         <el-table-column label="操作" width="150" fixed="right"><template #default="scope"><el-button link type="primary" :disabled="scope.row.status === 'completed'" @click="markComplete(scope.row)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
-        <article v-for="task in tasks" :key="task.id" class="mobile-data-card">
+        <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
           <div class="mobile-card-head">
-            <div><time class="time-cell">{{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
+            <div><time class="time-cell">{{ task.occurrenceDate }} {{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
             <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
           </div>
           <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音：${task.voiceContent}` : "静默提醒" }}</p>
