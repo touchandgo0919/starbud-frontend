@@ -14,7 +14,7 @@ const children = ref<Child[]>([]);
 const loading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
-const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
+const filters = reactive({ keyword: "", childId: "", status: "pending", repeatType: "" });
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 
@@ -39,7 +39,7 @@ async function loadTasks() {
 }
 
 function resetFilters() {
-  Object.assign(filters, { keyword: "", childId: "", status: "", repeatType: "" });
+  Object.assign(filters, { keyword: "", childId: "", status: "pending", repeatType: "" });
   void loadTasks();
 }
 
