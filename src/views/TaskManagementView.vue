@@ -183,10 +183,12 @@ onMounted(async () => {
           <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
-        <el-form-item><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
-        <el-form-item v-if="form.voiceEnabled" label="语音提醒次数">
-          <el-input-number v-model="form.voiceReminderCount" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
-        </el-form-item>
+        <div class="dialog-form-row voice-reminder-row">
+          <el-form-item label="语音提醒"><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
+          <el-form-item v-if="form.voiceEnabled" label="提醒次数">
+            <el-input-number v-model="form.voiceReminderCount" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
+          </el-form-item>
+        </div>
         <el-form-item v-if="form.voiceEnabled" label="提醒语音内容">
           <el-input
             v-model="form.voiceContent"

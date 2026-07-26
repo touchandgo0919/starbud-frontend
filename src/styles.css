@@ -167,6 +167,7 @@ h1, h2, h3, p { margin: 0; }
 
 .dialog-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100%; }
+.voice-reminder-row .el-input-number { width: 100%; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }
 
