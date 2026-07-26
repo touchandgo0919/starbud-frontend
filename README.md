@@ -1,4 +1,4 @@
-# 星芽AI助手后台
+# 星星芽AI助手后台
 
 家长 Web 后台，部署目标为 Cloudflare Pages。
 
