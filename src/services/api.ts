@@ -7,6 +7,7 @@ import type {
   RegisterPayload,
   SaveUserPayload,
   Task,
+  UpdateTaskPayload,
   User
 } from "../types/task";
 
@@ -198,6 +199,15 @@ export async function createTask(payload: CreateTaskPayload) {
 export async function completeTask(taskId: string) {
   const body = await request<{ task: Task }>(`/api/tasks/${taskId}/complete`, {
     method: "POST"
+  });
+
+  return body.task;
+}
+
+export async function updateTask(taskId: string, payload: UpdateTaskPayload) {
+  const body = await request<{ task: Task }>(`/api/tasks/${taskId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
   });
 
   return body.task;

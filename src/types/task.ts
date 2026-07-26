@@ -14,6 +14,10 @@ export interface Task {
   status: TaskStatus;
   occurrenceDate: string | null;
   completedAt: string | null;
+  claimedAt: string | null;
+  submissionId: string | null;
+  submissionStatus: "draft" | "submitted" | null;
+  submissionPhotoCount: number;
   createdAt: string;
 }
 
@@ -26,6 +30,8 @@ export interface CreateTaskPayload {
   voiceContent: string;
   voiceReminderCount: number;
 }
+
+export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId">;
 
 export interface User {
   id: string;

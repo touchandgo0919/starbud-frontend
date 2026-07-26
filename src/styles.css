@@ -181,6 +181,9 @@ h1, h2, h3, p { margin: 0; }
 .mobile-card-head h3 { margin-top: 4px; color: var(--text); font-size: 14px; }
 .mobile-data-card > p { margin-top: 8px; color: var(--muted); font-size: 11px; }
 .mobile-card-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.task-table-actions { display: grid; gap: 2px; }
+.task-table-actions__row { display: flex; align-items: center; gap: 10px; min-height: 22px; }
+.task-table-actions__row .el-button + .el-button { margin-left: 0; }
 .mobile-user-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .mobile-user-meta { display: grid; justify-items: end; gap: 7px; }
 .mobile-user-card .mobile-card-actions { grid-column: 1 / -1; margin-top: 0; padding-top: 8px; border-top: 1px solid #2b2e35; }
@@ -194,6 +197,9 @@ h1, h2, h3, p { margin: 0; }
 .dialog-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100%; }
 .voice-reminder-row .el-input-number { width: 100%; }
+.task-detail-descriptions .el-descriptions__label { width: 108px; color: #aeb3bd !important; font-weight: 700 !important; }
+.task-detail-descriptions .el-descriptions__content { color: #eef0f3 !important; }
+.task-detail-descriptions .el-descriptions__cell { border-color: var(--border) !important; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }
 
