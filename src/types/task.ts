@@ -10,6 +10,7 @@ export interface Task {
   repeatType: RepeatType;
   voiceEnabled: boolean;
   voiceContent: string;
+  voiceReminderCount: number;
   status: TaskStatus;
   occurrenceDate: string | null;
   completedAt: string | null;
@@ -23,6 +24,7 @@ export interface CreateTaskPayload {
   repeatType: RepeatType;
   voiceEnabled: boolean;
   voiceContent: string;
+  voiceReminderCount: number;
 }
 
 export interface User {

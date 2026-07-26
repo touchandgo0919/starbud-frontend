@@ -15,7 +15,7 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "pending", repeatType: "" });
-const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "" });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 
 function currentTime() {
@@ -54,7 +54,8 @@ function openCreate() {
     scheduleTime: currentTime(),
     repeatType: "daily",
     voiceEnabled: true,
-    voiceContent: ""
+    voiceContent: "",
+    voiceReminderCount: 1
   });
   dialogVisible.value = true;
 }
@@ -153,7 +154,7 @@ onMounted(async () => {
         <el-table-column prop="title" label="任务名称" min-width="180" />
         <el-table-column label="任务对象" min-width="120"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="重复" width="110"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
-        <el-table-column label="提醒" width="90"><template #default="scope">{{ scope.row.voiceEnabled ? "语音" : "静默" }}</template></el-table-column>
+        <el-table-column label="提醒" width="100"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="110"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ scope.row.status === "completed" ? "已完成" : "待完成" }}</span></template></el-table-column>
         <el-table-column label="操作" width="150" fixed="right"><template #default="scope"><el-button link type="primary" :disabled="scope.row.status === 'completed'" @click="markComplete(scope.row)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
@@ -163,7 +164,7 @@ onMounted(async () => {
             <div><time class="time-cell">{{ task.occurrenceDate }} {{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
             <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
           </div>
-          <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音：${task.voiceContent}` : "静默提醒" }}</p>
+          <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音 ${task.voiceReminderCount} 次：${task.voiceContent}` : "静默提醒" }}</p>
           <div class="mobile-card-actions"><el-button link type="primary" :disabled="task.status === 'completed'" @click="markComplete(task)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(task)">删除</el-button></div>
         </article>
         <div v-if="!tasks.length && !loading" class="empty-state">没有符合条件的任务</div>
@@ -183,6 +184,9 @@ onMounted(async () => {
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <el-form-item><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
+        <el-form-item v-if="form.voiceEnabled" label="语音提醒次数">
+          <el-input-number v-model="form.voiceReminderCount" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
+        </el-form-item>
         <el-form-item v-if="form.voiceEnabled" label="提醒语音内容">
           <el-input
             v-model="form.voiceContent"
