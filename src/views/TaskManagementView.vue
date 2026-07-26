@@ -1,22 +1,48 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
 import { completeTask, createTask, deleteTask, getChildren, getTasks } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, Task } from "../types/task";
+import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
 
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
+const calendarTasks = ref<Task[]>([]);
 const children = ref<Child[]>([]);
 const loading = ref(false);
+const calendarLoading = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "pending", repeatType: "" });
+const selectedDate = ref(dateKey(new Date()));
+const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
+const calendarTaskDates = computed(() => calendarTasks.value.reduce<Record<string, number>>((dates, task) => {
+  if (task.occurrenceDate) dates[task.occurrenceDate] = (dates[task.occurrenceDate] || 0) + 1;
+  return dates;
+}, {}));
+const selectedDateLabel = computed(() => {
+  const [year, month, day] = selectedDate.value.split("-").map(Number);
+  return `${year}年${month}月${day}日`;
+});
+
+function dateKey(date: Date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
+function initialWeekRange() {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return { from: dateKey(start), to: dateKey(end) };
+}
 
 function currentTime() {
   const now = new Date();
@@ -31,10 +57,14 @@ function taskRowKey(task: Task) {
   return `${task.id}-${task.occurrenceDate || "today"}`;
 }
 
+function canComplete(task: Task) {
+  return task.status !== "completed" && task.occurrenceDate === dateKey(new Date());
+}
+
 async function loadTasks() {
   loading.value = true;
   try {
-    tasks.value = await getTasks(filters);
+    tasks.value = await getTasks({ ...filters, date: selectedDate.value });
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务加载失败。");
   } finally {
@@ -42,9 +72,45 @@ async function loadTasks() {
   }
 }
 
+async function loadCalendar() {
+  calendarLoading.value = true;
+  try {
+    calendarTasks.value = await getTasks({
+      childId: filters.childId,
+      keyword: filters.keyword,
+      repeatType: filters.repeatType,
+      dateFrom: calendarRange.from,
+      dateTo: calendarRange.to
+    });
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "任务日历加载失败。");
+  } finally {
+    calendarLoading.value = false;
+  }
+}
+
+async function refreshTaskData() {
+  await Promise.all([loadTasks(), loadCalendar()]);
+}
+
+function selectCalendarDate(date: string) {
+  selectedDate.value = date;
+  void loadTasks();
+}
+
+function changeCalendarRange(range: { from: string; to: string }) {
+  Object.assign(calendarRange, range);
+  void loadCalendar();
+}
+
+function applyFilters() {
+  void refreshTaskData();
+}
+
 function resetFilters() {
   Object.assign(filters, { keyword: "", childId: "", status: "pending", repeatType: "" });
-  void loadTasks();
+  selectedDate.value = dateKey(new Date());
+  void refreshTaskData();
 }
 
 function openCreate() {
@@ -82,7 +148,7 @@ async function submitTask() {
       .map((result, index) => result.status === "rejected" ? childName(childIds[index]) : "")
       .filter(Boolean);
 
-    if (successCount) await loadTasks();
+    if (successCount) await refreshTaskData();
     if (!failedNames.length) {
       dialogVisible.value = false;
       ElMessage.success(`已为 ${successCount} 位小朋友创建任务`);
@@ -101,7 +167,7 @@ async function markComplete(task: Task) {
   try {
     await completeTask(task.id);
     ElMessage.success("已完成打卡");
-    await loadTasks();
+    await refreshTaskData();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "打卡失败。");
   }
@@ -112,7 +178,7 @@ async function removeTask(task: Task) {
     await ElMessageBox.confirm(`删除“${task.title}”后，儿童端将不再显示该任务。`, "删除任务", { type: "warning", confirmButtonText: "确认删除", cancelButtonText: "取消" });
     await deleteTask(task.id);
     ElMessage.success("任务已删除");
-    await loadTasks();
+    await refreshTaskData();
   } catch (cause) {
     if (cause !== "cancel" && cause !== "close") ElMessage.error(cause instanceof Error ? cause.message : "任务删除失败。");
   }
@@ -121,7 +187,7 @@ async function removeTask(task: Task) {
 onMounted(async () => {
   try {
     children.value = await getChildren();
-    await loadTasks();
+    await refreshTaskData();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务数据加载失败。");
   }
@@ -130,8 +196,16 @@ onMounted(async () => {
 
 <template>
   <div class="page-stack">
+    <TaskCalendar
+      :selected-date="selectedDate"
+      :task-dates="calendarTaskDates"
+      :loading="calendarLoading"
+      @select="selectCalendarDate"
+      @range-change="changeCalendarRange"
+    />
+
     <section class="content-panel filter-panel">
-      <form class="filter-grid" @submit.prevent="loadTasks">
+      <form class="filter-grid" @submit.prevent="applyFilters">
         <label class="field"><span>关键词</span><el-input v-model="filters.keyword" clearable placeholder="搜索任务名称" /></label>
         <label class="field"><span>任务对象</span><el-select v-model="filters.childId" clearable placeholder="全部成员"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
         <label class="field"><span>任务状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="待完成" value="pending" /><el-option label="已完成" value="completed" /></el-select></label>
@@ -145,7 +219,7 @@ onMounted(async () => {
 
     <section class="content-panel table-panel">
       <div class="panel-heading">
-        <div><h2>任务列表</h2><p>共 {{ tasks.length }} 项任务</p></div>
+        <div><h2>我的任务</h2><p>{{ selectedDateLabel }} · 共 {{ tasks.length }} 项任务</p></div>
         <el-button v-if="auth.user?.role !== 'child'" type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
       </div>
       <el-table v-loading="loading" :data="tasks" :row-key="taskRowKey" class="data-table desktop-table" empty-text="没有符合条件的任务">
@@ -156,7 +230,7 @@ onMounted(async () => {
         <el-table-column label="重复" width="110"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="100"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="110"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ scope.row.status === "completed" ? "已完成" : "待完成" }}</span></template></el-table-column>
-        <el-table-column label="操作" width="150" fixed="right"><template #default="scope"><el-button link type="primary" :disabled="scope.row.status === 'completed'" @click="markComplete(scope.row)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(scope.row)">删除</el-button></template></el-table-column>
+        <el-table-column label="操作" width="150" fixed="right"><template #default="scope"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
         <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
@@ -165,7 +239,7 @@ onMounted(async () => {
             <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
           </div>
           <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音 ${task.voiceReminderCount} 次：${task.voiceContent}` : "静默提醒" }}</p>
-          <div class="mobile-card-actions"><el-button link type="primary" :disabled="task.status === 'completed'" @click="markComplete(task)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(task)">删除</el-button></div>
+          <div class="mobile-card-actions"><el-button link type="primary" :disabled="!canComplete(task)" @click="markComplete(task)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(task)">删除</el-button></div>
         </article>
         <div v-if="!tasks.length && !loading" class="empty-state">没有符合条件的任务</div>
       </div>

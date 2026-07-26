@@ -108,6 +108,32 @@ h1, h2, h3, p { margin: 0; }
 .admin-main { min-height: calc(100vh - 92px); padding: 26px 30px 40px !important; background: var(--bg); }
 .page-stack { display: grid; gap: 20px; }
 
+.task-calendar-panel { padding: 18px 20px 14px; }
+.task-calendar-header { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 18px; }
+.calendar-period-nav, .calendar-view-actions { display: flex; align-items: center; gap: 6px; }
+.calendar-period-nav h2 { min-width: 112px; color: var(--text); font-size: 17px; text-align: center; }
+.calendar-icon-button, .calendar-quick-button { display: inline-grid; min-height: 30px; padding: 0; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #9da3ad; cursor: pointer; }
+.calendar-icon-button { width: 30px; font-size: 14px; }
+.calendar-quick-button { padding: 0 10px; background: rgba(0, 185, 107, .11); color: #67dda8; font-size: 11px; font-weight: 800; }
+.calendar-icon-button:hover, .calendar-icon-button:focus-visible { background: var(--surface-raised); color: var(--text); }
+.calendar-quick-button:hover, .calendar-quick-button:focus-visible { background: rgba(0, 185, 107, .2); color: #8ce7bd; }
+.calendar-icon-button:focus-visible, .calendar-quick-button:focus-visible, .task-calendar-day:focus-visible { outline: 2px solid #54d99e; outline-offset: 2px; }
+.task-calendar-weekdays, .task-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.task-calendar-weekdays { margin-top: 14px; color: #737a85; font-size: 11px; font-weight: 700; text-align: center; }
+.task-calendar-weekdays span { padding: 5px 0; }
+.task-calendar-grid { margin-top: 2px; }
+.task-calendar-day { position: relative; display: grid; min-width: 0; height: 42px; padding: 5px 0 8px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #dce0e5; cursor: pointer; }
+.task-calendar-day > span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; font-size: 12px; font-weight: 800; }
+.task-calendar-day > i { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: #31ce87; }
+.task-calendar-day:hover { background: #252930; }
+.task-calendar-day.is-selected > span { background: var(--green); color: #fff; box-shadow: 0 0 0 3px rgba(0, 185, 107, .12); }
+.task-calendar-day.is-today:not(.is-selected) > span { color: #5ee0a7; box-shadow: inset 0 0 0 1px rgba(0, 185, 107, .55); }
+.task-calendar-day.is-outside { color: #5f6671; }
+.task-calendar-grid--month .task-calendar-day { height: 48px; }
+.task-calendar-legend { display: flex; min-height: 22px; margin-top: 6px; align-items: center; justify-content: flex-end; gap: 6px; color: #7f8691; font-size: 10px; }
+.task-calendar-legend i { width: 5px; height: 5px; border-radius: 50%; background: #31ce87; }
+.task-calendar-panel[aria-busy="true"] .task-calendar-grid { opacity: .62; }
+
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .metric-card { display: flex; min-width: 0; gap: 15px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .metric-card--primary { border-color: rgba(0, 185, 107, .34); }
@@ -223,6 +249,15 @@ h1, h2, h3, p { margin: 0; }
   .admin-main { padding: 14px !important; }
   .metric-grid, .filter-grid, .user-filter-grid, .dialog-form-row { grid-template-columns: 1fr; }
   .content-panel { padding: 17px; }
+  .task-calendar-panel { padding: 15px 12px 10px; }
+  .task-calendar-header { align-items: flex-start; }
+  .calendar-period-nav h2 { min-width: 88px; font-size: 15px; }
+  .calendar-period-nav, .calendar-view-actions { gap: 2px; }
+  .calendar-icon-button { width: 27px; min-height: 27px; }
+  .calendar-quick-button { min-height: 27px; padding-inline: 7px; font-size: 10px; }
+  .task-calendar-weekdays { margin-top: 10px; }
+  .task-calendar-day { height: 40px; }
+  .task-calendar-grid--month .task-calendar-day { height: 44px; }
   .panel-heading { align-items: flex-start; }
   .progress-summary { grid-template-columns: 1fr; gap: 12px; }
   .overview-row { grid-template-columns: 54px minmax(0, 1fr); }

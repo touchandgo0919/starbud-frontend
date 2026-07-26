@@ -42,18 +42,18 @@ Local development:
 cp .env.example .env.local
 ```
 
-Production should point to the deployed Worker URL:
+Production automatically selects the API from the current page hostname:
 
-```bash
-VITE_API_BASE_URL=https://starbud-backend.<your-subdomain>.workers.dev
-```
+- `*.zhaojianing.com` → `https://starbud-api.zhaojianing.com`
+- `*.zhaoyouning.com` → `https://starbud-api.zhaoyouning.com`
 
-For Cloudflare Pages, set this as a Pages environment variable before building.
+`VITE_API_BASE_URL` is only needed for local development or another deployment
+domain.
 
 ## Cloudflare Pages Deploy
 
 ```bash
 npm install
-VITE_API_BASE_URL=https://starbud-backend.<your-subdomain>.workers.dev npm run build
+npm run build
 npx wrangler pages deploy dist --project-name starbud-frontend
 ```

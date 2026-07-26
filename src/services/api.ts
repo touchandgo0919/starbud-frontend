@@ -10,10 +10,26 @@ import type {
   User
 } from "../types/task";
 
+const apiBaseUrls = {
+  "zhaojianing.com": "https://starbud-api.zhaojianing.com",
+  "zhaoyouning.com": "https://starbud-api.zhaoyouning.com"
+} as const;
+
+function apiBaseUrlForHostname(hostname: string) {
+  const normalizedHostname = hostname.trim().toLocaleLowerCase();
+  const domain = (Object.keys(apiBaseUrls) as Array<keyof typeof apiBaseUrls>)
+    .find((candidate) =>
+      normalizedHostname === candidate || normalizedHostname.endsWith(`.${candidate}`)
+    );
+  return domain ? apiBaseUrls[domain] : "";
+}
+
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
+const runtimeApiBaseUrl = apiBaseUrlForHostname(window.location.hostname);
 const API_BASE_URL =
+  runtimeApiBaseUrl ||
   configuredApiBaseUrl ||
-  (import.meta.env.DEV ? "http://localhost:8787" : "https://starbud-backend.zhaotao0919.workers.dev");
+  (import.meta.env.DEV ? "http://localhost:8787" : apiBaseUrls["zhaojianing.com"]);
 
 const tokenStorageKey = "starbud.authToken";
 
@@ -157,6 +173,9 @@ export async function getTasks(filters: {
   status?: string;
   keyword?: string;
   repeatType?: string;
+  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
 } = {}) {
   const query = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
