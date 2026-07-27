@@ -20,6 +20,7 @@ const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean }>>({});
@@ -190,6 +191,7 @@ const reviewHistory: ImageData[] = [];
 async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
+  submissionNote.value = "";
   submissionReviewImageUrl.value = null;
   detailVisible.value = true;
 
@@ -199,6 +201,7 @@ async function openDetail(task: Task) {
   try {
     const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
     submissionPhotos.value = submission.photos;
+    submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
     selectedSubmissionId.value = submission.id;
   } catch (cause) {
@@ -703,6 +706,7 @@ onBeforeUnmount(() => {
       </el-descriptions>
       <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
         <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : "这次提交暂未包含可查看的照片。" }}</p></div></div>
+        <div v-if="submissionNote" class="submission-note"><strong>提交备注</strong><p>{{ submissionNote }}</p></div>
         <button v-if="submissionPhotos.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>

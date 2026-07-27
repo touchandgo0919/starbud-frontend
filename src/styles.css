@@ -202,6 +202,9 @@ h1, h2, h3, p { margin: 0; }
 .task-detail-descriptions .el-descriptions__label { width: 108px; color: #aeb3bd !important; font-weight: 700 !important; }
 .task-detail-descriptions .el-descriptions__content { color: #eef0f3 !important; }
 .task-detail-descriptions .el-descriptions__cell { border-color: var(--border) !important; }
+.submission-note { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); }
+.submission-note strong { color: var(--text); font-size: 13px; }
+.submission-note p { margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .task-submission-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
 .task-submission-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .task-submission-heading h3 { color: var(--text); font-size: 15px; }
