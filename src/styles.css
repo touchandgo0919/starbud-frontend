@@ -200,6 +200,24 @@ h1, h2, h3, p { margin: 0; }
 .task-detail-descriptions .el-descriptions__label { width: 108px; color: #aeb3bd !important; font-weight: 700 !important; }
 .task-detail-descriptions .el-descriptions__content { color: #eef0f3 !important; }
 .task-detail-descriptions .el-descriptions__cell { border-color: var(--border) !important; }
+.task-submission-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.task-submission-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.task-submission-heading h3 { color: var(--text); font-size: 15px; }
+.task-submission-heading p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.submission-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.submission-photo-card { display: grid; overflow: hidden; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--muted); cursor: pointer; text-align: left; }
+.submission-photo-card:hover { border-color: var(--green); }
+.submission-photo-card img { display: block; width: 100%; aspect-ratio: 1 / .72; object-fit: cover; }
+.submission-photo-card span { padding: 8px; font-size: 11px; }
+.task-submission-empty { color: var(--muted); font-size: 12px; }
+.review-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 14px; color: #c7cbd2; font-size: 13px; }
+.review-toolbar label { display: inline-flex; align-items: center; gap: 7px; }
+.review-toolbar input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
+.review-toolbar input[type="range"] { accent-color: var(--green); }
+.review-toolbar span { color: var(--muted); font-size: 12px; }
+.review-canvas-shell { overflow: auto; max-height: 62vh; border: 1px solid var(--border); border-radius: 8px; background: #101216; text-align: center; }
+.review-canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+.review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }
 
@@ -273,4 +291,6 @@ h1, h2, h3, p { margin: 0; }
   .desktop-table { display: none; }
   .mobile-data-list { display: block; }
   .el-dialog { width: calc(100% - 24px) !important; }
+  .submission-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .review-toolbar { align-items: flex-start; }
 }

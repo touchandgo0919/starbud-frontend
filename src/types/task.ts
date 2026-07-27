@@ -33,6 +33,30 @@ export interface CreateTaskPayload {
 
 export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId">;
 
+export interface SubmissionPhoto {
+  id: string;
+  url: string;
+  contentType: string;
+  byteSize: number;
+}
+
+export interface Submission {
+  id: string;
+  taskId: string;
+  childId: string;
+  taskDate: string;
+  taskTitle: string;
+  scheduleTime: string;
+  note: string;
+  status: "draft" | "submitted";
+  photoCount: number;
+  photos: SubmissionPhoto[];
+  createdAt: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewImageUrl: string | null;
+}
+
 export interface User {
   id: string;
   username: string;

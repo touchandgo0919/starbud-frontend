@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
-import { completeTask, createTask, deleteTask, getChildren, getTasks, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, getChildren, getTaskSubmission, getTasks, remindTask, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
-import type { Child, CreateTaskPayload, RepeatType, Task } from "../types/task";
+import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
@@ -19,6 +19,15 @@ const dialogVisible = ref(false);
 const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
+const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const submissionPhotosLoading = ref(false);
+const reviewVisible = ref(false);
+const reviewPhoto = ref<SubmissionPhoto | null>(null);
+const reviewCanvas = ref<HTMLCanvasElement | null>(null);
+const reviewColor = ref("#e5484d");
+const reviewLineWidth = ref(6);
+const reviewSubmitting = ref(false);
+const selectedSubmissionId = ref<string | null>(null);
 const editingTaskId = ref("");
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
@@ -146,9 +155,25 @@ function openEdit(task: Task) {
   dialogVisible.value = true;
 }
 
-function openDetail(task: Task) {
+let reviewSourceImage: HTMLImageElement | null = null;
+let isReviewDrawing = false;
+let previousReviewPoint: { x: number; y: number } | null = null;
+
+async function openDetail(task: Task) {
   detailTask.value = task;
+  submissionPhotos.value = [];
   detailVisible.value = true;
+
+  submissionPhotosLoading.value = true;
+  try {
+    const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
+    submissionPhotos.value = submission.photos;
+    selectedSubmissionId.value = submission.id;
+  } catch (cause) {
+    if (!(cause instanceof Error) || !cause.message.includes("404")) ElMessage.error(cause instanceof Error ? cause.message : "提交照片加载失败。");
+  } finally {
+    submissionPhotosLoading.value = false;
+  }
 }
 
 function formatDateTime(value: string | null) {
@@ -161,6 +186,115 @@ function formatDateTime(value: string | null) {
 
 function updateDetailColumns() {
   detailColumnCount.value = window.innerWidth <= 620 ? 1 : 2;
+}
+
+function formatBytes(byteSize: number) {
+  return byteSize < 1024 * 1024
+    ? `${Math.max(1, Math.round(byteSize / 1024))} KB`
+    : `${(byteSize / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function openReview(photo: SubmissionPhoto) {
+  reviewPhoto.value = photo;
+  reviewVisible.value = true;
+  await nextTick();
+}
+
+function loadReviewCanvas() {
+  const canvas = reviewCanvas.value;
+  const photo = reviewPhoto.value;
+  if (!canvas || !photo) return;
+
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    context.drawImage(image, 0, 0);
+    reviewSourceImage = image;
+  };
+  image.onerror = () => ElMessage.error("批改图片加载失败。");
+  image.src = photo.url;
+}
+
+function reviewPoint(event: MouseEvent) {
+  const canvas = reviewCanvas.value;
+  if (!canvas) return null;
+  const bounds = canvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - bounds.left) * (canvas.width / bounds.width),
+    y: (event.clientY - bounds.top) * (canvas.height / bounds.height)
+  };
+}
+
+function drawReviewLine(from: { x: number; y: number }, to: { x: number; y: number }) {
+  const context = reviewCanvas.value?.getContext("2d");
+  if (!context) return;
+  context.strokeStyle = reviewColor.value;
+  context.lineWidth = reviewLineWidth.value;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+  context.moveTo(from.x, from.y);
+  context.lineTo(to.x, to.y);
+  context.stroke();
+}
+
+function startReviewDrawing(event: MouseEvent) {
+  if (event.button !== 0) return;
+  const point = reviewPoint(event);
+  if (!point) return;
+  isReviewDrawing = true;
+  previousReviewPoint = point;
+  drawReviewLine(point, { x: point.x + 0.01, y: point.y + 0.01 });
+}
+
+function continueReviewDrawing(event: MouseEvent) {
+  if (!isReviewDrawing || !previousReviewPoint) return;
+  const point = reviewPoint(event);
+  if (!point) return;
+  drawReviewLine(previousReviewPoint, point);
+  previousReviewPoint = point;
+}
+
+function stopReviewDrawing() {
+  isReviewDrawing = false;
+  previousReviewPoint = null;
+}
+
+function clearReviewDrawing() {
+  const canvas = reviewCanvas.value;
+  const context = canvas?.getContext("2d");
+  if (!canvas || !context || !reviewSourceImage) return;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(reviewSourceImage, 0, 0);
+}
+
+function submitReviewedImage() {
+  const canvas = reviewCanvas.value;
+  if (!canvas || !selectedSubmissionId.value) {
+    ElMessage.error("未找到对应的作业提交。");
+    return;
+  }
+  reviewSubmitting.value = true;
+  canvas.toBlob(async (image) => {
+    if (!image) {
+      reviewSubmitting.value = false;
+      ElMessage.error("生成批改图片失败。");
+      return;
+    }
+    try {
+      await submitSubmissionReview(selectedSubmissionId.value!, image);
+      reviewVisible.value = false;
+      ElMessage.success("批改已提交，已通知小朋友。");
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
+    } finally {
+      reviewSubmitting.value = false;
+    }
+  }, "image/png");
 }
 
 async function submitTask() {
@@ -215,6 +349,15 @@ async function markComplete(task: Task) {
     await refreshTaskData();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "打卡失败。");
+  }
+}
+
+async function sendReminder(task: Task) {
+  try {
+    await remindTask(task.id);
+    ElMessage.success(`已向${childName(task.childId)}发起一次语音提醒`);
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "提醒发送失败。");
   }
 }
 
@@ -280,7 +423,7 @@ onBeforeUnmount(() => {
         <el-table-column label="重复" width="90"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="90"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="100"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ scope.row.status === "completed" ? "已完成" : "待完成" }}</span></template></el-table-column>
-        <el-table-column label="操作" width="136" fixed="right"><template #default="scope"><div class="task-table-actions"><div class="task-table-actions__row"><el-button v-if="auth.user?.role !== 'child'" link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(scope.row)">删除</el-button></div></div></template></el-table-column>
+        <el-table-column label="操作" width="160" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
         <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
@@ -289,7 +432,7 @@ onBeforeUnmount(() => {
             <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
           </div>
           <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音 ${task.voiceReminderCount} 次：${task.voiceContent}` : "静默提醒" }}</p>
-          <div class="mobile-card-actions"><el-button link @click="openDetail(task)">详情</el-button><el-button link type="primary" :disabled="!canComplete(task)" @click="markComplete(task)">完成</el-button><el-button v-if="auth.user?.role !== 'child'" link type="primary" @click="openEdit(task)">编辑</el-button><el-button v-if="auth.user?.role !== 'child'" link type="danger" @click="removeTask(task)">删除</el-button></div>
+          <div class="mobile-card-actions"><template v-if="auth.user?.role === 'child'"><el-button link type="primary" :disabled="!canComplete(task)" @click="markComplete(task)">完成</el-button></template><template v-else><el-button link type="primary" @click="openEdit(task)">编辑</el-button><el-button link type="danger" @click="removeTask(task)">删除</el-button><el-button link type="primary" @click="sendReminder(task)">提醒</el-button><el-button link @click="openDetail(task)">详情</el-button></template></div>
         </article>
         <div v-if="!tasks.length && !loading" class="empty-state">没有符合条件的任务</div>
       </div>
@@ -342,7 +485,30 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
+      <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
+        <div class="task-submission-heading"><div><h3>已提交照片</h3><p>{{ submissionPhotos.length }} 张作业照片</p></div></div>
+        <div v-if="submissionPhotos.length" class="submission-photo-grid">
+          <button v-for="(photo, index) in submissionPhotos" :key="photo.id" type="button" class="submission-photo-card" @click="openReview(photo)">
+            <img :src="photo.url" :alt="`作业照片 ${index + 1}`" />
+            <span>批改这张 · {{ formatBytes(photo.byteSize) }}</span>
+          </button>
+        </div>
+        <p v-else-if="!submissionPhotosLoading" class="task-submission-empty">这次提交暂未包含可查看的照片。</p>
+      </section>
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="reviewVisible" title="图片批改" width="860px" class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
+      <div class="review-toolbar">
+        <label>笔色 <input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
+        <label>粗细 <input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }} px</span></label>
+        <el-button @click="clearReviewDrawing">清空笔迹</el-button>
+      </div>
+      <div class="review-canvas-shell">
+        <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
+      </div>
+      <p class="review-hint">按住鼠标左键即可在照片上书写；提交后会立即通知小朋友批改已完成。</p>
+      <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>
     </el-dialog>
   </div>
 </template>

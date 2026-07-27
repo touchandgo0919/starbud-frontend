@@ -6,6 +6,7 @@ import type {
   ManagedUser,
   RegisterPayload,
   SaveUserPayload,
+  Submission,
   Task,
   UpdateTaskPayload,
   User
@@ -34,6 +35,10 @@ const API_BASE_URL =
 
 const tokenStorageKey = "starbud.authToken";
 
+function apiUrl(path: string) {
+  return /^https?:\/\//.test(path) ? path : `${API_BASE_URL}${path}`;
+}
+
 export function getStoredToken() {
   return localStorage.getItem(tokenStorageKey);
 }
@@ -48,7 +53,7 @@ export function clearStoredToken() {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       "content-type": "application/json",
@@ -204,6 +209,11 @@ export async function completeTask(taskId: string) {
   return body.task;
 }
 
+export async function remindTask(taskId: string) {
+  const body = await request<{ task: Task }>(`/api/tasks/${taskId}/remind`, { method: "POST" });
+  return body.task;
+}
+
 export async function updateTask(taskId: string, payload: UpdateTaskPayload) {
   const body = await request<{ task: Task }>(`/api/tasks/${taskId}`, {
     method: "PATCH",
@@ -217,6 +227,47 @@ export async function deleteTask(taskId: string) {
   await request<{ deleted: true }>(`/api/tasks/${taskId}`, {
     method: "DELETE"
   });
+}
+
+export async function getSubmissions() {
+  const body = await request<{ submissions: Submission[] }>("/api/submissions");
+  return body.submissions.map((submission) => ({
+    ...submission,
+    photos: submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+    reviewImageUrl: submission.reviewImageUrl ? apiUrl(submission.reviewImageUrl) : null
+  }));
+}
+
+export async function getTaskSubmission(taskId: string, taskDate: string) {
+  const body = await request<{ submission: Submission }>(`/api/tasks/${taskId}/submission?date=${encodeURIComponent(taskDate)}`);
+  return {
+    ...body.submission,
+    photos: body.submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+    reviewImageUrl: body.submission.reviewImageUrl ? apiUrl(body.submission.reviewImageUrl) : null
+  };
+}
+
+export async function submitSubmissionReview(submissionId: string, image: Blob) {
+  const formData = new FormData();
+  formData.append("image", image, "review.png");
+  const token = getStoredToken();
+  const response = await fetch(apiUrl(`/api/submissions/${submissionId}/review`), {
+    method: "POST",
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    body: formData
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `Request failed with ${response.status}`);
+  }
+
+  const body = await response.json() as { submission: Submission };
+  return {
+    ...body.submission,
+    photos: body.submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+    reviewImageUrl: body.submission.reviewImageUrl ? apiUrl(body.submission.reviewImageUrl) : null
+  };
 }
 
 export async function getUsers() {
