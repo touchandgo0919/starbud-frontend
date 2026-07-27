@@ -705,13 +705,12 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : "这次提交暂未包含可查看的照片。" }}</p></div></div>
+        <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : detailTask.submissionStatus === "submitted" ? "本次提交暂未包含可查看的照片。" : "暂未提交作业。" }}</p></div></div>
         <div v-if="submissionNote" class="submission-note"><strong>提交备注</strong><p>{{ submissionNote }}</p></div>
         <button v-if="submissionPhotos.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
         </button>
-        <p v-else-if="!submissionPhotosLoading" class="task-submission-empty">这次提交暂未包含可查看的照片。</p>
       </section>
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>
