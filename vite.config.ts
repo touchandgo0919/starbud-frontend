@@ -5,20 +5,17 @@ import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig({
-  plugins: [
-    vue(),
-    UnoCSS(),
-    AutoImport({
-      imports: ["vue", "vue-router", "pinia"],
-      dts: false,
-      vueTemplate: true
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-      dts: false
-    })
-  ],
+  plugins: [vue(), UnoCSS(), AutoImport({
+    imports: ["vue", "vue-router", "pinia"],
+    dts: false,
+    vueTemplate: true
+  }), Components({
+    resolvers: [ElementPlusResolver()],
+    dts: false
+  }), cloudflare()],
   server: {
     port: 5173,
     strictPort: false

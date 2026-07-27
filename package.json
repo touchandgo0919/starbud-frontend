@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc --noEmit && vite build",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name starbud-frontend",
-    "preview": "vite preview --host 0.0.0.0",
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && wrangler dev",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
@@ -22,13 +22,14 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.47.0",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "unocss": "^65.4.3",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",
     "vue-tsc": "^2.2.0",
-    "wrangler": "^4.113.0"
+    "wrangler": "^4.114.0"
   },
   "overrides": {
     "sharp": "0.35.3"
