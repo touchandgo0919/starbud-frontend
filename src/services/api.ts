@@ -231,11 +231,20 @@ export async function deleteTask(taskId: string) {
 
 export async function getSubmissions() {
   const body = await request<{ submissions: Submission[] }>("/api/submissions");
-  return body.submissions.map((submission) => ({
+  return body.submissions.map(normalizeSubmissionUrls);
+}
+
+function normalizeSubmissionUrls(submission: Submission): Submission {
+  return {
     ...submission,
     photos: submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
-    reviewImageUrl: submission.reviewImageUrl ? apiUrl(submission.reviewImageUrl) : null
-  }));
+    reviewImageUrl: submission.reviewImageUrl ? apiUrl(submission.reviewImageUrl) : null,
+    reviewRounds: (submission.reviewRounds || []).map((round) => ({
+      ...round,
+      reviewImageUrl: apiUrl(round.reviewImageUrl),
+      photos: round.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) }))
+    }))
+  };
 }
 
 export async function deleteSubmission(submissionId: string) {
@@ -244,11 +253,7 @@ export async function deleteSubmission(submissionId: string) {
 
 export async function getTaskSubmission(taskId: string, taskDate: string) {
   const body = await request<{ submission: Submission }>(`/api/tasks/${taskId}/submission?date=${encodeURIComponent(taskDate)}`);
-  return {
-    ...body.submission,
-    photos: body.submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
-    reviewImageUrl: body.submission.reviewImageUrl ? apiUrl(body.submission.reviewImageUrl) : null
-  };
+  return normalizeSubmissionUrls(body.submission);
 }
 
 export async function submitSubmissionReview(submissionId: string, image: Blob) {
@@ -267,11 +272,12 @@ export async function submitSubmissionReview(submissionId: string, image: Blob) 
   }
 
   const body = await response.json() as { submission: Submission };
-  return {
-    ...body.submission,
-    photos: body.submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
-    reviewImageUrl: body.submission.reviewImageUrl ? apiUrl(body.submission.reviewImageUrl) : null
-  };
+  return normalizeSubmissionUrls(body.submission);
+}
+
+export async function finalizeSubmissionReview(submissionId: string) {
+  const body = await request<{ submission: Submission }>(`/api/submissions/${submissionId}/finalize-review`, { method: "POST" });
+  return normalizeSubmissionUrls(body.submission);
 }
 
 export async function getUsers() {

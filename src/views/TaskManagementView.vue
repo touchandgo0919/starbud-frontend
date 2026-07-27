@@ -2,9 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
-import { completeTask, createTask, deleteTask, getChildren, getTaskSubmission, getTasks, remindTask, submitSubmissionReview, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
-import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, Task } from "../types/task";
+import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
@@ -22,10 +22,12 @@ const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
 const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
+const submissionReviewRounds = ref<SubmissionReviewRound[]>([]);
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean }>>({});
 const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
+const selectedReviewImageUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
@@ -193,6 +195,8 @@ async function openDetail(task: Task) {
   submissionPhotos.value = [];
   submissionNote.value = "";
   submissionReviewImageUrl.value = null;
+  selectedReviewImageUrl.value = null;
+  submissionReviewRounds.value = [];
   detailVisible.value = true;
 
   if (!hasSubmission(task)) return;
@@ -203,6 +207,7 @@ async function openDetail(task: Task) {
     submissionPhotos.value = submission.photos;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
+    submissionReviewRounds.value = submission.reviewRounds;
     selectedSubmissionId.value = submission.id;
   } catch (cause) {
     if (!(cause instanceof Error) || !cause.message.includes("404")) ElMessage.error(cause instanceof Error ? cause.message : "提交照片加载失败。");
@@ -221,6 +226,7 @@ async function openTaskReview(task: Task) {
 async function openReviewEntry(task: Task) {
   await openDetail(task);
   if (submissionReviewImageUrl.value) {
+    selectedReviewImageUrl.value = null;
     reviewResultVisible.value = true;
     return;
   }
@@ -230,7 +236,34 @@ async function openReviewEntry(task: Task) {
 async function restartReview() {
   const task = detailTask.value;
   reviewResultVisible.value = false;
+  selectedReviewImageUrl.value = null;
   if (task) await openTaskReview(task);
+}
+
+async function reviewRoundOriginal(photo: SubmissionPhoto) {
+  if (auth.user?.role === "child") return;
+  await openReview(photo);
+}
+
+function viewRoundReview(url: string) {
+  selectedReviewImageUrl.value = url;
+  reviewResultVisible.value = true;
+}
+
+async function finalizeCurrentReview() {
+  if (!selectedSubmissionId.value) return;
+  try {
+    await finalizeSubmissionReview(selectedSubmissionId.value);
+    ElMessage.success("任务已结束，不再要求儿童重新提交");
+    await refreshTaskData();
+    const currentDetail = detailTask.value;
+    if (currentDetail) {
+      const refreshed = tasks.value.find((task) => taskRowKey(task) === taskRowKey(currentDetail));
+      if (refreshed) await openDetail(refreshed);
+    }
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "结束任务失败。");
+  }
 }
 
 function formatDateTime(value: string | null) {
@@ -696,7 +729,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="执行日期">{{ detailTask.occurrenceDate || "—" }}</el-descriptions-item>
         <el-descriptions-item label="提醒时间">{{ detailTask.scheduleTime }}</el-descriptions-item>
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
-        <el-descriptions-item label="任务状态">{{ detailTask.status === "completed" ? "已完成" : "待完成" }}</el-descriptions-item>
+        <el-descriptions-item label="任务状态">{{ detailTask.needsRevision ? "待修改" : detailTask.status === "completed" ? "已完成" : "待完成" }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? `已提交（${detailTask.submissionPhotoCount} 张照片）` : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
@@ -704,19 +737,34 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
-      <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
+      <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
         <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : detailTask.submissionStatus === "submitted" ? "本次提交暂未包含可查看的照片。" : "暂未提交作业。" }}</p></div></div>
-        <button v-if="submissionPhotos.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
+        <button v-if="submissionPhotos.length && !submissionReviewRounds.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
         </button>
-        <div class="submission-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
+        <div v-if="!submissionReviewRounds.length" class="submission-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
+        <section v-if="submissionReviewRounds.length" class="review-rounds">
+          <h3>批改记录</h3>
+          <article v-for="round in submissionReviewRounds" :key="round.id" class="review-round">
+            <h4>第 {{ round.sequence }} 次批改</h4>
+            <div class="review-round-row">
+              <strong>批改前图片</strong>
+              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="auth.user?.role === 'child' ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ auth.user?.role === 'child' ? '原图' : '批改这张' }}</span></button></div>
+            </div>
+            <div class="review-round-row">
+              <strong>批改后图片</strong>
+              <div class="round-images"><button type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(round.reviewImageUrl)"><img class="round-reviewed-image" :src="round.reviewImageUrl" alt="批改后图片" /><span>查看批改</span></button></div>
+            </div>
+            <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
+          </article>
+        </section>
       </section>
-      <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+      <template #footer><el-button v-if="detailTask?.needsRevision && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">结束任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
-      <img v-if="submissionReviewImageUrl" class="review-result-image" :src="submissionReviewImageUrl" alt="最后批改版本" />
+      <img v-if="selectedReviewImageUrl || submissionReviewImageUrl" class="review-result-image" :src="selectedReviewImageUrl || submissionReviewImageUrl || ''" alt="批改后照片" />
       <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button type="success" @click="restartReview">重新批改</el-button></template>
     </el-dialog>
 

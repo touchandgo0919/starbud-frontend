@@ -17,6 +17,9 @@ export interface Task {
   claimedAt: string | null;
   submissionId: string | null;
   submissionStatus: "draft" | "submitted" | null;
+  reviewedAt: string | null;
+  finalizedAt: string | null;
+  needsRevision: boolean;
   submissionPhotoCount: number;
   createdAt: string;
 }
@@ -40,6 +43,15 @@ export interface SubmissionPhoto {
   byteSize: number;
 }
 
+export interface SubmissionReviewRound {
+  id: string;
+  sequence: number;
+  note: string;
+  photos: SubmissionPhoto[];
+  reviewImageUrl: string;
+  reviewedAt: string;
+}
+
 export interface Submission {
   id: string;
   taskId: string;
@@ -54,7 +66,9 @@ export interface Submission {
   createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
+  finalizedAt: string | null;
   reviewImageUrl: string | null;
+  reviewRounds: SubmissionReviewRound[];
 }
 
 export interface User {
