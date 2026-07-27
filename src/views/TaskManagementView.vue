@@ -87,11 +87,16 @@ function canComplete(task: Task) {
   return task.status !== "completed" && task.occurrenceDate === dateKey(new Date());
 }
 
+function hasSubmission(task: Task) {
+  return Boolean(task.submissionId || task.submissionStatus);
+}
+
 async function loadTasks() {
   loading.value = true;
   try {
     tasks.value = await getTasks({ ...filters, date: selectedDate.value });
     const previews = await Promise.all(tasks.value.map(async (task) => {
+      if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[], false] as const;
       try {
         const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
         return [taskRowKey(task), submission.photos, Boolean(submission.reviewedAt)] as const;
@@ -187,6 +192,8 @@ async function openDetail(task: Task) {
   submissionPhotos.value = [];
   submissionReviewImageUrl.value = null;
   detailVisible.value = true;
+
+  if (!hasSubmission(task)) return;
 
   submissionPhotosLoading.value = true;
   try {
