@@ -31,7 +31,7 @@ const runtimeApiBaseUrl = apiBaseUrlForHostname(window.location.hostname);
 const API_BASE_URL =
   runtimeApiBaseUrl ||
   configuredApiBaseUrl ||
-  (import.meta.env.DEV ? "http://localhost:8787" : apiBaseUrls["zhaojianing.com"]);
+  apiBaseUrls["zhaojianing.com"];
 
 const tokenStorageKey = "starbud.authToken";
 

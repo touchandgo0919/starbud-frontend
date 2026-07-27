@@ -21,12 +21,18 @@ const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
+const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean }>>({});
 const submissionPhotosLoading = ref(false);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
+const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewColor = ref("#e5484d");
 const reviewLineWidth = ref(6);
+const reviewZoom = ref(100);
+const reviewTool = ref<"pen" | "text">("pen");
+const reviewText = ref("");
+const reviewFontSize = ref(28);
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
 const editingTaskId = ref("");
@@ -83,10 +89,11 @@ async function loadTasks() {
     const previews = await Promise.all(tasks.value.map(async (task) => {
       try {
         const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
-        return [taskRowKey(task), submission.photos] as const;
-      } catch { return [taskRowKey(task), []] as const; }
+        return [taskRowKey(task), submission.photos, Boolean(submission.reviewedAt)] as const;
+      } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false] as const; }
     }));
-    taskPhotoPreviews.value = Object.fromEntries(previews);
+    taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, photos]) => [key, photos]));
+    taskReviewStates.value = Object.fromEntries(previews.map(([key, photos, reviewed]) => [key, { hasPhotos: photos.length > 0, reviewed }]));
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务加载失败。");
   } finally {
@@ -184,6 +191,11 @@ async function openDetail(task: Task) {
   }
 }
 
+async function openTaskReview(task: Task) {
+  await openDetail(task);
+  if (submissionPhotos.value.length) await openReview(submissionPhotos.value[0]);
+}
+
 function formatDateTime(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
@@ -194,6 +206,7 @@ function formatDateTime(value: string | null) {
 
 function updateDetailColumns() {
   detailColumnCount.value = window.innerWidth <= 620 ? 1 : 2;
+  fitReviewCanvas();
 }
 
 function formatBytes(byteSize: number) {
@@ -204,6 +217,8 @@ function formatBytes(byteSize: number) {
 
 async function openReview(photo: SubmissionPhoto) {
   reviewPhoto.value = photo;
+  reviewZoom.value = 100;
+  reviewTool.value = "pen";
   reviewVisible.value = true;
   await nextTick();
 }
@@ -220,11 +235,27 @@ function loadReviewCanvas() {
     if (!context) return;
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
+    fitReviewCanvas();
     context.drawImage(image, 0, 0);
     reviewSourceImage = image;
   };
   image.onerror = () => ElMessage.error("批改图片加载失败。");
   image.src = photo.url;
+}
+
+function fitReviewCanvas() {
+  const canvas = reviewCanvas.value;
+  const shell = reviewCanvasShell.value;
+  if (!canvas || !shell || !canvas.width || !canvas.height) return;
+  const bounds = shell.getBoundingClientRect();
+  const scale = Math.min(bounds.width / canvas.width, bounds.height / canvas.height, 1) * (reviewZoom.value / 100);
+  canvas.style.width = `${Math.floor(canvas.width * scale)}px`;
+  canvas.style.height = `${Math.floor(canvas.height * scale)}px`;
+}
+
+function showWholeReviewImage() {
+  reviewZoom.value = 100;
+  fitReviewCanvas();
 }
 
 function reviewPoint(event: MouseEvent) {
@@ -254,9 +285,27 @@ function startReviewDrawing(event: MouseEvent) {
   if (event.button !== 0) return;
   const point = reviewPoint(event);
   if (!point) return;
+  if (reviewTool.value === "text") {
+    insertReviewText(point);
+    return;
+  }
   isReviewDrawing = true;
   previousReviewPoint = point;
   drawReviewLine(point, { x: point.x + 0.01, y: point.y + 0.01 });
+}
+
+function insertReviewText(point: { x: number; y: number }) {
+  const text = reviewText.value.trim();
+  const context = reviewCanvas.value?.getContext("2d");
+  if (!text || !context) {
+    ElMessage.warning("请先输入要插入的文字。");
+    return;
+  }
+  context.fillStyle = reviewColor.value;
+  context.font = `700 ${reviewFontSize.value}px sans-serif`;
+  context.textBaseline = "top";
+  text.split(/\r?\n/).forEach((line, index) => context.fillText(line, point.x, point.y + index * (reviewFontSize.value + 8)));
+  reviewTool.value = "pen";
 }
 
 function continueReviewDrawing(event: MouseEvent) {
@@ -428,6 +477,7 @@ onBeforeUnmount(() => {
         <el-table-column label="时间" width="96"><template #default="scope"><strong class="time-cell">{{ scope.row.scheduleTime }}</strong></template></el-table-column>
         <el-table-column prop="title" label="任务名称" min-width="160" />
         <el-table-column label="作业照片" width="116"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="104"><template #default="scope"><el-button v-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="任务对象" min-width="100"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="重复" width="90"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="90"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
@@ -511,12 +561,16 @@ onBeforeUnmount(() => {
       <div class="review-toolbar">
         <label>笔色 <input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
         <label>粗细 <input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }} px</span></label>
-        <el-button @click="clearReviewDrawing">清空笔迹</el-button>
+        <label class="review-text-input">文字 <input v-model="reviewText" maxlength="80" placeholder="输入评语" aria-label="批改文字" /></label>
+        <label>字号 <input v-model.number="reviewFontSize" type="range" min="16" max="56" step="2" aria-label="文字字号" /><span>{{ reviewFontSize }} px</span></label>
+        <el-button :type="reviewTool === 'text' ? 'success' : 'default'" @click="reviewTool = 'text'">插入文字</el-button>
+        <label>缩放 <input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
+        <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
       </div>
-      <div class="review-canvas-shell">
+      <div ref="reviewCanvasShell" class="review-canvas-shell">
         <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
       </div>
-      <p class="review-hint">按住鼠标左键即可在照片上书写；提交后会立即通知小朋友批改已完成。</p>
+      <p class="review-hint">画笔模式可直接书写；点击“插入文字”后，再点击图片位置即可添加评语。提交后会立即通知小朋友批改已完成。</p>
       <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>
     </el-dialog>
   </div>

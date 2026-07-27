@@ -47,8 +47,8 @@ Production automatically selects the API from the current page hostname:
 - `*.zhaojianing.com` → `https://starbud-api.zhaojianing.com`
 - `*.zhaoyouning.com` → `https://starbud-api.zhaoyouning.com`
 
-`VITE_API_BASE_URL` is only needed for local development or another deployment
-domain.
+本地开发默认也连接生产 API；如需改用本地 Worker，可在 `.env.local` 中设置
+`VITE_API_BASE_URL=http://localhost:8787`。
 
 ## Cloudflare Pages Deploy
 
