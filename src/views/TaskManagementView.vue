@@ -254,7 +254,7 @@ async function finalizeCurrentReview() {
   if (!selectedSubmissionId.value) return;
   try {
     await finalizeSubmissionReview(selectedSubmissionId.value);
-    ElMessage.success("任务已结束，不再要求儿童重新提交");
+    ElMessage.success("任务已关闭，不再要求儿童重新提交");
     await refreshTaskData();
     const currentDetail = detailTask.value;
     if (currentDetail) {
@@ -738,7 +738,6 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : detailTask.submissionStatus === "submitted" ? "本次提交暂未包含可查看的照片。" : "暂未提交作业。" }}</p></div></div>
         <button v-if="submissionPhotos.length && !submissionReviewRounds.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
@@ -758,9 +757,18 @@ onBeforeUnmount(() => {
             </div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
+          <article v-if="submissionPhotos.length && !submissionReviewImageUrl" class="review-round review-round--pending">
+            <h4>第 {{ submissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
+            <div class="review-round-row">
+              <strong>批改前图片</strong>
+              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" title="批改这张" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>批改这张</span></button></div>
+            </div>
+            <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>等待家长批改</span></div>
+            <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
+          </article>
         </section>
       </section>
-      <template #footer><el-button v-if="detailTask?.needsRevision && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">结束任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+      <template #footer><el-button v-if="detailTask?.submissionStatus === 'submitted' && !detailTask.finalizedAt && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">关闭任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
