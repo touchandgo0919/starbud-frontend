@@ -24,7 +24,7 @@ const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
 const submissionReviewRounds = ref<SubmissionReviewRound[]>([]);
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
-const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean }>>({});
+const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean; finalized: boolean }>>({});
 const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
@@ -90,6 +90,11 @@ function canComplete(task: Task) {
   return task.status !== "completed" && task.occurrenceDate === dateKey(new Date());
 }
 
+function taskStatusLabel(task: Task) {
+  if (task.submissionStatus === "submitted" && !task.finalizedAt) return task.needsRevision ? "待修改" : "待批改";
+  return task.status === "completed" ? "已完成" : "待完成";
+}
+
 function hasSubmission(task: Task) {
   return Boolean(task.submissionId || task.submissionStatus);
 }
@@ -99,14 +104,14 @@ async function loadTasks() {
   try {
     tasks.value = await getTasks({ ...filters, date: selectedDate.value });
     const previews = await Promise.all(tasks.value.map(async (task) => {
-      if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[], false] as const;
+      if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const;
       try {
         const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
-        return [taskRowKey(task), submission.photos, Boolean(submission.reviewedAt)] as const;
-      } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false] as const; }
+        return [taskRowKey(task), submission.photos, Boolean(submission.reviewedAt), Boolean(submission.finalizedAt)] as const;
+      } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const; }
     }));
     taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, photos]) => [key, photos]));
-    taskReviewStates.value = Object.fromEntries(previews.map(([key, photos, reviewed]) => [key, { hasPhotos: photos.length > 0, reviewed }]));
+    taskReviewStates.value = Object.fromEntries(previews.map(([key, photos, reviewed, finalized]) => [key, { hasPhotos: photos.length > 0, reviewed, finalized }]));
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务加载失败。");
   } finally {
@@ -672,16 +677,16 @@ onBeforeUnmount(() => {
         <el-table-column label="任务对象" min-width="100"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="重复" width="90"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="90"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
-        <el-table-column label="状态" width="100"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ scope.row.status === "completed" ? "已完成" : "待完成" }}</span></template></el-table-column>
+        <el-table-column label="状态" width="100"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="作业照片" width="116"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
-        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="104"><template #default="scope"><el-button v-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
+        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="104"><template #default="scope"><span v-if="taskReviewStates[taskRowKey(scope.row)]?.finalized" class="reviewed-label">已完成</span><el-button v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="100" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
         <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
           <div class="mobile-card-head">
             <div><time class="time-cell">{{ task.occurrenceDate }} {{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
-            <span class="status-dot" :class="`status-dot--${task.status}`">{{ task.status === "completed" ? "已完成" : "待完成" }}</span>
+            <span class="status-dot" :class="`status-dot--${task.status}`">{{ taskStatusLabel(task) }}</span>
           </div>
           <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音 ${task.voiceReminderCount} 次：${task.voiceContent}` : "静默提醒" }}</p>
           <div class="mobile-card-actions"><template v-if="auth.user?.role === 'child'"><el-button link type="primary" :disabled="!canComplete(task)" @click="markComplete(task)">完成</el-button></template><template v-else><el-button link type="primary" @click="openEdit(task)">编辑</el-button><el-button link type="danger" @click="removeTask(task)">删除</el-button><el-button link type="primary" @click="sendReminder(task)">提醒</el-button><el-button link @click="openDetail(task)">详情</el-button></template></div>
@@ -729,7 +734,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="执行日期">{{ detailTask.occurrenceDate || "—" }}</el-descriptions-item>
         <el-descriptions-item label="提醒时间">{{ detailTask.scheduleTime }}</el-descriptions-item>
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
-        <el-descriptions-item label="任务状态">{{ detailTask.needsRevision ? "待修改" : detailTask.status === "completed" ? "已完成" : "待完成" }}</el-descriptions-item>
+        <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? `已提交（${detailTask.submissionPhotoCount} 张照片）` : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>

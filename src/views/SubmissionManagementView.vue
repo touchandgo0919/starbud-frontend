@@ -16,7 +16,8 @@ const filteredSubmissions = computed(() => {
     const matchesKeyword = !query || item.taskTitle.toLowerCase().includes(query) || item.note.toLowerCase().includes(query);
     const matchesChild = !filters.childId || item.childId === filters.childId;
     const matchesStatus = !filters.status || item.status === filters.status;
-    const matchesReview = !filters.reviewStatus || (filters.reviewStatus === "reviewed" ? Boolean(item.reviewedAt) : !item.reviewedAt);
+    const reviewState = item.finalizedAt ? "completed" : item.reviewedAt ? "reviewed" : "pending";
+    const matchesReview = !filters.reviewStatus || filters.reviewStatus === reviewState;
     return matchesKeyword && matchesChild && matchesStatus && matchesReview;
   });
 });
@@ -29,6 +30,10 @@ function formatDateTime(value: string | null) {
 
 function childName(childId: string) {
   return children.value.find((child) => child.id === childId)?.name || "—";
+}
+
+function reviewStatusLabel(submission: Submission) {
+  return submission.finalizedAt ? "已完成" : submission.reviewedAt ? "已批改" : "待批改";
 }
 
 async function loadSubmissions() {
@@ -87,7 +92,7 @@ onMounted(() => {
         <label class="field"><span>关键词</span><el-input v-model="filters.keyword" clearable placeholder="搜索任务名称或备注" /></label>
         <label class="field"><span>任务对象</span><el-select v-model="filters.childId" clearable placeholder="全部成员"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
         <label class="field"><span>提交状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="已提交" value="submitted" /><el-option label="提交中" value="draft" /></el-select></label>
-        <label class="field"><span>批改状态</span><el-select v-model="filters.reviewStatus" clearable placeholder="全部状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /></el-select></label>
+        <label class="field"><span>批改状态</span><el-select v-model="filters.reviewStatus" clearable placeholder="全部状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /><el-option label="已完成" value="completed" /></el-select></label>
         <div class="filter-actions">
           <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
           <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
@@ -103,7 +108,7 @@ onMounted(() => {
         <el-table-column label="提交人" width="110"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="提交状态" width="100"><template #default="scope"><span :class="scope.row.status === 'submitted' ? 'reviewed-label' : 'task-photo-empty'">{{ scope.row.status === "submitted" ? "已提交" : "提交中" }}</span></template></el-table-column>
         <el-table-column label="作业照片" width="110"><template #default="scope"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><span v-else class="task-photo-empty">—</span></template></el-table-column>
-        <el-table-column label="批改状态" width="110"><template #default="scope"><span :class="scope.row.reviewedAt ? 'reviewed-label' : 'task-photo-empty'">{{ scope.row.reviewedAt ? "已批改" : "待批改" }}</span></template></el-table-column>
+        <el-table-column label="批改状态" width="110"><template #default="scope"><span :class="scope.row.finalizedAt || scope.row.reviewedAt ? 'reviewed-label' : 'task-photo-empty'">{{ reviewStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="操作" width="90" fixed="right"><template #default="scope"><el-button link type="danger" @click="removeSubmission(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
     </section>
