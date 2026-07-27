@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
         <div v-if="submissionPhotos.length" class="submission-photo-grid">
           <button v-for="(photo, index) in submissionPhotos" :key="photo.id" type="button" class="submission-photo-card" @click="openReview(photo)">
             <img :src="photo.url" :alt="`作业照片 ${index + 1}`" />
-            <span>批改这张 · {{ formatBytes(photo.byteSize) }}</span>
+            <span><strong>批改这张</strong><small>{{ formatBytes(photo.byteSize) }}</small></span>
           </button>
         </div>
         <p v-else-if="!submissionPhotosLoading" class="task-submission-empty">这次提交暂未包含可查看的照片。</p>

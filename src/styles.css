@@ -208,7 +208,9 @@ h1, h2, h3, p { margin: 0; }
 .submission-photo-card { display: grid; overflow: hidden; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--muted); cursor: pointer; text-align: left; }
 .submission-photo-card:hover { border-color: var(--green); }
 .submission-photo-card img { display: block; width: 100%; aspect-ratio: 1 / .72; object-fit: cover; }
-.submission-photo-card span { padding: 8px; font-size: 11px; }
+.submission-photo-card span { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; background: var(--green); color: #fff; }
+.submission-photo-card strong { font-size: 14px; font-weight: 800; }
+.submission-photo-card small { font-size: 11px; opacity: .85; }
 .task-submission-empty { color: var(--muted); font-size: 12px; }
 .task-photo-preview { position: relative; display: block; width: 52px; height: 38px; overflow: hidden; padding: 0; border: 1px solid var(--green); border-radius: 5px; background: #12151b; cursor: pointer; }
 .task-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -219,7 +221,9 @@ h1, h2, h3, p { margin: 0; }
 .review-toolbar input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
 .review-toolbar input[type="range"] { accent-color: var(--green); }
 .review-toolbar span { color: var(--muted); font-size: 12px; }
-.review-canvas-shell { display: grid; height: calc(100vh - 180px); overflow: hidden; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #101216; }
+.review-dialog.is-fullscreen { display: flex; flex-direction: column; }
+.review-dialog.is-fullscreen .el-dialog__body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.review-canvas-shell { display: grid; flex: 1; min-height: 0; overflow: hidden; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #101216; }
 .review-canvas { display: block; width: auto; max-width: 100%; height: auto; max-height: 100%; cursor: crosshair; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
