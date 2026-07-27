@@ -20,6 +20,7 @@ const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const submissionPhotosLoading = ref(false);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
@@ -79,6 +80,13 @@ async function loadTasks() {
   loading.value = true;
   try {
     tasks.value = await getTasks({ ...filters, date: selectedDate.value });
+    const previews = await Promise.all(tasks.value.map(async (task) => {
+      try {
+        const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
+        return [taskRowKey(task), submission.photos] as const;
+      } catch { return [taskRowKey(task), []] as const; }
+    }));
+    taskPhotoPreviews.value = Object.fromEntries(previews);
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务加载失败。");
   } finally {
@@ -419,6 +427,7 @@ onBeforeUnmount(() => {
         <el-table-column prop="occurrenceDate" label="执行日期" width="120" />
         <el-table-column label="时间" width="96"><template #default="scope"><strong class="time-cell">{{ scope.row.scheduleTime }}</strong></template></el-table-column>
         <el-table-column prop="title" label="任务名称" min-width="160" />
+        <el-table-column label="作业照片" width="116"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column label="任务对象" min-width="100"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="重复" width="90"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="90"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
@@ -498,7 +507,7 @@ onBeforeUnmount(() => {
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="reviewVisible" title="图片批改" width="860px" class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
+    <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
       <div class="review-toolbar">
         <label>笔色 <input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
         <label>粗细 <input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }} px</span></label>
