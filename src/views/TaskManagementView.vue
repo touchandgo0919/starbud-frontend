@@ -651,8 +651,8 @@ onBeforeUnmount(() => {
         <label class="field"><span>任务状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="待完成" value="pending" /><el-option label="已完成" value="completed" /></el-select></label>
         <label class="field"><span>重复方式</span><el-select v-model="filters.repeatType" clearable placeholder="全部方式"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></label>
         <div class="filter-actions">
-          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
           <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
+          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
         </div>
       </form>
     </section>

@@ -85,8 +85,8 @@ onMounted(() => {
         <label class="field"><span>提交状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="已提交" value="submitted" /><el-option label="提交中" value="draft" /></el-select></label>
         <label class="field"><span>批改状态</span><el-select v-model="filters.reviewStatus" clearable placeholder="全部状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /></el-select></label>
         <div class="filter-actions">
-          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
           <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
+          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
         </div>
       </form>
     </section>
