@@ -30,9 +30,9 @@ const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewColor = ref("#e5484d");
 const reviewLineWidth = ref(6);
 const reviewZoom = ref(100);
-const reviewTool = ref<"pen" | "text" | "rectangle">("pen");
-const reviewText = ref("");
+const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji">("pen");
 const reviewFontSize = ref(28);
+const reviewEmoji = ref("👍");
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
 const editingTaskId = ref("");
@@ -175,6 +175,7 @@ let isReviewDrawing = false;
 let previousReviewPoint: { x: number; y: number } | null = null;
 let rectangleStart: { x: number; y: number } | null = null;
 let rectangleBase: ImageData | null = null;
+const reviewHistory: ImageData[] = [];
 
 async function openDetail(task: Task) {
   detailTask.value = task;
@@ -221,6 +222,7 @@ async function openReview(photo: SubmissionPhoto) {
   reviewPhoto.value = photo;
   reviewZoom.value = 100;
   reviewTool.value = "pen";
+  reviewHistory.length = 0;
   reviewVisible.value = true;
   await nextTick();
 }
@@ -288,7 +290,11 @@ function startReviewDrawing(event: MouseEvent) {
   const point = reviewPoint(event);
   if (!point) return;
   if (reviewTool.value === "text") {
-    insertReviewText(point);
+    void insertReviewText(point);
+    return;
+  }
+  if (reviewTool.value === "emoji") {
+    insertReviewEmoji(point);
     return;
   }
   if (reviewTool.value === "rectangle") {
@@ -297,24 +303,44 @@ function startReviewDrawing(event: MouseEvent) {
     if (!canvas || !context) return;
     rectangleStart = point;
     rectangleBase = context.getImageData(0, 0, canvas.width, canvas.height);
+    reviewHistory.push(rectangleBase);
     return;
   }
+  saveReviewHistory();
   isReviewDrawing = true;
   previousReviewPoint = point;
   drawReviewLine(point, { x: point.x + 0.01, y: point.y + 0.01 });
 }
 
-function insertReviewText(point: { x: number; y: number }) {
-  const text = reviewText.value.trim();
-  const context = reviewCanvas.value?.getContext("2d");
-  if (!text || !context) {
-    ElMessage.warning("请先输入要插入的文字。");
-    return;
+async function insertReviewText(point: { x: number; y: number }) {
+  try {
+    const { value } = await ElMessageBox.prompt("请输入要添加到图片上的批注文字。", "插入文字", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      inputPlaceholder: "例如：这里需要修改",
+      inputValidator: (value) => value.trim().length > 0 || "请输入文字"
+    });
+    const context = reviewCanvas.value?.getContext("2d");
+    if (!context) return;
+    saveReviewHistory();
+    context.fillStyle = reviewColor.value;
+    context.font = `700 ${reviewFontSize.value}px sans-serif`;
+    context.textBaseline = "top";
+    value.trim().split(/\r?\n/).forEach((line, index) => context.fillText(line, point.x, point.y + index * (reviewFontSize.value + 8)));
+  } catch {
+    // 取消文字输入时不修改图片。
+  } finally {
+    reviewTool.value = "pen";
   }
-  context.fillStyle = reviewColor.value;
-  context.font = `700 ${reviewFontSize.value}px sans-serif`;
+}
+
+function insertReviewEmoji(point: { x: number; y: number }) {
+  const context = reviewCanvas.value?.getContext("2d");
+  if (!context) return;
+  saveReviewHistory();
+  context.font = `48px sans-serif`;
   context.textBaseline = "top";
-  text.split(/\r?\n/).forEach((line, index) => context.fillText(line, point.x, point.y + index * (reviewFontSize.value + 8)));
+  context.fillText(reviewEmoji.value, point.x, point.y);
   reviewTool.value = "pen";
 }
 
@@ -347,8 +373,27 @@ function clearReviewDrawing() {
   const canvas = reviewCanvas.value;
   const context = canvas?.getContext("2d");
   if (!canvas || !context || !reviewSourceImage) return;
+  saveReviewHistory();
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(reviewSourceImage, 0, 0);
+}
+
+function saveReviewHistory() {
+  const canvas = reviewCanvas.value;
+  const context = canvas?.getContext("2d");
+  if (!canvas || !context) return;
+  reviewHistory.push(context.getImageData(0, 0, canvas.width, canvas.height));
+  if (reviewHistory.length > 30) reviewHistory.shift();
+}
+
+function undoReviewAction() {
+  const snapshot = reviewHistory.pop();
+  const context = reviewCanvas.value?.getContext("2d");
+  if (!snapshot || !context) {
+    ElMessage.info("没有可撤销的批注。");
+    return;
+  }
+  context.putImageData(snapshot, 0, 0);
 }
 
 function submitReviewedImage() {
@@ -583,17 +628,17 @@ onBeforeUnmount(() => {
       <div class="review-toolbar">
         <label>笔色 <input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
         <label>粗细 <input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }} px</span></label>
-        <label class="review-text-input">文字 <input v-model="reviewText" maxlength="80" placeholder="输入评语" aria-label="批改文字" /></label>
         <label>字号 <input v-model.number="reviewFontSize" type="range" min="16" max="56" step="2" aria-label="文字字号" /><span>{{ reviewFontSize }} px</span></label>
         <el-button :type="reviewTool === 'text' ? 'success' : 'default'" @click="reviewTool = 'text'">插入文字</el-button>
+        <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-button :type="reviewTool === 'emoji' ? 'success' : 'default'">😊 表情</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
         <el-button :type="reviewTool === 'rectangle' ? 'success' : 'default'" @click="reviewTool = 'rectangle'">矩形框</el-button>
         <label>缩放 <input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
-        <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
+        <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="undoReviewAction">撤销上一步</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
       </div>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
         <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
       </div>
-      <p class="review-hint">画笔模式可直接书写；点击“插入文字”后，再点击图片位置即可添加评语。提交后会立即通知小朋友批改已完成。</p>
+      <p class="review-hint">画笔模式可直接书写；文字、表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
       <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>
     </el-dialog>
   </div>
