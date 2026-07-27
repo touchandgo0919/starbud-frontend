@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { deleteSubmission, getSubmissions } from "../services/api";
-import type { Submission } from "../types/task";
+import { Refresh, Search } from "@element-plus/icons-vue";
+import { deleteSubmission, getChildren, getSubmissions } from "../services/api";
+import type { Child, Submission } from "../types/task";
 
 const submissions = ref<Submission[]>([]);
+const children = ref<Child[]>([]);
 const loading = ref(false);
-const keyword = ref("");
+const filters = reactive({ keyword: "", childId: "", status: "", reviewStatus: "" });
 
 const filteredSubmissions = computed(() => {
-  const query = keyword.value.trim().toLowerCase();
-  return query ? submissions.value.filter((item) => item.taskTitle.toLowerCase().includes(query)) : submissions.value;
+  const query = filters.keyword.trim().toLowerCase();
+  return submissions.value.filter((item) => {
+    const matchesKeyword = !query || item.taskTitle.toLowerCase().includes(query) || item.note.toLowerCase().includes(query);
+    const matchesChild = !filters.childId || item.childId === filters.childId;
+    const matchesStatus = !filters.status || item.status === filters.status;
+    const matchesReview = !filters.reviewStatus || (filters.reviewStatus === "reviewed" ? Boolean(item.reviewedAt) : !item.reviewedAt);
+    return matchesKeyword && matchesChild && matchesStatus && matchesReview;
+  });
 });
 
 function formatDateTime(value: string | null) {
@@ -30,6 +38,23 @@ async function loadSubmissions() {
   }
 }
 
+async function loadChildren() {
+  try {
+    children.value = await getChildren();
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "成员加载失败。");
+  }
+}
+
+function applyFilters() {
+  void loadSubmissions();
+}
+
+function resetFilters() {
+  Object.assign(filters, { keyword: "", childId: "", status: "", reviewStatus: "" });
+  void loadSubmissions();
+}
+
 async function removeSubmission(submission: Submission) {
   try {
     await ElMessageBox.confirm(`删除“${submission.taskTitle}”的提交后，作业照片和批改图也会一并删除。`, "删除提交", {
@@ -45,14 +70,24 @@ async function removeSubmission(submission: Submission) {
   }
 }
 
-onMounted(loadSubmissions);
+onMounted(() => {
+  void loadSubmissions();
+  void loadChildren();
+});
 </script>
 
 <template>
   <div class="page-stack" v-loading="loading">
     <section class="content-panel filter-panel">
-      <form class="filter-grid submission-filter-grid" @submit.prevent="loadSubmissions">
-        <label class="field"><span>关键词</span><el-input v-model="keyword" clearable placeholder="搜索任务名称" /></label>
+      <form class="filter-grid" @submit.prevent="applyFilters">
+        <label class="field"><span>关键词</span><el-input v-model="filters.keyword" clearable placeholder="搜索任务名称或备注" /></label>
+        <label class="field"><span>任务对象</span><el-select v-model="filters.childId" clearable placeholder="全部成员"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
+        <label class="field"><span>提交状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="已提交" value="submitted" /><el-option label="提交中" value="draft" /></el-select></label>
+        <label class="field"><span>批改状态</span><el-select v-model="filters.reviewStatus" clearable placeholder="全部状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /></el-select></label>
+        <div class="filter-actions">
+          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+          <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
+        </div>
       </form>
     </section>
 
