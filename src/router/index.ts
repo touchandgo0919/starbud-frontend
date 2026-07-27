@@ -7,6 +7,7 @@ const DashboardView = () => import("../views/DashboardView.vue");
 const FamilyManagementView = () => import("../views/FamilyManagementView.vue");
 const LoginView = () => import("../views/LoginView.vue");
 const TaskManagementView = () => import("../views/TaskManagementView.vue");
+const SubmissionManagementView = () => import("../views/SubmissionManagementView.vue");
 const UserManagementView = () => import("../views/UserManagementView.vue");
 
 const router = createRouter({
@@ -34,6 +35,12 @@ const router = createRouter({
           name: "Tasks",
           component: TaskManagementView,
           meta: { title: "任务管理", description: "筛选、创建与维护家庭任务" }
+        },
+        {
+          path: "submissions",
+          name: "Submissions",
+          component: SubmissionManagementView,
+          meta: { title: "提交管理", description: "查看并清理孩子提交的作业", familyOnly: true }
         },
         {
           path: "families",

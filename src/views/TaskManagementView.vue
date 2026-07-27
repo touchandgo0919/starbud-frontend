@@ -642,7 +642,7 @@ onBeforeUnmount(() => {
         <el-table-column label="状态" width="100"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ scope.row.status === "completed" ? "已完成" : "待完成" }}</span></template></el-table-column>
         <el-table-column label="作业照片" width="116"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="104"><template #default="scope"><el-button v-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
+        <el-table-column label="操作" width="100" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
         <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
@@ -706,11 +706,11 @@ onBeforeUnmount(() => {
       </el-descriptions>
       <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
         <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : detailTask.submissionStatus === "submitted" ? "本次提交暂未包含可查看的照片。" : "暂未提交作业。" }}</p></div></div>
-        <div v-if="submissionNote" class="submission-note"><strong>提交备注</strong><p>{{ submissionNote }}</p></div>
         <button v-if="submissionPhotos.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
         </button>
+        <div class="submission-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
       </section>
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>

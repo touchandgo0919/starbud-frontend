@@ -238,6 +238,10 @@ export async function getSubmissions() {
   }));
 }
 
+export async function deleteSubmission(submissionId: string) {
+  await request<{ deleted: true }>(`/api/submissions/${submissionId}`, { method: "DELETE" });
+}
+
 export async function getTaskSubmission(taskId: string, taskDate: string) {
   const body = await request<{ submission: Submission }>(`/api/tasks/${taskId}/submission?date=${encodeURIComponent(taskDate)}`);
   return {

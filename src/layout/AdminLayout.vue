@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { HomeFilled, House, List, SwitchButton, UserFilled } from "@element-plus/icons-vue";
+import { DocumentChecked, HomeFilled, House, List, SwitchButton, UserFilled } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 
 const route = useRoute();
@@ -34,6 +34,10 @@ async function logout() {
         <el-menu-item index="/tasks">
           <el-icon><List /></el-icon>
           <span>任务管理</span>
+        </el-menu-item>
+        <el-menu-item v-if="auth.user?.role !== 'child'" index="/submissions">
+          <el-icon><DocumentChecked /></el-icon>
+          <span>提交管理</span>
         </el-menu-item>
         <el-menu-item v-if="auth.user?.role !== 'child'" index="/families">
           <el-icon><House /></el-icon>
