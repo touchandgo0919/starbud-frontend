@@ -28,6 +28,8 @@ const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: bool
 const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
+const originalPreviewVisible = ref(false);
+const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
@@ -222,6 +224,7 @@ async function openDetail(task: Task) {
 }
 
 async function openTaskReview(task: Task) {
+  if (task.finalizedAt) return;
   await openDetail(task);
   const original = submissionPhotos.value[0];
   if (!original) return;
@@ -230,6 +233,7 @@ async function openTaskReview(task: Task) {
 
 async function openReviewEntry(task: Task) {
   await openDetail(task);
+  if (task.finalizedAt && !submissionReviewImageUrl.value) return;
   if (submissionReviewImageUrl.value) {
     selectedReviewImageUrl.value = null;
     reviewResultVisible.value = true;
@@ -240,12 +244,18 @@ async function openReviewEntry(task: Task) {
 
 async function restartReview() {
   const task = detailTask.value;
+  if (task?.finalizedAt) return;
   reviewResultVisible.value = false;
   selectedReviewImageUrl.value = null;
   if (task) await openTaskReview(task);
 }
 
 async function reviewRoundOriginal(photo: SubmissionPhoto) {
+  if (detailTask.value?.finalizedAt) {
+    originalPreviewUrl.value = photo.url;
+    originalPreviewVisible.value = true;
+    return;
+  }
   if (auth.user?.role === "child") return;
   await openReview(photo);
 }
@@ -743,7 +753,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <button v-if="submissionPhotos.length && !submissionReviewRounds.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
+        <button v-if="submissionPhotos.length && !submissionReviewRounds.length" type="button" class="submission-photo-card review-entry" :disabled="Boolean(detailTask.finalizedAt && !submissionReviewImageUrl)" :title="detailTask.finalizedAt && !submissionReviewImageUrl ? '任务已完成，不能再次批改' : submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
           <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
           <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
         </button>
@@ -754,7 +764,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ round.sequence }} 次批改</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="auth.user?.role === 'child' ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ auth.user?.role === 'child' ? '原图' : '批改这张' }}</span></button></div>
+              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="detailTask?.finalizedAt ? '查看原图' : auth.user?.role === 'child' ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ detailTask?.finalizedAt || auth.user?.role === 'child' ? '查看原图' : '批改这张' }}</span></button></div>
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
@@ -766,7 +776,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ submissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" title="批改这张" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>批改这张</span></button></div>
+              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="detailTask?.finalizedAt ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ detailTask?.finalizedAt ? '查看原图' : '批改这张' }}</span></button></div>
             </div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>等待家长批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
@@ -778,7 +788,12 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
       <img v-if="selectedReviewImageUrl || submissionReviewImageUrl" class="review-result-image" :src="selectedReviewImageUrl || submissionReviewImageUrl || ''" alt="批改后照片" />
-      <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button type="success" @click="restartReview">重新批改</el-button></template>
+      <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button v-if="!detailTask?.finalizedAt" type="success" @click="restartReview">重新批改</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="originalPreviewVisible" title="原图" width="min(860px, 92vw)" class="form-dialog">
+      <img v-if="originalPreviewUrl" class="review-result-image" :src="originalPreviewUrl" alt="作业原图" />
+      <template #footer><el-button type="primary" @click="originalPreviewVisible = false">关闭</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
