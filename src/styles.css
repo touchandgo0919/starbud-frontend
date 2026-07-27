@@ -219,8 +219,8 @@ h1, h2, h3, p { margin: 0; }
 .review-toolbar input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
 .review-toolbar input[type="range"] { accent-color: var(--green); }
 .review-toolbar span { color: var(--muted); font-size: 12px; }
-.review-canvas-shell { overflow: auto; height: calc(100vh - 180px); border: 1px solid var(--border); border-radius: 8px; background: #101216; text-align: center; }
-.review-canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+.review-canvas-shell { display: grid; height: calc(100vh - 180px); overflow: hidden; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #101216; }
+.review-canvas { display: block; width: auto; max-width: 100%; height: auto; max-height: 100%; cursor: crosshair; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }
