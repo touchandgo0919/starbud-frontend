@@ -220,6 +220,9 @@ h1, h2, h3, p { margin: 0; }
 .task-photo-preview { position: relative; display: block; width: 52px; height: 38px; overflow: hidden; padding: 0; border: 1px solid var(--green); border-radius: 5px; background: #12151b; cursor: pointer; }
 .task-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
 .task-photo-preview span { position: absolute; right: 2px; bottom: 1px; min-width: 14px; border-radius: 8px; background: var(--green); color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
+.submission-photo-preview { position: relative; width: 52px; height: 38px; overflow: hidden; border: 1px solid var(--border); border-radius: 5px; background: #12151b; }
+.submission-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.submission-photo-preview span { position: absolute; right: 2px; bottom: 1px; min-width: 14px; border-radius: 8px; background: var(--green); color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
 .review-entry { width: min(100%, 220px); }
 .submission-note { width: min(100%, 420px); margin-top: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); }
 .submission-note strong { color: #d8dce3; font-size: 13px; }
