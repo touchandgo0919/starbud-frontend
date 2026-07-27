@@ -20,9 +20,11 @@ const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const submissionReviewImageUrl = ref<string | null>(null);
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean }>>({});
 const submissionPhotosLoading = ref(false);
+const reviewResultVisible = ref(false);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
@@ -33,6 +35,9 @@ const reviewZoom = ref(100);
 const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji">("pen");
 const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
+const reviewTextAnnotations = ref<Array<{ id: string; text: string; x: number; y: number; color: string; fontSize: number }>>([]);
+const reviewCanvasDisplay = ref({ width: 0, height: 0 });
+let movingAnnotation: { id: string; offsetX: number; offsetY: number } | null = null;
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
 const editingTaskId = ref("");
@@ -180,12 +185,14 @@ const reviewHistory: ImageData[] = [];
 async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
+  submissionReviewImageUrl.value = null;
   detailVisible.value = true;
 
   submissionPhotosLoading.value = true;
   try {
     const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
     submissionPhotos.value = submission.photos;
+    submissionReviewImageUrl.value = submission.reviewImageUrl;
     selectedSubmissionId.value = submission.id;
   } catch (cause) {
     if (!(cause instanceof Error) || !cause.message.includes("404")) ElMessage.error(cause instanceof Error ? cause.message : "提交照片加载失败。");
@@ -196,7 +203,24 @@ async function openDetail(task: Task) {
 
 async function openTaskReview(task: Task) {
   await openDetail(task);
-  if (submissionPhotos.value.length) await openReview(submissionPhotos.value[0]);
+  const original = submissionPhotos.value[0];
+  if (!original) return;
+  await openReview(submissionReviewImageUrl.value ? { ...original, url: submissionReviewImageUrl.value } : original);
+}
+
+async function openReviewEntry(task: Task) {
+  await openDetail(task);
+  if (submissionReviewImageUrl.value) {
+    reviewResultVisible.value = true;
+    return;
+  }
+  await openTaskReview(task);
+}
+
+async function restartReview() {
+  const task = detailTask.value;
+  reviewResultVisible.value = false;
+  if (task) await openTaskReview(task);
 }
 
 function formatDateTime(value: string | null) {
@@ -223,6 +247,7 @@ async function openReview(photo: SubmissionPhoto) {
   reviewZoom.value = 100;
   reviewTool.value = "pen";
   reviewHistory.length = 0;
+  reviewTextAnnotations.value = [];
   reviewVisible.value = true;
   await nextTick();
 }
@@ -255,6 +280,7 @@ function fitReviewCanvas() {
   const scale = Math.min(bounds.width / canvas.width, bounds.height / canvas.height, 1) * (reviewZoom.value / 100);
   canvas.style.width = `${Math.floor(canvas.width * scale)}px`;
   canvas.style.height = `${Math.floor(canvas.height * scale)}px`;
+  reviewCanvasDisplay.value = { width: Math.floor(canvas.width * scale), height: Math.floor(canvas.height * scale) };
 }
 
 function showWholeReviewImage() {
@@ -320,18 +346,49 @@ async function insertReviewText(point: { x: number; y: number }) {
       inputPlaceholder: "例如：这里需要修改",
       inputValidator: (value) => value.trim().length > 0 || "请输入文字"
     });
-    const context = reviewCanvas.value?.getContext("2d");
-    if (!context) return;
-    saveReviewHistory();
-    context.fillStyle = reviewColor.value;
-    context.font = `700 ${reviewFontSize.value}px sans-serif`;
-    context.textBaseline = "top";
-    value.trim().split(/\r?\n/).forEach((line, index) => context.fillText(line, point.x, point.y + index * (reviewFontSize.value + 8)));
+    reviewTextAnnotations.value.push({ id: `${Date.now()}-${Math.random()}`, text: value.trim(), x: point.x, y: point.y, color: reviewColor.value, fontSize: reviewFontSize.value });
   } catch {
     // 取消文字输入时不修改图片。
   } finally {
     reviewTool.value = "pen";
   }
+}
+
+function startMoveAnnotation(event: MouseEvent, annotation: { id: string; x: number; y: number }) {
+  const canvas = reviewCanvas.value;
+  if (!canvas) return;
+  const bounds = canvas.getBoundingClientRect();
+  movingAnnotation = { id: annotation.id, offsetX: event.clientX - bounds.left - annotation.x * (bounds.width / canvas.width), offsetY: event.clientY - bounds.top - annotation.y * (bounds.height / canvas.height) };
+  window.addEventListener("mousemove", moveAnnotation);
+  window.addEventListener("mouseup", stopMoveAnnotation, { once: true });
+}
+
+function moveAnnotation(event: MouseEvent) {
+  if (!movingAnnotation || !reviewCanvas.value) return;
+  const canvas = reviewCanvas.value;
+  const bounds = canvas.getBoundingClientRect();
+  const annotation = reviewTextAnnotations.value.find((item) => item.id === movingAnnotation?.id);
+  if (!annotation) return;
+  annotation.x = Math.max(0, Math.min(canvas.width, (event.clientX - bounds.left - movingAnnotation.offsetX) * (canvas.width / bounds.width)));
+  annotation.y = Math.max(0, Math.min(canvas.height, (event.clientY - bounds.top - movingAnnotation.offsetY) * (canvas.height / bounds.height)));
+}
+
+function stopMoveAnnotation() {
+  movingAnnotation = null;
+  window.removeEventListener("mousemove", moveAnnotation);
+}
+
+function annotationStyle(annotation: { x: number; y: number; color: string; fontSize: number }) {
+  const canvas = reviewCanvas.value;
+  const display = reviewCanvasDisplay.value;
+  if (!canvas || !canvas.width || !canvas.height || !display.width) return {};
+  const scale = display.width / canvas.width;
+  return {
+    left: `${annotation.x * scale}px`,
+    top: `${annotation.y * scale}px`,
+    color: annotation.color,
+    fontSize: `${annotation.fontSize * scale}px`
+  };
 }
 
 function insertReviewEmoji(point: { x: number; y: number }) {
@@ -376,6 +433,7 @@ function clearReviewDrawing() {
   saveReviewHistory();
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(reviewSourceImage, 0, 0);
+  reviewTextAnnotations.value = [];
 }
 
 function saveReviewHistory() {
@@ -396,14 +454,35 @@ function undoReviewAction() {
   context.putImageData(snapshot, 0, 0);
 }
 
+function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const context = exportCanvas.getContext("2d");
+  if (!context) return null;
+  context.drawImage(canvas, 0, 0);
+  context.textBaseline = "top";
+  for (const annotation of reviewTextAnnotations.value) {
+    context.fillStyle = annotation.color;
+    context.font = `700 ${annotation.fontSize}px sans-serif`;
+    context.fillText(annotation.text, annotation.x, annotation.y);
+  }
+  return exportCanvas;
+}
+
 function submitReviewedImage() {
   const canvas = reviewCanvas.value;
   if (!canvas || !selectedSubmissionId.value) {
     ElMessage.error("未找到对应的作业提交。");
     return;
   }
+  const exportCanvas = createReviewedExportCanvas(canvas);
+  if (!exportCanvas) {
+    ElMessage.error("生成批改图片失败。");
+    return;
+  }
   reviewSubmitting.value = true;
-  canvas.toBlob(async (image) => {
+  exportCanvas.toBlob(async (image) => {
     if (!image) {
       reviewSubmitting.value = false;
       ElMessage.error("生成批改图片失败。");
@@ -507,6 +586,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  stopMoveAnnotation();
   window.removeEventListener("resize", updateDetailColumns);
 });
 </script>
@@ -612,16 +692,19 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <div class="task-submission-heading"><div><h3>已提交照片</h3><p>{{ submissionPhotos.length }} 张作业照片</p></div></div>
-        <div v-if="submissionPhotos.length" class="submission-photo-grid">
-          <button v-for="(photo, index) in submissionPhotos" :key="photo.id" type="button" class="submission-photo-card" @click="openReview(photo)">
-            <img :src="photo.url" :alt="`作业照片 ${index + 1}`" />
-            <span><strong>批改这张</strong><small>{{ formatBytes(photo.byteSize) }}</small></span>
-          </button>
-        </div>
+        <div class="task-submission-heading"><div><h3>作业照片</h3><p>{{ submissionPhotos.length ? `已提交 ${submissionPhotos.length} 张照片，可在批改页面查看原图。` : "这次提交暂未包含可查看的照片。" }}</p></div></div>
+        <button v-if="submissionPhotos.length" type="button" class="submission-photo-card review-entry" :title="submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
+          <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
+          <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
+        </button>
         <p v-else-if="!submissionPhotosLoading" class="task-submission-empty">这次提交暂未包含可查看的照片。</p>
       </section>
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
+      <img v-if="submissionReviewImageUrl" class="review-result-image" :src="submissionReviewImageUrl" alt="最后批改版本" />
+      <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button type="success" @click="restartReview">重新批改</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
@@ -636,9 +719,12 @@ onBeforeUnmount(() => {
         <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="undoReviewAction">撤销上一步</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
       </div>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
-        <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
+        <div class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }">
+          <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
+          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :style="annotationStyle(annotation)" title="拖动调整文字位置" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
+        </div>
       </div>
-      <p class="review-hint">画笔模式可直接书写；文字、表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
+      <p class="review-hint">画笔模式可直接书写；文字批注输入后可直接拖动调整位置；表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
       <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>
     </el-dialog>
   </div>
