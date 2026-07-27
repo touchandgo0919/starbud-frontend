@@ -30,7 +30,7 @@ const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewColor = ref("#e5484d");
 const reviewLineWidth = ref(6);
 const reviewZoom = ref(100);
-const reviewTool = ref<"pen" | "text">("pen");
+const reviewTool = ref<"pen" | "text" | "rectangle">("pen");
 const reviewText = ref("");
 const reviewFontSize = ref(28);
 const reviewSubmitting = ref(false);
@@ -173,6 +173,8 @@ function openEdit(task: Task) {
 let reviewSourceImage: HTMLImageElement | null = null;
 let isReviewDrawing = false;
 let previousReviewPoint: { x: number; y: number } | null = null;
+let rectangleStart: { x: number; y: number } | null = null;
+let rectangleBase: ImageData | null = null;
 
 async function openDetail(task: Task) {
   detailTask.value = task;
@@ -289,6 +291,14 @@ function startReviewDrawing(event: MouseEvent) {
     insertReviewText(point);
     return;
   }
+  if (reviewTool.value === "rectangle") {
+    const canvas = reviewCanvas.value;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    rectangleStart = point;
+    rectangleBase = context.getImageData(0, 0, canvas.width, canvas.height);
+    return;
+  }
   isReviewDrawing = true;
   previousReviewPoint = point;
   drawReviewLine(point, { x: point.x + 0.01, y: point.y + 0.01 });
@@ -309,6 +319,16 @@ function insertReviewText(point: { x: number; y: number }) {
 }
 
 function continueReviewDrawing(event: MouseEvent) {
+  if (reviewTool.value === "rectangle" && rectangleStart && rectangleBase) {
+    const point = reviewPoint(event);
+    const context = reviewCanvas.value?.getContext("2d");
+    if (!point || !context) return;
+    context.putImageData(rectangleBase, 0, 0);
+    context.strokeStyle = reviewColor.value;
+    context.lineWidth = reviewLineWidth.value;
+    context.strokeRect(rectangleStart.x, rectangleStart.y, point.x - rectangleStart.x, point.y - rectangleStart.y);
+    return;
+  }
   if (!isReviewDrawing || !previousReviewPoint) return;
   const point = reviewPoint(event);
   if (!point) return;
@@ -319,6 +339,8 @@ function continueReviewDrawing(event: MouseEvent) {
 function stopReviewDrawing() {
   isReviewDrawing = false;
   previousReviewPoint = null;
+  rectangleStart = null;
+  rectangleBase = null;
 }
 
 function clearReviewDrawing() {
@@ -564,6 +586,7 @@ onBeforeUnmount(() => {
         <label class="review-text-input">文字 <input v-model="reviewText" maxlength="80" placeholder="输入评语" aria-label="批改文字" /></label>
         <label>字号 <input v-model.number="reviewFontSize" type="range" min="16" max="56" step="2" aria-label="文字字号" /><span>{{ reviewFontSize }} px</span></label>
         <el-button :type="reviewTool === 'text' ? 'success' : 'default'" @click="reviewTool = 'text'">插入文字</el-button>
+        <el-button :type="reviewTool === 'rectangle' ? 'success' : 'default'" @click="reviewTool = 'rectangle'">矩形框</el-button>
         <label>缩放 <input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
         <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
       </div>
