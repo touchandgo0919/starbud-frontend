@@ -624,7 +624,10 @@ onBeforeUnmount(() => {
     <section class="content-panel table-panel">
       <div class="panel-heading">
         <div><h2>我的任务</h2><p>{{ selectedDateLabel }} · 共 {{ tasks.length }} 项任务</p></div>
-        <el-button v-if="auth.user?.role !== 'child'" type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
+        <div v-if="auth.user?.role !== 'child'" class="panel-heading-actions">
+          <el-button type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
+          <el-button :icon="Refresh" :loading="loading" @click="refreshTaskData">刷新</el-button>
+        </div>
       </div>
       <el-table v-loading="loading" :data="tasks" :row-key="taskRowKey" class="data-table desktop-table" empty-text="没有符合条件的任务">
         <el-table-column prop="occurrenceDate" label="执行日期" width="120" />

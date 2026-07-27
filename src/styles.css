@@ -148,6 +148,7 @@ h1, h2, h3, p { margin: 0; }
 
 .content-panel { min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+.panel-heading-actions { display: flex; align-items: center; gap: 10px; }
 .panel-heading h2 { color: var(--text); font-size: 18px; }
 .panel-heading p { margin-top: 5px; color: var(--muted); font-size: 12px; }
 .panel-link { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-size: 13px; text-decoration: none; }
@@ -166,6 +167,7 @@ h1, h2, h3, p { margin: 0; }
 .field { display: grid; gap: 8px; color: #b8bdc6; font-size: 12px; font-weight: 700; }
 .filter-panel { padding: 18px 20px; }
 .filter-grid { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(130px, 1fr)) auto; gap: 14px; align-items: end; }
+.submission-filter-grid { grid-template-columns: minmax(240px, 1.4fr) auto; }
 .user-filter-grid { display: grid; grid-template-columns: 1.5fr repeat(2, minmax(150px, .8fr)) auto; gap: 14px; align-items: end; }
 .filter-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .table-panel { padding-bottom: 12px; }
