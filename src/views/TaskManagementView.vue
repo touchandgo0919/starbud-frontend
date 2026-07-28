@@ -23,6 +23,7 @@ const submissionPhotos = ref<SubmissionPhoto[]>([]);
 const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
 const submissionReviewRounds = ref<SubmissionReviewRound[]>([]);
+const orderedSubmissionReviewRounds = computed(() => [...submissionReviewRounds.value].sort((left, right) => left.sequence - right.sequence));
 const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const taskReviewStates = ref<Record<string, { hasPhotos: boolean; reviewed: boolean; finalized: boolean }>>({});
 const submissionPhotosLoading = ref(false);
@@ -753,14 +754,9 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <button v-if="submissionPhotos.length && !submissionReviewRounds.length" type="button" class="submission-photo-card review-entry" :disabled="Boolean(detailTask.finalizedAt && !submissionReviewImageUrl)" :title="detailTask.finalizedAt && !submissionReviewImageUrl ? '任务已完成，不能再次批改' : submissionReviewImageUrl ? '查看最后批改版本' : '批改这张'" @click="openReviewEntry(detailTask)">
-          <img :src="submissionReviewImageUrl || submissionPhotos[0].url" :alt="submissionReviewImageUrl ? '最后批改版本' : '批改前原图'" />
-          <span><strong>{{ submissionReviewImageUrl ? "查看批改" : "批改这张" }}</strong><small>{{ submissionReviewImageUrl ? "最后批改版本" : "批改前原图" }}</small></span>
-        </button>
-        <div v-if="!submissionReviewRounds.length" class="submission-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
-        <section v-if="submissionReviewRounds.length" class="review-rounds">
+        <section v-if="orderedSubmissionReviewRounds.length || submissionPhotos.length" class="review-rounds">
           <h3>批改记录</h3>
-          <article v-for="round in submissionReviewRounds" :key="round.id" class="review-round">
+          <article v-for="round in orderedSubmissionReviewRounds" :key="round.id" class="review-round">
             <h4>第 {{ round.sequence }} 次批改</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
@@ -773,7 +769,7 @@ onBeforeUnmount(() => {
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
           <article v-if="submissionPhotos.length && !submissionReviewImageUrl" class="review-round review-round--pending">
-            <h4>第 {{ submissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
+            <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
               <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="detailTask?.finalizedAt ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ detailTask?.finalizedAt ? '查看原图' : '批改这张' }}</span></button></div>
