@@ -48,6 +48,7 @@ export interface SubmissionReviewRound {
   sequence: number;
   note: string;
   photos: SubmissionPhoto[];
+  reviewImages: SubmissionPhoto[];
   reviewImageUrl: string;
   reviewedAt: string;
 }

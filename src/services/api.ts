@@ -242,7 +242,9 @@ function normalizeSubmissionUrls(submission: Submission): Submission {
     reviewRounds: (submission.reviewRounds || []).map((round) => ({
       ...round,
       reviewImageUrl: apiUrl(round.reviewImageUrl),
-      photos: round.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) }))
+      photos: round.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+      reviewImages: (round.reviewImages?.length ? round.reviewImages : [{ id: `legacy-${round.id}`, url: round.reviewImageUrl, contentType: "image/png", byteSize: 0 }])
+        .map((image) => ({ ...image, url: apiUrl(image.url) }))
     }))
   };
 }

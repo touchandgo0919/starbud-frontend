@@ -785,7 +785,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
-              <div class="round-images"><button type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(round.reviewImageUrl)"><img class="round-reviewed-image" :src="round.reviewImageUrl" alt="批改后图片" /><span>查看批改</span></button></div>
+              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(image.url)"><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>查看批改</span></button></div>
             </div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
