@@ -103,6 +103,10 @@ function hasSubmission(task: Task) {
   return Boolean(task.submissionId || task.submissionStatus);
 }
 
+function canReviewSubmission(task: Task | null) {
+  return Boolean(task && task.submissionStatus === "submitted" && !task.finalizedAt && auth.user?.role !== "child");
+}
+
 async function loadTasks() {
   loading.value = true;
   try {
@@ -226,7 +230,10 @@ async function openDetail(task: Task) {
 }
 
 async function openTaskReview(task: Task) {
-  if (task.finalizedAt) return;
+  if (!canReviewSubmission(task)) {
+    ElMessage.info(task.submissionStatus === "draft" ? "小朋友尚未提交作业，暂不能批改。" : "当前作业暂不能批改。");
+    return;
+  }
   await openDetail(task);
   const original = submissionPhotos.value[0];
   if (!original) return;
@@ -253,12 +260,11 @@ async function restartReview() {
 }
 
 async function reviewRoundOriginal(photo: SubmissionPhoto) {
-  if (detailTask.value?.finalizedAt) {
+  if (!canReviewSubmission(detailTask.value)) {
     originalPreviewUrl.value = photo.url;
     originalPreviewVisible.value = true;
     return;
   }
-  if (auth.user?.role === "child") return;
   await openReview(photo);
 }
 
@@ -711,7 +717,7 @@ onBeforeUnmount(() => {
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="作业照片" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
-        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="taskReviewStates[taskRowKey(scope.row)]?.finalized" class="reviewed-label">已完成</span><el-button v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
+        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="taskReviewStates[taskRowKey(scope.row)]?.finalized" class="reviewed-label">已完成</span><el-button v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'submitted' && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'draft'" class="task-photo-empty">提交中</span><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
@@ -781,7 +787,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ round.sequence }} 次批改</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="detailTask?.finalizedAt ? '查看原图' : auth.user?.role === 'child' ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ detailTask?.finalizedAt || auth.user?.role === 'child' ? '查看原图' : '批改这张' }}</span></button></div>
+              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
@@ -793,7 +799,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="detailTask?.finalizedAt ? '查看原图' : '批改这张'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ detailTask?.finalizedAt ? '查看原图' : '批改这张' }}</span></button></div>
+              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>等待家长批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
