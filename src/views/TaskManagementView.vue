@@ -38,6 +38,7 @@ const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewColor = ref("#e5484d");
 const reviewLineWidth = ref(6);
 const reviewZoom = ref(100);
+const reviewRotation = ref(0);
 const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji">("pen");
 const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
@@ -304,6 +305,7 @@ function formatBytes(byteSize: number) {
 async function openReview(photo: SubmissionPhoto) {
   reviewPhoto.value = photo;
   reviewZoom.value = 100;
+  reviewRotation.value = 0;
   reviewTool.value = "pen";
   reviewHistory.length = 0;
   reviewTextAnnotations.value = [];
@@ -319,16 +321,38 @@ function loadReviewCanvas() {
   const image = new Image();
   image.crossOrigin = "anonymous";
   image.onload = () => {
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    fitReviewCanvas();
-    context.drawImage(image, 0, 0);
     reviewSourceImage = image;
+    renderReviewSourceImage();
   };
   image.onerror = () => ElMessage.error("批改图片加载失败。");
   image.src = photo.url;
+}
+
+function renderReviewSourceImage() {
+  const canvas = reviewCanvas.value;
+  const image = reviewSourceImage;
+  if (!canvas || !image) return;
+  const normalizedRotation = ((reviewRotation.value % 360) + 360) % 360;
+  const isSideways = normalizedRotation === 90 || normalizedRotation === 270;
+  canvas.width = isSideways ? image.naturalHeight : image.naturalWidth;
+  canvas.height = isSideways ? image.naturalWidth : image.naturalHeight;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.save();
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate((normalizedRotation * Math.PI) / 180);
+  context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+  context.restore();
+  fitReviewCanvas();
+}
+
+function rotateReviewImage(degrees: number) {
+  if (!reviewSourceImage) return;
+  reviewRotation.value = (reviewRotation.value + degrees + 360) % 360;
+  reviewHistory.length = 0;
+  reviewTextAnnotations.value = [];
+  stopReviewDrawing();
+  renderReviewSourceImage();
 }
 
 function fitReviewCanvas() {
@@ -486,13 +510,10 @@ function stopReviewDrawing() {
 }
 
 function clearReviewDrawing() {
-  const canvas = reviewCanvas.value;
-  const context = canvas?.getContext("2d");
-  if (!canvas || !context || !reviewSourceImage) return;
+  if (!reviewCanvas.value || !reviewSourceImage) return;
   saveReviewHistory();
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(reviewSourceImage, 0, 0);
   reviewTextAnnotations.value = [];
+  renderReviewSourceImage();
 }
 
 function saveReviewHistory() {
@@ -800,6 +821,7 @@ onBeforeUnmount(() => {
         <el-button :type="reviewTool === 'text' ? 'success' : 'default'" @click="reviewTool = 'text'">插入文字</el-button>
         <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-button :type="reviewTool === 'emoji' ? 'success' : 'default'">😊 表情</el-button><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
         <el-button :type="reviewTool === 'rectangle' ? 'success' : 'default'" @click="reviewTool = 'rectangle'">矩形框</el-button>
+        <el-button @click="rotateReviewImage(-90)">↶ 左转 90°</el-button><el-button @click="rotateReviewImage(90)">↷ 右转 90°</el-button>
         <label>缩放 <input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
         <el-button @click="showWholeReviewImage">全图</el-button><el-button @click="undoReviewAction">撤销上一步</el-button><el-button @click="clearReviewDrawing">清空笔迹</el-button>
       </div>
