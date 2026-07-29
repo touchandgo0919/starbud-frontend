@@ -112,6 +112,8 @@ function canReviewSubmission(task: Task | null) {
 
 function awaitingRevision(task: Task) {
   const state = taskReviewStates.value[taskRowKey(task)];
+  // Review rounds are historical records. After a child re-submits, they must
+  // not make the new submission look like it is still awaiting revision.
   return Boolean(!state?.finalized && (task.needsRevision || state?.reviewed));
 }
 
@@ -126,7 +128,7 @@ async function loadTasks() {
         const previewPhotos = submission.photos.length
           ? submission.photos
           : submission.reviewRounds.flatMap((round) => round.photos);
-        return [taskRowKey(task), previewPhotos, Boolean(submission.reviewedAt || submission.reviewRounds.length), Boolean(submission.finalizedAt)] as const;
+        return [taskRowKey(task), previewPhotos, Boolean(submission.reviewedAt), Boolean(submission.finalizedAt)] as const;
       } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const; }
     }));
     taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, photos]) => [key, photos]));
