@@ -151,6 +151,11 @@ h1, h2, h3, p { margin: 0; }
 .panel-heading-actions { display: flex; align-items: center; gap: 10px; }
 .panel-heading h2 { color: var(--text); font-size: 18px; }
 .panel-heading p { margin-top: 5px; color: var(--muted); font-size: 12px; }
+.panel-heading-progress { display: grid; flex: 1; grid-template-columns: auto auto minmax(120px, 1fr); gap: 8px; align-items: center; max-width: 620px; min-width: 240px; margin: 0 18px; }
+.panel-heading-progress strong { color: var(--text); font-size: 20px; line-height: 1; white-space: nowrap; }
+.panel-heading-progress > span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.task-progress-track { height: 10px; overflow: hidden; border-radius: 999px; background: #3a3a3a; }
+.task-progress-track i { display: block; height: 100%; min-width: 0; border-radius: inherit; background: var(--green); transition: width .25s ease; }
 .panel-link { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-size: 13px; text-decoration: none; }
 .progress-summary { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 22px; align-items: center; padding: 18px; border-radius: 8px; background: var(--surface-raised); }
 .progress-copy { display: flex; align-items: baseline; gap: 8px; }
@@ -326,6 +331,7 @@ h1, h2, h3, p { margin: 0; }
   .task-calendar-day { height: 40px; }
   .task-calendar-grid--month .task-calendar-day { height: 44px; }
   .panel-heading { align-items: flex-start; }
+  .panel-heading-progress { min-width: 0; margin: 0; }
   .progress-summary { grid-template-columns: 1fr; gap: 12px; }
   .overview-row { grid-template-columns: 54px minmax(0, 1fr); }
   .overview-row > .status-dot { grid-column: 2; }

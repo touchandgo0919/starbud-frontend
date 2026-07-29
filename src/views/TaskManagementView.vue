@@ -62,6 +62,8 @@ const selectedDateLabel = computed(() => {
   const [year, month, day] = selectedDate.value.split("-").map(Number);
   return `${year}年${month}月${day}日`;
 });
+const completedTaskCount = computed(() => tasks.value.filter((task) => task.status === "completed").length);
+const taskProgressPercent = computed(() => tasks.value.length ? Math.round((completedTaskCount.value / tasks.value.length) * 100) : 0);
 const dialogTitle = computed(() => editingTaskId.value ? "编辑任务" : "新建任务");
 
 function dateKey(date: Date) {
@@ -703,6 +705,11 @@ onBeforeUnmount(() => {
     <section class="content-panel table-panel">
       <div class="panel-heading">
         <div><h2>我的任务</h2><p>{{ selectedDateLabel }} · 共 {{ tasks.length }} 项任务</p></div>
+        <div class="panel-heading-progress" :aria-label="`已完成 ${completedTaskCount} 项，共 ${tasks.length} 项任务`">
+          <strong>{{ completedTaskCount }} / {{ tasks.length }}</strong>
+          <span>任务已完成</span>
+          <div class="task-progress-track" aria-hidden="true"><i :style="{ width: `${taskProgressPercent}%` }" /></div>
+        </div>
         <div v-if="auth.user?.role !== 'child'" class="panel-heading-actions">
           <el-button type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
           <el-button :icon="Refresh" :loading="loading" @click="refreshTaskData">刷新</el-button>
