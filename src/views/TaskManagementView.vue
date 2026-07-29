@@ -20,6 +20,7 @@ const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const submissionSubmittedAt = ref<string | null>(null);
 const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
 const submissionReviewRounds = ref<SubmissionReviewRound[]>([]);
@@ -212,6 +213,7 @@ const reviewHistory: ImageData[] = [];
 async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
+  submissionSubmittedAt.value = null;
   submissionNote.value = "";
   submissionReviewImageUrl.value = null;
   selectedReviewImageUrl.value = null;
@@ -224,6 +226,7 @@ async function openDetail(task: Task) {
   try {
     const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
     submissionPhotos.value = submission.photos;
+    submissionSubmittedAt.value = submission.submittedAt;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
     submissionReviewRounds.value = submission.reviewRounds;
@@ -818,21 +821,23 @@ onBeforeUnmount(() => {
           <h3>批改记录</h3>
           <article v-for="round in orderedSubmissionReviewRounds" :key="round.id" class="review-round">
             <h4>第 {{ round.sequence }} 次批改</h4>
+            <p class="review-round-time">提交时间：{{ formatDateTime(round.submittedAt) }}</p>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
+              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span><small class="round-image-time">提交：{{ formatDateTime(round.submittedAt) }}</small></button></div>
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
-              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(image.url)"><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>查看批改</span></button></div>
+              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(image.url)"><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>查看批改</span><small class="round-image-time">批改：{{ formatDateTime(image.createdAt) }}</small></button></div>
             </div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
           <article v-if="submissionPhotos.length && !submissionReviewImageUrl" class="review-round review-round--pending">
             <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
+            <p class="review-round-time">提交时间：{{ formatDateTime(submissionSubmittedAt) }}</p>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
+              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span><small class="round-image-time">提交：{{ formatDateTime(submissionSubmittedAt) }}</small></button></div>
             </div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>等待家长批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>

@@ -45,6 +45,7 @@ export interface SubmissionPhoto {
   url: string;
   contentType: string;
   byteSize: number;
+  createdAt: string;
 }
 
 export interface SubmissionReviewRound {
@@ -54,6 +55,7 @@ export interface SubmissionReviewRound {
   photos: SubmissionPhoto[];
   reviewImages: SubmissionPhoto[];
   reviewImageUrl: string;
+  submittedAt: string | null;
   reviewedAt: string;
 }
 
