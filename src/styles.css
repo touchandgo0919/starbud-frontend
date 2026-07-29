@@ -254,7 +254,6 @@ h1, h2, h3, p { margin: 0; }
 .round-image-action img { display: block; width: 130px; height: 100px; object-fit: cover; background: #101216; }
 .round-image-action span { padding: 6px 8px; background: var(--green); font-size: 12px; font-weight: 800; }
 .round-image-time { display: block; overflow: hidden; padding: 6px 8px; color: var(--muted); font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
-.review-round-time { margin: -6px 0 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .review-round-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .review-round-note strong { display: block; color: var(--muted); font-size: 12px; }
 .review-round-note p { margin-top: 6px; color: var(--text); font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
