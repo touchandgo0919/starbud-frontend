@@ -4,7 +4,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "@element-plus/icons-v
 
 const props = defineProps<{
   selectedDate: string;
-  taskDates: Record<string, number>;
+  taskDates: Record<string, "revision" | "review" | "active" | "pending" | "completed">;
   loading?: boolean;
 }>();
 const emit = defineEmits<{
@@ -87,13 +87,14 @@ function isToday(date: Date) {
   return dateKey(date) === dateKey(new Date());
 }
 
-function taskCount(date: Date) {
-  return props.taskDates[dateKey(date)] || 0;
+function taskStatus(date: Date) {
+  return props.taskDates[dateKey(date)] || null;
 }
 
 function dayLabel(date: Date) {
-  const count = taskCount(date);
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日${count ? `，${count}项我的任务` : ""}`;
+  const status = taskStatus(date);
+  const labels = { revision: "有待修改任务", review: "有待批改任务", active: "有进行中任务", pending: "有待处理任务", completed: "任务已完成" };
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日${status ? `，${labels[status]}` : ""}`;
 }
 
 watch(
@@ -153,7 +154,7 @@ onMounted(emitRange);
           'is-selected': dateKey(date) === selectedDate,
           'is-today': isToday(date),
           'is-outside': mode === 'month' && date.getMonth() !== anchorDate.getMonth(),
-          'has-task': taskCount(date) > 0
+          'has-task': Boolean(taskStatus(date))
         }"
         :data-date="dateKey(date)"
         :aria-label="dayLabel(date)"
@@ -161,7 +162,7 @@ onMounted(emitRange);
         @click="selectDate(date)"
       >
         <span>{{ date.getDate() }}</span>
-        <i v-if="taskCount(date)" aria-hidden="true" />
+        <i v-if="taskStatus(date)" :class="`task-calendar-dot--${taskStatus(date)}`" aria-hidden="true" />
       </button>
     </div>
     <footer class="task-calendar-legend"><i aria-hidden="true" /><span>我的任务</span></footer>
