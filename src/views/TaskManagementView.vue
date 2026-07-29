@@ -97,6 +97,7 @@ function canComplete(task: Task) {
 }
 
 function taskStatusLabel(task: Task) {
+  if (awaitingRevision(task)) return "待修改";
   if (task.submissionStatus === "submitted" && !task.finalizedAt) return task.needsRevision ? "待修改" : "待批改";
   return task.status === "completed" ? "已完成" : "待完成";
 }
@@ -107,6 +108,11 @@ function hasSubmission(task: Task) {
 
 function canReviewSubmission(task: Task | null) {
   return Boolean(task && task.submissionStatus === "submitted" && !task.finalizedAt && auth.user?.role !== "child");
+}
+
+function awaitingRevision(task: Task) {
+  const state = taskReviewStates.value[taskRowKey(task)];
+  return Boolean(!state?.finalized && (task.needsRevision || state?.reviewed));
 }
 
 async function loadTasks() {
@@ -120,7 +126,7 @@ async function loadTasks() {
         const previewPhotos = submission.photos.length
           ? submission.photos
           : submission.reviewRounds.flatMap((round) => round.photos);
-        return [taskRowKey(task), previewPhotos, Boolean(submission.reviewedAt), Boolean(submission.finalizedAt)] as const;
+        return [taskRowKey(task), previewPhotos, Boolean(submission.reviewedAt || submission.reviewRounds.length), Boolean(submission.finalizedAt)] as const;
       } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const; }
     }));
     taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, photos]) => [key, photos]));
@@ -729,7 +735,7 @@ onBeforeUnmount(() => {
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot" :class="`status-dot--${scope.row.status}`">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="作业照片" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
-        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="taskReviewStates[taskRowKey(scope.row)]?.finalized" class="reviewed-label">已完成</span><el-button v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'submitted' && !taskReviewStates[taskRowKey(scope.row)]?.reviewed" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'draft'" class="task-photo-empty">提交中</span><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.reviewed" class="reviewed-label">已批改</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
+        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="taskReviewStates[taskRowKey(scope.row)]?.finalized" class="reviewed-label">已完成</span><span v-else-if="awaitingRevision(scope.row)" class="revision-label">待修改</span><el-button v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'submitted'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="taskReviewStates[taskRowKey(scope.row)]?.hasPhotos && scope.row.submissionStatus === 'draft'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
