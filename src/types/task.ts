@@ -1,6 +1,7 @@
 export type RepeatType = "once" | "daily" | "weekdays" | "weekly";
 
 export type TaskStatus = "pending" | "completed" | "missed";
+export type TaskReviewStatus = "not_required" | "pending_submission" | "submitting" | "pending_review" | "needs_revision" | "completed";
 
 export interface Task {
   id: string;
@@ -21,6 +22,7 @@ export interface Task {
   reviewedAt: string | null;
   finalizedAt: string | null;
   needsRevision: boolean;
+  reviewStatus: TaskReviewStatus;
   submissionPhotoCount: number;
   createdAt: string;
 }
