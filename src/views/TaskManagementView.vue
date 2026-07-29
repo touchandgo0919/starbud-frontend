@@ -832,12 +832,12 @@ onBeforeUnmount(() => {
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
           <article v-if="submissionPhotos.length && !submissionReviewImageUrl" class="review-round review-round--pending">
-            <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交 <span>待批改</span></h4>
+            <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
               <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
-            <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>等待家长批改</span></div>
+            <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>家长未批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
           </article>
         </section>
