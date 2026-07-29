@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Refresh, Search } from "@element-plus/icons-vue";
+import { Plus, QuestionFilled, Refresh, Search } from "@element-plus/icons-vue";
 import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
@@ -52,7 +52,7 @@ const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
 const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
-const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 const calendarTaskDates = computed(() => calendarTasks.value.reduce<Record<string, number>>((dates, task) => {
   if (task.occurrenceDate) dates[task.occurrenceDate] = (dates[task.occurrenceDate] || 0) + 1;
@@ -177,6 +177,7 @@ function openCreate() {
     title: "",
     scheduleTime: currentTime(),
     repeatType: "daily",
+    requiresPhotoUpload: true,
     voiceEnabled: true,
     voiceContent: "",
     voiceReminderCount: 1
@@ -191,6 +192,7 @@ function openEdit(task: Task) {
     title: task.title,
     scheduleTime: task.scheduleTime,
     repeatType: task.repeatType,
+    requiresPhotoUpload: task.requiresPhotoUpload,
     voiceEnabled: task.voiceEnabled,
     voiceContent: task.voiceContent === task.title ? "" : task.voiceContent,
     voiceReminderCount: task.voiceReminderCount
@@ -752,10 +754,31 @@ onBeforeUnmount(() => {
           <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
-        <div class="dialog-form-row voice-reminder-row">
-          <el-form-item label="语音提醒"><el-checkbox v-model="form.voiceEnabled">开启语音提醒</el-checkbox></el-form-item>
-          <el-form-item v-if="form.voiceEnabled" label="提醒次数">
-            <el-input-number v-model="form.voiceReminderCount" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
+        <div class="task-options-row">
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">上传照片
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是照片型任务：儿童领取后必须提交照片，家长才能批改或关闭。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">语音提醒
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>请让小朋友在设备上安装并登录星星芽 AI 助手 App，才能正常收到语音提醒。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.voiceEnabled">开启</el-checkbox>
+          </el-form-item>
+          <el-form-item label="提醒次数">
+            <el-input-number v-model="form.voiceReminderCount" :disabled="!form.voiceEnabled" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
           </el-form-item>
         </div>
         <el-form-item v-if="form.voiceEnabled" label="提醒语音内容">
@@ -781,6 +804,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
         <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
+        <el-descriptions-item label="上传照片">{{ detailTask.requiresPhotoUpload ? "需要上传" : "无需上传" }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? `已提交（${detailTask.submissionPhotoCount} 张照片）` : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
         <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>

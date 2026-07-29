@@ -11,6 +11,7 @@ export interface Task {
   voiceEnabled: boolean;
   voiceContent: string;
   voiceReminderCount: number;
+  requiresPhotoUpload: boolean;
   status: TaskStatus;
   occurrenceDate: string | null;
   completedAt: string | null;
@@ -32,6 +33,7 @@ export interface CreateTaskPayload {
   voiceEnabled: boolean;
   voiceContent: string;
   voiceReminderCount: number;
+  requiresPhotoUpload: boolean;
 }
 
 export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId">;
