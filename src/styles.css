@@ -135,8 +135,6 @@ h1, h2, h3, p { margin: 0; }
 .task-calendar-day.is-today:not(.is-selected) > span { color: #5ee0a7; box-shadow: inset 0 0 0 1px rgba(0, 185, 107, .55); }
 .task-calendar-day.is-outside { color: #5f6671; }
 .task-calendar-grid--month .task-calendar-day { height: 48px; }
-.task-calendar-legend { display: flex; min-height: 22px; margin-top: 6px; align-items: center; justify-content: flex-end; gap: 6px; color: #7f8691; font-size: 10px; }
-.task-calendar-legend i { width: 5px; height: 5px; border-radius: 50%; background: #31ce87; }
 .task-calendar-panel[aria-busy="true"] .task-calendar-grid { opacity: .62; }
 
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }

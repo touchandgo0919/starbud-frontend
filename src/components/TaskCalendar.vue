@@ -165,6 +165,5 @@ onMounted(emitRange);
         <i v-if="taskStatus(date)" :class="`task-calendar-dot--${taskStatus(date)}`" aria-hidden="true" />
       </button>
     </div>
-    <footer class="task-calendar-legend"><i aria-hidden="true" /><span>我的任务</span></footer>
   </section>
 </template>
