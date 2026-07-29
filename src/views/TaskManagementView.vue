@@ -117,7 +117,10 @@ async function loadTasks() {
       if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const;
       try {
         const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
-        return [taskRowKey(task), submission.photos, Boolean(submission.reviewedAt), Boolean(submission.finalizedAt)] as const;
+        const previewPhotos = submission.photos.length
+          ? submission.photos
+          : submission.reviewRounds.flatMap((round) => round.photos);
+        return [taskRowKey(task), previewPhotos, Boolean(submission.reviewedAt), Boolean(submission.finalizedAt)] as const;
       } catch { return [taskRowKey(task), [] as SubmissionPhoto[], false, false] as const; }
     }));
     taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, photos]) => [key, photos]));
