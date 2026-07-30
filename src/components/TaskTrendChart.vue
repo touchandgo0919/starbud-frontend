@@ -93,16 +93,17 @@ function renderChart() {
         name: "已完成",
         type: "bar",
         data: props.points.map((point) => point.completed),
-        barWidth: 12,
-        itemStyle: { color: "#00b96b", borderRadius: [4, 4, 0, 0] },
+        barWidth: 20,
+        barGap: "32%",
+        itemStyle: { color: "#00b96b", borderRadius: 0 },
         emphasis: { focus: "series" }
       },
       {
         name: "未完成",
         type: "bar",
         data: props.points.map((point) => point.unfinished),
-        barWidth: 12,
-        itemStyle: { color: "#d89a3c", borderRadius: [4, 4, 0, 0] },
+        barWidth: 20,
+        itemStyle: { color: "#d89a3c", borderRadius: 0 },
         emphasis: { focus: "series" }
       },
       {

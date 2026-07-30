@@ -142,7 +142,9 @@ function updateTrendPeriod(period: TrendPeriod) {
   load({ preserveLoading: true });
 }
 
-function updateChild() {
+function selectChild(childId: string) {
+  if (selectedChildId.value === childId) return;
+  selectedChildId.value = childId;
   load({ preserveLoading: true });
 }
 
@@ -180,10 +182,10 @@ onMounted(load);
       <div class="panel-heading trend-heading">
         <div><h2>任务变化趋势</h2><p>按执行日期查看完成与未完成任务的变化</p></div>
         <div class="trend-controls">
-          <el-select v-model="selectedChildId" class="trend-member-select" placeholder="选择" aria-label="筛选任务成员" @change="updateChild">
-            <el-option label="全部成员" value="" />
-            <el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" />
-          </el-select>
+          <div class="trend-member-switch" aria-label="筛选任务成员">
+            <button :class="{ 'is-active': !selectedChildId }" type="button" @click="selectChild('')">全部</button>
+            <button v-for="child in children" :key="child.id" :class="{ 'is-active': selectedChildId === child.id }" type="button" @click="selectChild(child.id)">{{ child.name }}</button>
+          </div>
           <div class="trend-period-switch" aria-label="统计周期">
             <button :class="{ 'is-active': trendPeriod === 'week' }" type="button" @click="updateTrendPeriod('week')">本周</button>
             <button :class="{ 'is-active': trendPeriod === 'month' }" type="button" @click="updateTrendPeriod('month')">本月</button>
