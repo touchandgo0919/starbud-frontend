@@ -131,9 +131,7 @@ function taskStateClass(task: Task) {
   if (task.reviewStatus === "needs_revision") return "task-state--revision";
   if (task.reviewStatus === "pending_review") return "task-state--review";
   if (task.status === "completed" || task.reviewStatus === "completed") return "task-state--completed";
-  return task.claimedAt || task.reviewStatus === "submitting"
-    ? "task-state--active"
-    : "task-state--pending";
+  return "task-state--pending";
 }
 
 function hasSubmission(task: Task) {

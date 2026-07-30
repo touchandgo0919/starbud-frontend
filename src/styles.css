@@ -265,8 +265,6 @@ h1, h2, h3, p { margin: 0; }
 .revision-label { color: #ff7279; font-size: 12px; font-weight: 700; }
 .task-state--pending { color: #d59b21; }
 .task-state--pending::before { background: #ffc947; }
-.task-state--active { color: #33bf86; }
-.task-state--active::before { background: #0aa868; }
 .task-state--review { color: #60a5fa; }
 .task-state--review::before { background: #3b82f6; }
 .task-state--revision { color: #ff7279; }
