@@ -62,7 +62,7 @@ const saving = ref(false);
 const filters = reactive({ childId: "" });
 const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
-const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 type CalendarDotStatus = "revision" | "review" | "pending" | "completed";
 
@@ -223,6 +223,7 @@ function openCreate() {
   Object.assign(form, {
     childIds: children.value.map((child) => child.id),
     title: "",
+    startDate: selectedDate.value,
     scheduleTime: currentTime(),
     repeatType: "daily",
     requiresPhotoUpload: true,
@@ -238,6 +239,7 @@ function openEdit(task: Task) {
   Object.assign(form, {
     childIds: [task.childId],
     title: task.title,
+    startDate: task.startDate || task.occurrenceDate || selectedDate.value,
     scheduleTime: task.scheduleTime,
     repeatType: task.repeatType,
     requiresPhotoUpload: task.requiresPhotoUpload,
@@ -701,6 +703,10 @@ async function submitTask() {
     ElMessage.warning("请至少选择一位小朋友");
     return;
   }
+  if (!form.startDate) {
+    ElMessage.warning("请选择执行日期");
+    return;
+  }
 
   saving.value = true;
   try {
@@ -881,7 +887,10 @@ onBeforeUnmount(() => {
           </el-select>
         </el-form-item>
         <div class="dialog-form-row">
+          <el-form-item label="执行日期" required><el-date-picker v-model="form.startDate" type="date" format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false" /></el-form-item>
           <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
+        </div>
+        <div class="dialog-form-row">
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <div class="task-options-row">

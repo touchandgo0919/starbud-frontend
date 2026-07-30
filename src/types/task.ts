@@ -24,6 +24,7 @@ export interface Task {
   needsRevision: boolean;
   reviewStatus: TaskReviewStatus;
   submissionPhotoCount: number;
+  startDate: string;
   createdAt: string;
 }
 
@@ -36,6 +37,7 @@ export interface CreateTaskPayload {
   voiceContent: string;
   voiceReminderCount: number;
   requiresPhotoUpload: boolean;
+  startDate: string;
 }
 
 export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId">;
