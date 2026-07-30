@@ -915,10 +915,10 @@ onBeforeUnmount(() => {
       <el-radio-group v-model="statusRepairValue" class="status-repair-options">
         <el-radio value="unclaimed">待领取</el-radio>
         <el-radio value="claimed">已领取／待完成</el-radio>
-        <el-radio :disabled="Boolean(statusRepairTask?.requiresPhotoUpload)" value="completed">已完成</el-radio>
+        <el-radio value="completed">已完成</el-radio>
       </el-radio-group>
       <p v-if="statusRepairValue === 'unclaimed'" class="dialog-hint">已有作业提交的照片型任务不能恢复为待领取，避免误删提交数据。</p>
-      <p v-if="statusRepairTask?.requiresPhotoUpload" class="dialog-hint">照片型任务需通过批改流程关闭，不能直接标记已完成。</p>
+      <p v-if="statusRepairTask?.requiresPhotoUpload && statusRepairValue === 'completed'" class="dialog-hint">照片型任务已提交至少一张作业照片后，可直接标记为已完成，无需先上传批改图。</p>
       <template #footer><el-button @click="statusRepairVisible = false">取消</el-button><el-button type="primary" :loading="statusRepairing" @click="saveStatusRepair">确认修正</el-button></template>
     </el-dialog>
 
