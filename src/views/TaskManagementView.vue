@@ -881,16 +881,16 @@ onBeforeUnmount(() => {
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" class="form-dialog">
       <el-form label-position="top">
         <el-form-item label="任务名称" required><el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：完成数学作业" /></el-form-item>
-        <el-form-item label="任务对象" required>
-          <el-select v-model="form.childIds" multiple clearable :disabled="Boolean(editingTaskId)" placeholder="请选择一个或多个小朋友" style="width: 100%">
-            <el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" />
-          </el-select>
-        </el-form-item>
         <div class="dialog-form-row">
+          <el-form-item label="任务对象" required>
+            <el-select v-model="form.childIds" multiple clearable :disabled="Boolean(editingTaskId)" placeholder="请选择一个或多个小朋友" style="width: 100%">
+              <el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="执行日期" required><el-date-picker v-model="form.startDate" type="date" format="YYYY-MM-DD" value-format="YYYY-MM-DD" :clearable="false" /></el-form-item>
-          <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
         </div>
         <div class="dialog-form-row">
+          <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <div class="task-options-row">
