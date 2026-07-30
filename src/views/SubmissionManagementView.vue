@@ -93,21 +93,15 @@ onMounted(() => {
 
 <template>
   <div class="page-stack" v-loading="loading">
-    <section class="content-panel filter-panel">
-      <form class="filter-grid" @submit.prevent="applyFilters">
-        <label class="field"><span>关键词</span><el-input v-model="filters.keyword" clearable placeholder="搜索任务名称或备注" /></label>
-        <label class="field"><span>任务对象</span><el-select v-model="filters.childId" clearable placeholder="全部"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
-        <label class="field"><span>提交状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="已提交" value="submitted" /><el-option label="提交中" value="draft" /></el-select></label>
-        <label class="field"><span>批改状态</span><el-select v-model="filters.reviewStatus" clearable placeholder="全部状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /><el-option label="已完成" value="completed" /></el-select></label>
-        <div class="filter-actions">
-          <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
-          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
-        </div>
-      </form>
-    </section>
-
     <section class="content-panel table-panel">
-      <div class="panel-heading"><div><h2>提交记录</h2><p>共 {{ total }} 条提交记录</p></div><el-button @click="loadSubmissions(1)">刷新</el-button></div>
+      <form class="submission-list-toolbar" @submit.prevent="applyFilters">
+        <el-input v-model="filters.keyword" clearable placeholder="搜索任务名称或备注" aria-label="搜索提交" />
+        <el-select v-model="filters.childId" clearable placeholder="全部成员" aria-label="筛选任务对象"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select>
+        <el-select v-model="filters.status" clearable placeholder="提交状态" aria-label="筛选提交状态"><el-option label="已提交" value="submitted" /><el-option label="提交中" value="draft" /></el-select>
+        <el-select v-model="filters.reviewStatus" clearable placeholder="批改状态" aria-label="筛选批改状态"><el-option label="待批改" value="pending" /><el-option label="已批改" value="reviewed" /><el-option label="已完成" value="completed" /></el-select>
+        <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
+        <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+      </form>
       <el-table class="data-table" :data="submissions" empty-text="暂无提交记录">
         <el-table-column label="提交时间" min-width="176"><template #default="scope">{{ formatDateTime(scope.row.submittedAt) }}</template></el-table-column>
         <el-table-column prop="taskTitle" label="任务名称" min-width="170" />
@@ -117,8 +111,10 @@ onMounted(() => {
         <el-table-column label="批改状态" width="110"><template #default="scope"><span :class="scope.row.finalizedAt || scope.row.reviewedAt ? 'reviewed-label' : 'task-photo-empty'">{{ reviewStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="操作" width="90" fixed="right"><template #default="scope"><el-button link type="danger" @click="removeSubmission(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
-      <div v-if="total > pageSize" class="table-pagination">
+      <div v-if="total" class="table-pagination table-pagination--with-total">
+        <span class="table-pagination-total">共 {{ total }} 条提交记录</span>
         <el-pagination
+          v-if="total > pageSize"
           :current-page="currentPage"
           :page-size="pageSize"
           :total="total"
