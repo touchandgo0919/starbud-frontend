@@ -317,6 +317,9 @@ h1, h2, h3, p { margin: 0; }
 .task-state--completed { color: #9aa39f; }
 .task-state--completed::before { background: #8a9490; }
 .review-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; color: #c7cbd2; font-size: 13px; }
+.review-dialog.is-fullscreen .el-dialog__header { padding-right: 72px; }
+.review-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 32px; }
+.review-submit-button.el-button { margin-left: auto; }
 .review-tool-group { display: inline-flex; align-items: center; gap: 6px; padding-right: 8px; border-right: 1px solid rgba(255, 255, 255, .12); }
 .review-tool-group:last-child { padding-right: 0; border-right: 0; }
 .review-tool-button.el-button { width: 32px; min-width: 32px; height: 32px; margin: 0; padding: 0; border-color: transparent; background: transparent; color: #d4d8df; font-size: 17px; }

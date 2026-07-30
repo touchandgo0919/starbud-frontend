@@ -969,6 +969,12 @@ onBeforeUnmount(() => {
     </el-dialog>
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
+      <template #header="{ titleId, titleClass }">
+        <div class="review-dialog-header">
+          <span :id="titleId" :class="titleClass">图片批改</span>
+          <el-button class="review-submit-button" type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button>
+        </div>
+      </template>
       <div class="review-toolbar">
         <div class="review-tool-group">
           <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" :type="reviewTool === 'pen' ? 'success' : 'default'" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
@@ -1003,7 +1009,6 @@ onBeforeUnmount(() => {
         <el-tooltip content="下一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewNextPhoto" aria-label="下一张" @click="switchReviewPhoto(1)"><el-icon><ArrowRight /></el-icon></el-button></el-tooltip>
       </div>
       <p class="review-hint">画笔模式可直接书写；文字批注输入后可直接拖动调整位置；表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
-      <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>
     </el-dialog>
   </div>
 </template>
