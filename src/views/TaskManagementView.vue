@@ -36,6 +36,7 @@ const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewPhotos = ref<SubmissionPhoto[]>([]);
 const reviewPhotoIndex = ref(0);
+const reviewedPhotoBlobs = ref<Record<string, Blob>>({});
 const canReviewPreviousPhoto = computed(() => reviewPhotoIndex.value > 0);
 const canReviewNextPhoto = computed(() => reviewPhotoIndex.value < reviewPhotos.value.length - 1);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
@@ -377,8 +378,9 @@ function resetReviewCanvas() {
   }
 }
 
-async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo]) {
+async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo], preserveStagedReviews = false) {
   const photoIndex = photos.findIndex((item) => item.id === photo.id);
+  if (!preserveStagedReviews) reviewedPhotoBlobs.value = {};
   reviewPhotos.value = photos;
   reviewPhotoIndex.value = photoIndex >= 0 ? photoIndex : 0;
   reviewPhoto.value = photo;
@@ -391,11 +393,16 @@ async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [p
   loadReviewCanvas();
 }
 
-function switchReviewPhoto(offset: number) {
+async function switchReviewPhoto(offset: number) {
   const nextIndex = reviewPhotoIndex.value + offset;
   const photo = reviewPhotos.value[nextIndex];
   if (!photo) return;
-  void openReview(photo, reviewPhotos.value);
+  try {
+    await stashCurrentReviewedImage();
+    await openReview(photo, reviewPhotos.value, true);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "暂存当前批改图片失败。");
+  }
 }
 
 function loadReviewCanvas() {
@@ -405,14 +412,23 @@ function loadReviewCanvas() {
 
   const loadVersion = ++reviewImageLoadVersion;
   const image = new Image();
+  const stagedImage = reviewedPhotoBlobs.value[photo.id];
+  const sourceUrl = stagedImage ? URL.createObjectURL(stagedImage) : photo.url;
+  const releaseSourceUrl = () => {
+    if (stagedImage) URL.revokeObjectURL(sourceUrl);
+  };
   image.crossOrigin = "anonymous";
   image.onload = () => {
+    releaseSourceUrl();
     if (loadVersion !== reviewImageLoadVersion || reviewPhoto.value?.id !== photo.id) return;
     reviewSourceImage = image;
     renderReviewSourceImage();
   };
-  image.onerror = () => ElMessage.error("批改图片加载失败。");
-  image.src = photo.url;
+  image.onerror = () => {
+    releaseSourceUrl();
+    ElMessage.error("批改图片加载失败。");
+  };
+  image.src = sourceUrl;
 }
 
 function renderReviewSourceImage() {
@@ -637,34 +653,42 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
   return exportCanvas;
 }
 
-function submitReviewedImage() {
+async function reviewedImageBlob() {
   const canvas = reviewCanvas.value;
-  if (!canvas || !selectedSubmissionId.value) {
+  if (!canvas) return null;
+  const exportCanvas = createReviewedExportCanvas(canvas);
+  if (!exportCanvas) return null;
+  return new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, "image/png"));
+}
+
+async function stashCurrentReviewedImage() {
+  const photo = reviewPhoto.value;
+  if (!photo) return;
+  const image = await reviewedImageBlob();
+  if (!image) throw new Error("生成批改图片失败。");
+  reviewedPhotoBlobs.value = { ...reviewedPhotoBlobs.value, [photo.id]: image };
+}
+
+async function submitReviewedImage() {
+  if (!selectedSubmissionId.value) {
     ElMessage.error("未找到对应的作业提交。");
     return;
   }
-  const exportCanvas = createReviewedExportCanvas(canvas);
-  if (!exportCanvas) {
-    ElMessage.error("生成批改图片失败。");
-    return;
-  }
   reviewSubmitting.value = true;
-  exportCanvas.toBlob(async (image) => {
-    if (!image) {
-      reviewSubmitting.value = false;
-      ElMessage.error("生成批改图片失败。");
-      return;
-    }
-    try {
-      await submitSubmissionReview(selectedSubmissionId.value!, image);
-      reviewVisible.value = false;
-      ElMessage.success("批改已提交，已通知小朋友。");
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
-    } finally {
-      reviewSubmitting.value = false;
-    }
-  }, "image/png");
+  try {
+    await stashCurrentReviewedImage();
+    const images = reviewPhotos.value
+      .map((photo) => reviewedPhotoBlobs.value[photo.id])
+      .filter((image): image is Blob => Boolean(image));
+    if (!images.length) throw new Error("请至少批改一张图片。");
+    await submitSubmissionReview(selectedSubmissionId.value, images);
+    reviewVisible.value = false;
+    ElMessage.success(`已提交 ${images.length} 张批改图片，已通知小朋友。`);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
+  } finally {
+    reviewSubmitting.value = false;
+  }
 }
 
 async function submitTask() {

@@ -281,9 +281,9 @@ export async function getTaskSubmission(taskId: string, taskDate: string) {
   return normalizeSubmissionUrls(body.submission);
 }
 
-export async function submitSubmissionReview(submissionId: string, image: Blob) {
+export async function submitSubmissionReview(submissionId: string, images: Blob[]) {
   const formData = new FormData();
-  formData.append("image", image, "review.png");
+  images.forEach((image, index) => formData.append("images", image, `review-${index + 1}.png`));
   const token = getStoredToken();
   const response = await fetch(apiUrl(`/api/submissions/${submissionId}/review`), {
     method: "POST",
