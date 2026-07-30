@@ -263,6 +263,23 @@ h1, h2, h3, p { margin: 0; }
 .task-photo-empty { color: var(--muted); }
 .reviewed-label { color: #6bdca7; font-size: 12px; font-weight: 700; }
 .revision-label { color: #ff7279; font-size: 12px; font-weight: 700; }
+.task-state--pending { color: #d59b21; }
+.task-state--pending::before { background: #ffc947; }
+.task-state--active { color: #33bf86; }
+.task-state--active::before { background: #0aa868; }
+.task-state--review { color: #60a5fa; }
+.task-state--review::before { background: #3b82f6; }
+.task-state--revision { color: #ff7279; }
+.task-state--revision::before { background: #e5484d; }
+.task-state--completed { color: #9aa39f; }
+.task-state--completed::before { background: #8a9490; }
+.review-state { font-size: 12px; font-weight: 700; }
+.review-state--pending { color: #d59b21; }
+.review-state--active { color: #33bf86; }
+.review-state--review { color: #60a5fa; }
+.review-state--revision { color: #ff7279; }
+.review-state--completed { color: #9aa39f; }
+.review-action--review { border-color: #3b82f6 !important; background: #eff6ff !important; color: #2563eb !important; }
 .review-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 14px; color: #c7cbd2; font-size: 13px; }
 .review-toolbar label { display: inline-flex; align-items: center; gap: 7px; }
 .review-toolbar input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
