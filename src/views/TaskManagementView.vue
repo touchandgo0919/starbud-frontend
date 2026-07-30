@@ -892,6 +892,8 @@ onBeforeUnmount(() => {
         </div>
         <div class="dialog-form-row">
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
+        </div>
+        <div class="task-options-row">
           <el-form-item>
             <template #label>
               <span class="task-option-label">上传照片
@@ -903,8 +905,6 @@ onBeforeUnmount(() => {
             </template>
             <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
           </el-form-item>
-        </div>
-        <div class="dialog-form-row">
           <el-form-item>
             <template #label>
               <span class="task-option-label">语音提醒

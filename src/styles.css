@@ -249,6 +249,11 @@ h1, h2, h3, p { margin: 0; }
 
 .dialog-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100%; }
+.task-options-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.task-options-row .el-form-item:nth-child(3) { grid-column: span 2; }
+.task-options-row .el-form-item { margin-bottom: 18px; }
+.task-options-row .el-checkbox { white-space: nowrap; }
+.task-options-row .el-input-number { width: 100%; }
 .task-option-label { display: inline-flex; align-items: center; gap: 5px; }
 .task-option-help { color: #89939f; font-size: 14px; cursor: help; }
 .task-detail-descriptions .el-descriptions__label { width: 108px; color: #aeb3bd !important; font-weight: 700 !important; }
@@ -400,7 +405,7 @@ h1, h2, h3, p { margin: 0; }
   .admin-header h1 { font-size: 20px; }
   .admin-header p { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .admin-main { padding: 14px !important; }
-  .metric-grid, .filter-grid, .user-filter-grid, .dialog-form-row { grid-template-columns: 1fr; }
+  .metric-grid, .filter-grid, .user-filter-grid, .dialog-form-row, .task-options-row { grid-template-columns: 1fr; }
   .submission-list-toolbar { grid-template-columns: 1fr 1fr; }
   .submission-list-toolbar > :first-child { grid-column: 1 / -1; }
   .submission-list-toolbar .el-select:last-of-type { grid-column: auto; }
