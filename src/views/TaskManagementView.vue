@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, QuestionFilled, Refresh, Search } from "@element-plus/icons-vue";
+import { Plus, QuestionFilled, Refresh } from "@element-plus/icons-vue";
 import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
@@ -11,6 +11,7 @@ type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] 
 
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
+const allTasksForSelectedDate = ref<Task[]>([]);
 const calendarTasks = ref<Task[]>([]);
 const children = ref<Child[]>([]);
 const loading = ref(false);
@@ -53,7 +54,7 @@ const statusRepairValue = ref<"unclaimed" | "claimed" | "completed">("unclaimed"
 const statusRepairing = ref(false);
 const editingTaskId = ref("");
 const saving = ref(false);
-const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
+const filters = reactive({ childId: "" });
 const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
@@ -83,13 +84,22 @@ const calendarTaskDates = computed(() => calendarTasks.value.reduce<Record<strin
   if (!current || calendarDotPriority[status] > calendarDotPriority[current]) dates[task.occurrenceDate] = status;
   return dates;
 }, {}));
-const selectedDateLabel = computed(() => {
-  const [year, month, day] = selectedDate.value.split("-").map(Number);
-  return `${year}年${month}月${day}日`;
-});
 const completedTaskCount = computed(() => tasks.value.filter((task) => task.status === "completed").length);
 const taskProgressPercent = computed(() => tasks.value.length ? Math.round((completedTaskCount.value / tasks.value.length) * 100) : 0);
 const dialogTitle = computed(() => editingTaskId.value ? "编辑任务" : "新建任务");
+const quickMemberOptions = computed(() => {
+  const counts = new Map<string, number>();
+  allTasksForSelectedDate.value.forEach((task) => counts.set(task.childId, (counts.get(task.childId) || 0) + 1));
+  return [
+    { id: "", name: "全部", count: allTasksForSelectedDate.value.length, initial: "全" },
+    ...children.value.map((child) => ({
+      id: child.id,
+      name: child.name,
+      count: counts.get(child.id) || 0,
+      initial: child.name.slice(0, 1)
+    }))
+  ];
+});
 
 function dateKey(date: Date) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
@@ -145,7 +155,13 @@ function canReviewSubmission(task: Task | null) {
 async function loadTasks() {
   loading.value = true;
   try {
-    tasks.value = await getTasks({ ...filters, date: selectedDate.value });
+    const allTasksRequest = getTasks({ date: selectedDate.value });
+    const filteredTasksRequest = filters.childId
+      ? getTasks({ childId: filters.childId, date: selectedDate.value })
+      : allTasksRequest;
+    const [allTasks, visibleTasks] = await Promise.all([allTasksRequest, filteredTasksRequest]);
+    allTasksForSelectedDate.value = allTasks;
+    tasks.value = visibleTasks;
     const previews = await Promise.all(tasks.value.map(async (task) => {
       if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[]] as const;
       try {
@@ -169,8 +185,6 @@ async function loadCalendar() {
   try {
     calendarTasks.value = await getTasks({
       childId: filters.childId,
-      keyword: filters.keyword,
-      repeatType: filters.repeatType,
       dateFrom: calendarRange.from,
       dateTo: calendarRange.to
     });
@@ -195,13 +209,9 @@ function changeCalendarRange(range: { from: string; to: string }) {
   void loadCalendar();
 }
 
-function applyFilters() {
-  void refreshTaskData();
-}
-
-function resetFilters() {
-  Object.assign(filters, { keyword: "", childId: "", status: "", repeatType: "" });
-  selectedDate.value = dateKey(new Date());
+function selectQuickMember(childId: string) {
+  if (filters.childId === childId) return;
+  filters.childId = childId;
   void refreshTaskData();
 }
 
@@ -752,25 +762,26 @@ onBeforeUnmount(() => {
       @range-change="changeCalendarRange"
     />
 
-    <section class="content-panel filter-panel">
-      <form class="filter-grid" @submit.prevent="applyFilters">
-        <label class="field"><span>关键词</span><el-input v-model="filters.keyword" clearable placeholder="搜索任务名称" /></label>
-        <label class="field"><span>任务对象</span><el-select v-model="filters.childId" clearable placeholder="全部成员"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
-        <label class="field"><span>任务状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="待完成" value="pending" /><el-option label="已完成" value="completed" /></el-select></label>
-        <label class="field"><span>重复方式</span><el-select v-model="filters.repeatType" clearable placeholder="全部方式"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></label>
-        <div class="filter-actions">
-          <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
-          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
-        </div>
-      </form>
-    </section>
-
     <section class="content-panel table-panel">
-      <div class="panel-heading">
-        <div><h2>我的任务</h2><p>{{ selectedDateLabel }} · 共 {{ tasks.length }} 项任务</p></div>
+      <div class="panel-heading task-panel-heading">
+        <div class="task-quick-switch-list task-quick-switch-list--embedded" role="list" aria-label="任务对象快速切换">
+          <button
+            v-for="member in quickMemberOptions"
+            :key="member.id || 'all'"
+            type="button"
+            class="task-quick-switch-item"
+            :class="{ 'is-active': filters.childId === member.id }"
+            role="listitem"
+            @click="selectQuickMember(member.id)"
+          >
+            <span class="task-quick-switch-avatar">{{ member.initial }}</span>
+            <span class="task-quick-switch-name">{{ member.name }}</span>
+            <b>{{ member.count }}</b>
+          </button>
+        </div>
         <div class="panel-heading-progress" :aria-label="`已完成 ${completedTaskCount} 项，共 ${tasks.length} 项任务`">
           <strong>{{ completedTaskCount }} / {{ tasks.length }}</strong>
-          <span>任务已完成</span>
+          <span>已完成</span>
           <div class="task-progress-track" aria-hidden="true"><i :style="{ width: `${taskProgressPercent}%` }" /></div>
         </div>
         <div v-if="auth.user?.role !== 'child'" class="panel-heading-actions">
