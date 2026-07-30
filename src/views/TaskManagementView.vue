@@ -907,7 +907,7 @@ onBeforeUnmount(() => {
           </article>
         </section>
       </section>
-      <template #footer><el-button v-if="detailTask && auth.user?.role !== 'child'" @click="openStatusRepair(detailTask)">修正状态</el-button><el-button v-if="detailTask?.submissionStatus === 'submitted' && !detailTask.finalizedAt && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">关闭任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+      <template #footer><el-button v-if="detailTask && auth.user?.role !== 'child'" @click="openStatusRepair(detailTask)">修正状态</el-button><el-button v-if="detailTask?.submissionStatus === 'submitted' && !detailTask.finalizedAt && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">完成任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="statusRepairVisible" title="修正任务状态" width="420px" class="form-dialog">

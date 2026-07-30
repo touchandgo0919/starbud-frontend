@@ -152,10 +152,10 @@ h1, h2, h3, p { margin: 0; }
 .trend-panel { padding-bottom: 18px; }
 .trend-heading { margin-bottom: 16px; }
 .trend-controls { display: flex; flex: 0 1 auto; flex-wrap: nowrap; min-width: 0; align-items: center; justify-content: flex-end; gap: 10px; overflow-x: auto; white-space: nowrap; }
-.trend-member-switch { display: inline-flex; flex: 0 0 auto; gap: 8px; }
-.trend-member-switch button { min-width: 58px; height: 32px; padding: 0 12px; border: 1px solid #3a3e47; border-radius: 7px; background: #24272e; color: #c7cbd2; font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color .16s ease, background .16s ease, color .16s ease; }
-.trend-member-switch button:hover { border-color: #4f5b67; color: #eef1f4; }
-.trend-member-switch button.is-active { border-color: rgba(0, 185, 107, .7); background: rgba(0, 185, 107, .16); color: #effff7; }
+.dashboard-member-filter { display: flex; min-width: 0; align-items: center; justify-content: flex-start; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.dashboard-member-filter button { min-width: 58px; height: 32px; padding: 0 12px; border: 1px solid #3a3e47; border-radius: 7px; background: #24272e; color: #c7cbd2; font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color .16s ease, background .16s ease, color .16s ease; }
+.dashboard-member-filter button:hover { border-color: #4f5b67; color: #eef1f4; }
+.dashboard-member-filter button.is-active { border-color: rgba(0, 185, 107, .7); background: rgba(0, 185, 107, .16); color: #effff7; }
 .trend-period-switch { display: inline-flex; flex: 0 0 auto; overflow: hidden; border: 1px solid #3a3e47; border-radius: 7px; background: #181a1f; }
 .trend-period-switch button { min-width: 58px; height: 30px; padding: 0 10px; border: 0; border-right: 1px solid #3a3e47; background: transparent; color: #aeb4bd; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .16s ease, color .16s ease; }
 .trend-period-switch button:last-child { border-right: 0; }
