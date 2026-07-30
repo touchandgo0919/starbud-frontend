@@ -261,6 +261,8 @@ h1, h2, h3, p { margin: 0; }
 .review-round-note strong { display: block; color: var(--muted); font-size: 12px; }
 .review-round-note p { margin-top: 6px; color: var(--text); font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .task-photo-empty { color: var(--muted); }
+.task-title-link { display: inline; max-width: 100%; overflow: hidden; padding: 0; border: 0; color: inherit; background: transparent; font: inherit; font-weight: 700; line-height: inherit; text-align: left; text-overflow: ellipsis; white-space: normal; cursor: pointer; }
+.task-title-link:hover { color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
 .reviewed-label { color: #6bdca7; font-size: 12px; font-weight: 700; }
 .revision-label { color: #ff7279; font-size: 12px; font-weight: 700; }
 .task-state--pending { color: #d59b21; }

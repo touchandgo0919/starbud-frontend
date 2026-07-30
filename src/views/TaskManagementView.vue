@@ -781,7 +781,7 @@ onBeforeUnmount(() => {
       <el-table v-loading="loading" :data="tasks" :row-key="taskRowKey" class="data-table desktop-table" empty-text="没有符合条件的任务">
         <el-table-column prop="occurrenceDate" label="执行日期" width="108" />
         <el-table-column label="时间" width="72"><template #default="scope"><strong class="time-cell">{{ scope.row.scheduleTime }}</strong></template></el-table-column>
-        <el-table-column prop="title" label="任务名称" min-width="160" />
+        <el-table-column label="任务名称" min-width="160"><template #default="scope"><button type="button" class="task-title-link" @click="openDetail(scope.row)">{{ scope.row.title }}</button></template></el-table-column>
         <el-table-column label="任务对象" width="78"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="重复" width="72"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
@@ -793,7 +793,7 @@ onBeforeUnmount(() => {
       <div v-loading="loading" class="mobile-data-list">
         <article v-for="task in tasks" :key="taskRowKey(task)" class="mobile-data-card">
           <div class="mobile-card-head">
-            <div><time class="time-cell">{{ task.occurrenceDate }} {{ task.scheduleTime }}</time><h3>{{ task.title }}</h3></div>
+            <div><time class="time-cell">{{ task.occurrenceDate }} {{ task.scheduleTime }}</time><h3><button type="button" class="task-title-link" @click="openDetail(task)">{{ task.title }}</button></h3></div>
             <span class="status-dot task-state" :class="taskStateClass(task)">{{ taskStatusLabel(task) }}</span>
           </div>
           <p>{{ childName(task.childId) }} · {{ repeatLabels[task.repeatType] }} · {{ task.voiceEnabled ? `语音 ${task.voiceReminderCount} 次：${task.voiceContent}` : "静默提醒" }}</p>
