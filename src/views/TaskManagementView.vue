@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, QuestionFilled, Refresh, Search } from "@element-plus/icons-vue";
-import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, submitSubmissionReview, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
@@ -47,6 +47,10 @@ const reviewCanvasDisplay = ref({ width: 0, height: 0 });
 let movingAnnotation: { id: string; offsetX: number; offsetY: number } | null = null;
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
+const statusRepairVisible = ref(false);
+const statusRepairTask = ref<Task | null>(null);
+const statusRepairValue = ref<"unclaimed" | "claimed" | "completed">("unclaimed");
+const statusRepairing = ref(false);
 const editingTaskId = ref("");
 const saving = ref(false);
 const filters = reactive({ keyword: "", childId: "", status: "", repeatType: "" });
@@ -667,6 +671,34 @@ async function markComplete(task: Task) {
   }
 }
 
+function openStatusRepair(task: Task) {
+  statusRepairTask.value = task;
+  statusRepairValue.value = task.status === "completed" ? "completed" : task.claimedAt ? "claimed" : "unclaimed";
+  statusRepairVisible.value = true;
+}
+
+async function saveStatusRepair() {
+  const task = statusRepairTask.value;
+  if (!task) return;
+  try {
+    await ElMessageBox.confirm(`确认将“${task.title}”修正为该状态吗？`, "修正任务状态", {
+      type: "warning",
+      confirmButtonText: "确认修正",
+      cancelButtonText: "取消"
+    });
+    statusRepairing.value = true;
+    const updated = await repairTaskStatus(task.id, task.occurrenceDate, statusRepairValue.value);
+    statusRepairVisible.value = false;
+    await refreshTaskData();
+    if (detailTask.value && taskRowKey(detailTask.value) === taskRowKey(task)) await openDetail(updated);
+    ElMessage.success("任务状态已修正");
+  } catch (cause) {
+    if (cause !== "cancel" && cause !== "close") ElMessage.error(cause instanceof Error ? cause.message : "任务状态修正失败。");
+  } finally {
+    statusRepairing.value = false;
+  }
+}
+
 async function sendReminder(task: Task) {
   try {
     await remindTask(task.id);
@@ -859,7 +891,19 @@ onBeforeUnmount(() => {
           </article>
         </section>
       </section>
-      <template #footer><el-button v-if="detailTask?.submissionStatus === 'submitted' && !detailTask.finalizedAt && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">关闭任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+      <template #footer><el-button v-if="detailTask && auth.user?.role !== 'child'" @click="openStatusRepair(detailTask)">修正状态</el-button><el-button v-if="detailTask?.submissionStatus === 'submitted' && !detailTask.finalizedAt && auth.user?.role !== 'child'" type="success" @click="finalizeCurrentReview">关闭任务</el-button><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="statusRepairVisible" title="修正任务状态" width="420px" class="form-dialog">
+      <p class="dialog-hint">状态修正会同步到家长网页、儿童小程序和日历。</p>
+      <el-radio-group v-model="statusRepairValue" class="status-repair-options">
+        <el-radio value="unclaimed">待领取</el-radio>
+        <el-radio value="claimed">已领取／待完成</el-radio>
+        <el-radio :disabled="Boolean(statusRepairTask?.requiresPhotoUpload)" value="completed">已完成</el-radio>
+      </el-radio-group>
+      <p v-if="statusRepairValue === 'unclaimed'" class="dialog-hint">已有作业提交的照片型任务不能恢复为待领取，避免误删提交数据。</p>
+      <p v-if="statusRepairTask?.requiresPhotoUpload" class="dialog-hint">照片型任务需通过批改流程关闭，不能直接标记已完成。</p>
+      <template #footer><el-button @click="statusRepairVisible = false">取消</el-button><el-button type="primary" :loading="statusRepairing" @click="saveStatusRepair">确认修正</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">

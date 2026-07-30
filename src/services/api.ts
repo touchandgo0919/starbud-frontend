@@ -209,6 +209,14 @@ export async function completeTask(taskId: string) {
   return body.task;
 }
 
+export async function repairTaskStatus(taskId: string, taskDate: string | null, status: "unclaimed" | "claimed" | "completed") {
+  const body = await request<{ task: Task }>(`/api/tasks/${taskId}/status`, {
+    method: "POST",
+    body: JSON.stringify({ taskDate: taskDate || undefined, status })
+  });
+  return body.task;
+}
+
 export async function remindTask(taskId: string) {
   const body = await request<{ task: Task }>(`/api/tasks/${taskId}/remind`, { method: "POST" });
   return body.task;
