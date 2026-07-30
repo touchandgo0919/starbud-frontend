@@ -970,11 +970,6 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
       <div class="review-toolbar">
-        <div v-if="reviewPhotos.length > 1" class="review-tool-group review-photo-navigation">
-          <el-tooltip content="上一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewPreviousPhoto" aria-label="上一张" @click="switchReviewPhoto(-1)"><el-icon><ArrowLeft /></el-icon></el-button></el-tooltip>
-          <span class="review-photo-position">{{ reviewPhotoIndex + 1 }} / {{ reviewPhotos.length }}</span>
-          <el-tooltip content="下一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewNextPhoto" aria-label="下一张" @click="switchReviewPhoto(1)"><el-icon><ArrowRight /></el-icon></el-button></el-tooltip>
-        </div>
         <div class="review-tool-group">
           <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" :type="reviewTool === 'pen' ? 'success' : 'default'" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
           <label class="review-tool-slider" title="笔色"><input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
@@ -1001,6 +996,11 @@ onBeforeUnmount(() => {
           <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
           <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :style="annotationStyle(annotation)" title="拖动调整文字位置" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
         </div>
+      </div>
+      <div v-if="reviewPhotos.length > 1" class="review-photo-navigation">
+        <el-tooltip content="上一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewPreviousPhoto" aria-label="上一张" @click="switchReviewPhoto(-1)"><el-icon><ArrowLeft /></el-icon></el-button></el-tooltip>
+        <span class="review-photo-position">{{ reviewPhotoIndex + 1 }} / {{ reviewPhotos.length }}</span>
+        <el-tooltip content="下一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewNextPhoto" aria-label="下一张" @click="switchReviewPhoto(1)"><el-icon><ArrowRight /></el-icon></el-button></el-tooltip>
       </div>
       <p class="review-hint">画笔模式可直接书写；文字批注输入后可直接拖动调整位置；表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
       <template #footer><el-button :disabled="reviewSubmitting" @click="reviewVisible = false">取消</el-button><el-button type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button></template>

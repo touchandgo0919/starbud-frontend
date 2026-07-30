@@ -329,7 +329,7 @@ h1, h2, h3, p { margin: 0; }
 .review-tool-slider input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 4px; background: transparent; cursor: pointer; }
 .review-tool-slider input[type="range"] { width: 96px; accent-color: var(--green); }
 .review-tool-slider span, .review-photo-position { min-width: 34px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.review-photo-navigation { gap: 2px; }
+.review-photo-navigation { display: flex; align-items: center; justify-content: center; gap: 2px; min-height: 40px; margin: 8px 0 2px; }
 .review-toolbar .review-text-input input { width: 150px; height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-raised); color: var(--text); padding: 0 8px; }
 .review-dialog.is-fullscreen { display: flex; flex-direction: column; }
 .review-dialog.is-fullscreen .el-dialog__body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
