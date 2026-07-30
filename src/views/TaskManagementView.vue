@@ -971,32 +971,35 @@ onBeforeUnmount(() => {
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
       <template #header="{ titleId, titleClass }">
         <div class="review-dialog-header">
-          <span :id="titleId" :class="titleClass">图片批改</span>
+          <div class="review-dialog-title">
+            <span :id="titleId" :class="titleClass">图片批改</span>
+            <el-tooltip content="画笔可直接书写；选择文字、表情或矩形框后，在图片上点击或拖动即可批注。" placement="bottom"><el-icon class="review-help" aria-label="批改说明"><QuestionFilled /></el-icon></el-tooltip>
+          </div>
+          <div class="review-toolbar">
+            <div class="review-tool-group">
+              <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" :type="reviewTool === 'pen' ? 'success' : 'default'" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
+              <label class="review-tool-slider" title="笔色"><input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
+              <label class="review-tool-slider" title="批改笔粗细"><el-icon><Brush /></el-icon><input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }}</span></label>
+            </div>
+            <div class="review-tool-group">
+              <el-tooltip content="插入文字" placement="bottom"><el-button class="review-tool-button review-tool-button--text" :class="{ 'is-active': reviewTool === 'text' }" :type="reviewTool === 'text' ? 'success' : 'default'" aria-label="插入文字" @click="reviewTool = 'text'">T</el-button></el-tooltip>
+              <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-tooltip content="表情" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" :type="reviewTool === 'emoji' ? 'success' : 'default'" aria-label="表情"><el-icon><ChatDotRound /></el-icon></el-button></el-tooltip><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
+              <el-tooltip content="矩形框" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" :type="reviewTool === 'rectangle' ? 'success' : 'default'" aria-label="矩形框" @click="reviewTool = 'rectangle'"><el-icon><Crop /></el-icon></el-button></el-tooltip>
+            </div>
+            <div class="review-tool-group">
+              <el-tooltip content="左转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="左转 90°" @click="rotateReviewImage(-90)"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
+              <el-tooltip content="右转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="右转 90°" @click="rotateReviewImage(90)"><el-icon><RefreshRight /></el-icon></el-button></el-tooltip>
+              <label class="review-tool-slider" title="图片缩放"><input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
+              <el-tooltip content="全图" placement="bottom"><el-button class="review-tool-button" aria-label="全图" @click="showWholeReviewImage"><el-icon><FullScreen /></el-icon></el-button></el-tooltip>
+            </div>
+            <div class="review-tool-group">
+              <el-tooltip content="撤销上一步" placement="bottom"><el-button class="review-tool-button" aria-label="撤销上一步" @click="undoReviewAction"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
+              <el-tooltip content="清空笔迹" placement="bottom"><el-button class="review-tool-button" aria-label="清空笔迹" @click="clearReviewDrawing"><el-icon><Delete /></el-icon></el-button></el-tooltip>
+            </div>
+          </div>
           <el-button class="review-submit-button" type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button>
         </div>
       </template>
-      <div class="review-toolbar">
-        <div class="review-tool-group">
-          <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" :type="reviewTool === 'pen' ? 'success' : 'default'" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
-          <label class="review-tool-slider" title="笔色"><input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
-          <label class="review-tool-slider" title="批改笔粗细"><el-icon><Brush /></el-icon><input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }}</span></label>
-        </div>
-        <div class="review-tool-group">
-          <el-tooltip content="插入文字" placement="bottom"><el-button class="review-tool-button review-tool-button--text" :class="{ 'is-active': reviewTool === 'text' }" :type="reviewTool === 'text' ? 'success' : 'default'" aria-label="插入文字" @click="reviewTool = 'text'">T</el-button></el-tooltip>
-          <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-tooltip content="表情" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" :type="reviewTool === 'emoji' ? 'success' : 'default'" aria-label="表情"><el-icon><ChatDotRound /></el-icon></el-button></el-tooltip><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
-          <el-tooltip content="矩形框" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" :type="reviewTool === 'rectangle' ? 'success' : 'default'" aria-label="矩形框" @click="reviewTool = 'rectangle'"><el-icon><Crop /></el-icon></el-button></el-tooltip>
-        </div>
-        <div class="review-tool-group">
-          <el-tooltip content="左转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="左转 90°" @click="rotateReviewImage(-90)"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
-          <el-tooltip content="右转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="右转 90°" @click="rotateReviewImage(90)"><el-icon><RefreshRight /></el-icon></el-button></el-tooltip>
-          <label class="review-tool-slider" title="图片缩放"><input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
-          <el-tooltip content="全图" placement="bottom"><el-button class="review-tool-button" aria-label="全图" @click="showWholeReviewImage"><el-icon><FullScreen /></el-icon></el-button></el-tooltip>
-        </div>
-        <div class="review-tool-group">
-          <el-tooltip content="撤销上一步" placement="bottom"><el-button class="review-tool-button" aria-label="撤销上一步" @click="undoReviewAction"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
-          <el-tooltip content="清空笔迹" placement="bottom"><el-button class="review-tool-button" aria-label="清空笔迹" @click="clearReviewDrawing"><el-icon><Delete /></el-icon></el-button></el-tooltip>
-        </div>
-      </div>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
         <div class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }">
           <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
@@ -1004,11 +1007,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div v-if="reviewPhotos.length > 1" class="review-photo-navigation">
-        <el-tooltip content="上一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewPreviousPhoto" aria-label="上一张" @click="switchReviewPhoto(-1)"><el-icon><ArrowLeft /></el-icon></el-button></el-tooltip>
+        <el-button class="review-page-button" :disabled="!canReviewPreviousPhoto" @click="switchReviewPhoto(-1)"><el-icon><ArrowLeft /></el-icon>上一张</el-button>
         <span class="review-photo-position">{{ reviewPhotoIndex + 1 }} / {{ reviewPhotos.length }}</span>
-        <el-tooltip content="下一张" placement="bottom"><el-button class="review-tool-button" :disabled="!canReviewNextPhoto" aria-label="下一张" @click="switchReviewPhoto(1)"><el-icon><ArrowRight /></el-icon></el-button></el-tooltip>
+        <el-button class="review-page-button" :disabled="!canReviewNextPhoto" @click="switchReviewPhoto(1)">下一张<el-icon><ArrowRight /></el-icon></el-button>
       </div>
-      <p class="review-hint">画笔模式可直接书写；文字批注输入后可直接拖动调整位置；表情和矩形框工具选择后，点击或拖动图片即可完成批注。</p>
     </el-dialog>
   </div>
 </template>
