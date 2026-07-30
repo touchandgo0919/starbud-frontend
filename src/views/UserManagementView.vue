@@ -107,7 +107,7 @@ onMounted(loadUsers);
         <el-table-column label="用户" min-width="220"><template #default="scope"><div class="table-user"><div class="member-avatar">{{ scope.row.displayName.slice(0, 1) }}</div><div><strong>{{ scope.row.displayName }}</strong><span>@{{ scope.row.username }}</span></div></div></template></el-table-column>
         <el-table-column label="角色" width="140"><template #default="scope"><span class="role-tag" :class="`role-tag--${scope.row.role}`">{{ roleLabels[scope.row.role as User['role']] }}</span></template></el-table-column>
         <el-table-column label="状态" width="110"><template #default="scope"><span class="status-dot" :class="scope.row.active ? 'status-dot--completed' : 'status-dot--disabled'">{{ scope.row.active ? "已启用" : "已停用" }}</span></template></el-table-column>
-        <el-table-column label="创建时间" width="180"><template #default="scope">{{ new Date(scope.row.createdAt).toLocaleString("zh-CN", { hour12: false }) }}</template></el-table-column>
+        <el-table-column label="创建时间" width="180"><template #default="scope">{{ scope.row.createdAt || "—" }}</template></el-table-column>
         <el-table-column label="操作" width="160" fixed="right"><template #default="scope"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link :type="scope.row.active ? 'danger' : 'success'" :disabled="scope.row.id === auth.user?.id" @click="toggleUser(scope.row)">{{ scope.row.active ? "停用" : "启用" }}</el-button></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
