@@ -200,6 +200,7 @@ h1, h2, h3, p { margin: 0; }
 .data-table .el-table__cell { padding: 13px 0; }
 .data-table th.el-table__cell { color: #aeb3bd; font-size: 12px; font-weight: 800; }
 .data-table td.el-table__cell { color: #dce0e5; font-size: 13px; }
+.table-pagination { display: flex; justify-content: flex-end; padding: 16px 0 4px; }
 .mobile-data-list { display: none; }
 .mobile-data-card { padding: 15px 0; border-bottom: 1px solid var(--border); }
 .mobile-data-card:last-child { border-bottom: 0; }

@@ -237,9 +237,24 @@ export async function deleteTask(taskId: string) {
   });
 }
 
-export async function getSubmissions() {
-  const body = await request<{ submissions: Submission[] }>("/api/submissions");
-  return body.submissions.map(normalizeSubmissionUrls);
+export async function getSubmissions(options: {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  childId?: string;
+  status?: string;
+  reviewStatus?: string;
+} = {}) {
+  const query = new URLSearchParams();
+  Object.entries(options).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") query.set(key, String(value));
+  });
+  const suffix = query.size ? `?${query.toString()}` : "";
+  const body = await request<{
+    submissions: Submission[];
+    pagination: { page: number; pageSize: number; total: number; hasMore: boolean };
+  }>(`/api/submissions${suffix}`);
+  return { ...body, submissions: body.submissions.map(normalizeSubmissionUrls) };
 }
 
 function normalizeSubmissionUrls(submission: Submission): Submission {
