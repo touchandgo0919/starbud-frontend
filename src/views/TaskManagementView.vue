@@ -106,7 +106,7 @@ function dateKey(date: Date) {
 function initialWeekRange() {
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  start.setDate(start.getDate() - start.getDay());
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
   return { from: dateKey(start), to: dateKey(end) };

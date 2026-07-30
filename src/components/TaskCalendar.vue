@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const mode = ref<"week" | "month">("week");
 const anchorDate = ref(parseDateKey(props.selectedDate) || new Date());
-const weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"];
+const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
 
 const title = computed(() => `${anchorDate.value.getFullYear()}年${anchorDate.value.getMonth() + 1}月`);
 const calendarDays = computed(() => {
@@ -44,8 +44,7 @@ function addDays(date: Date, amount: number) {
 
 function startOfWeek(date: Date) {
   const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const offset = (result.getDay() + 6) % 7;
-  result.setDate(result.getDate() - offset);
+  result.setDate(result.getDate() - result.getDay());
   return result;
 }
 
