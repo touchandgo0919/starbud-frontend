@@ -127,8 +127,7 @@ h1, h2, h3, p { margin: 0; }
 .task-calendar-day > i { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: #31ce87; }
 .task-calendar-day > i.task-calendar-dot--revision { background: #e5484d; }
 .task-calendar-day > i.task-calendar-dot--review { background: #3b82f6; }
-.task-calendar-day > i.task-calendar-dot--active { background: #0aa868; }
-.task-calendar-day > i.task-calendar-dot--pending { background: #f2b63d; }
+.task-calendar-day > i.task-calendar-dot--pending { background: #ffc947; }
 .task-calendar-day > i.task-calendar-dot--completed { background: #8a9490; }
 .task-calendar-day:hover { background: #252930; }
 .task-calendar-day.is-selected > span { background: var(--green); color: #fff; box-shadow: 0 0 0 3px rgba(0, 185, 107, .12); }

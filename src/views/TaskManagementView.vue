@@ -59,12 +59,11 @@ const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
-type CalendarDotStatus = "revision" | "review" | "active" | "pending" | "completed";
+type CalendarDotStatus = "revision" | "review" | "pending" | "completed";
 
 const calendarDotPriority: Record<CalendarDotStatus, number> = {
   revision: 5,
   review: 4,
-  active: 3,
   pending: 2,
   completed: 1
 };
@@ -73,7 +72,6 @@ function calendarDotStatus(task: Task): CalendarDotStatus {
   if (task.reviewStatus === "needs_revision") return "revision";
   if (task.reviewStatus === "pending_review") return "review";
   if (task.status === "completed" || task.reviewStatus === "completed") return "completed";
-  if (task.claimedAt || task.reviewStatus === "submitting") return "active";
   return "pending";
 }
 
