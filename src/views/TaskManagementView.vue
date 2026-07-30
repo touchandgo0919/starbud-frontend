@@ -34,6 +34,10 @@ const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
+const reviewPhotos = ref<SubmissionPhoto[]>([]);
+const reviewPhotoIndex = ref(0);
+const canReviewPreviousPhoto = computed(() => reviewPhotoIndex.value > 0);
+const canReviewNextPhoto = computed(() => reviewPhotoIndex.value < reviewPhotos.value.length - 1);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
 const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewColor = ref("#e5484d");
@@ -244,6 +248,7 @@ function openEdit(task: Task) {
 }
 
 let reviewSourceImage: HTMLImageElement | null = null;
+let reviewImageLoadVersion = 0;
 let isReviewDrawing = false;
 let previousReviewPoint: { x: number; y: number } | null = null;
 let rectangleStart: { x: number; y: number } | null = null;
@@ -286,7 +291,10 @@ async function openTaskReview(task: Task) {
   await openDetail(task);
   const original = submissionPhotos.value[0];
   if (!original) return;
-  await openReview(submissionReviewImageUrl.value ? { ...original, url: submissionReviewImageUrl.value } : original);
+  await openReview(
+    submissionReviewImageUrl.value ? { ...original, url: submissionReviewImageUrl.value } : original,
+    submissionReviewImageUrl.value ? undefined : submissionPhotos.value
+  );
 }
 
 async function openReviewEntry(task: Task) {
@@ -308,13 +316,13 @@ async function restartReview() {
   if (task) await openTaskReview(task);
 }
 
-async function reviewRoundOriginal(photo: SubmissionPhoto) {
+async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo]) {
   if (!canReviewSubmission(detailTask.value)) {
     originalPreviewUrl.value = photo.url;
     originalPreviewVisible.value = true;
     return;
   }
-  await openReview(photo);
+  await openReview(photo, photos);
 }
 
 function viewRoundReview(url: string) {
@@ -353,15 +361,41 @@ function formatBytes(byteSize: number) {
     : `${(byteSize / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-async function openReview(photo: SubmissionPhoto) {
+function resetReviewCanvas() {
+  reviewImageLoadVersion += 1;
+  reviewSourceImage = null;
+  stopReviewDrawing();
+  reviewHistory.length = 0;
+  reviewTextAnnotations.value = [];
+  reviewCanvasDisplay.value = { width: 0, height: 0 };
+  const canvas = reviewCanvas.value;
+  const context = canvas?.getContext("2d");
+  if (canvas && context) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.width = 1;
+    canvas.height = 1;
+  }
+}
+
+async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo]) {
+  const photoIndex = photos.findIndex((item) => item.id === photo.id);
+  reviewPhotos.value = photos;
+  reviewPhotoIndex.value = photoIndex >= 0 ? photoIndex : 0;
   reviewPhoto.value = photo;
   reviewZoom.value = 100;
   reviewRotation.value = 0;
   reviewTool.value = "pen";
-  reviewHistory.length = 0;
-  reviewTextAnnotations.value = [];
+  resetReviewCanvas();
   reviewVisible.value = true;
   await nextTick();
+  loadReviewCanvas();
+}
+
+function switchReviewPhoto(offset: number) {
+  const nextIndex = reviewPhotoIndex.value + offset;
+  const photo = reviewPhotos.value[nextIndex];
+  if (!photo) return;
+  void openReview(photo, reviewPhotos.value);
 }
 
 function loadReviewCanvas() {
@@ -369,9 +403,11 @@ function loadReviewCanvas() {
   const photo = reviewPhoto.value;
   if (!canvas || !photo) return;
 
+  const loadVersion = ++reviewImageLoadVersion;
   const image = new Image();
   image.crossOrigin = "anonymous";
   image.onload = () => {
+    if (loadVersion !== reviewImageLoadVersion || reviewPhoto.value?.id !== photo.id) return;
     reviewSourceImage = image;
     renderReviewSourceImage();
   };
@@ -888,7 +924,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ round.sequence }} 次批改</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><small class="round-image-time">{{ formatDateTime(round.submittedAt) }}</small><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
+              <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, round.photos)"><small class="round-image-time">{{ formatDateTime(round.submittedAt) }}</small><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
@@ -900,7 +936,7 @@ onBeforeUnmount(() => {
             <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
-              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
+              <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, submissionPhotos)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>家长未批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
@@ -934,6 +970,9 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">
       <div class="review-toolbar">
+        <el-button :disabled="!canReviewPreviousPhoto" @click="switchReviewPhoto(-1)">上一张</el-button>
+        <span v-if="reviewPhotos.length > 1" class="review-photo-position">{{ reviewPhotoIndex + 1 }} / {{ reviewPhotos.length }}</span>
+        <el-button :disabled="!canReviewNextPhoto" @click="switchReviewPhoto(1)">下一张</el-button>
         <label>笔色 <input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
         <label>粗细 <input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }} px</span></label>
         <label>字号 <input v-model.number="reviewFontSize" type="range" min="16" max="56" step="2" aria-label="文字字号" /><span>{{ reviewFontSize }} px</span></label>
