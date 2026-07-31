@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { DocumentChecked, HomeFilled, House, List, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
+import { DocumentChecked, HomeFilled, House, List, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 
 const route = useRoute();
@@ -10,6 +10,11 @@ const auth = useAuthStore();
 const pageTitle = computed(() => String(route.meta.title || "星星芽AI助手"));
 const pageDescription = computed(() => String(route.meta.description || ""));
 const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
+const defaultOpeneds = computed(() => {
+  if (["/tasks", "/submissions"].includes(route.path)) return ["task-management"];
+  if (["/families", "/users", "/access-records"].includes(route.path)) return ["system-management"];
+  return [];
+});
 
 async function logout() {
   await auth.signOut();
@@ -26,31 +31,48 @@ async function logout() {
       </router-link>
 
       <div class="menu-label">工作台</div>
-      <el-menu router :default-active="route.path" class="admin-menu">
+      <el-menu
+        router
+        :default-active="route.path"
+        :default-openeds="defaultOpeneds"
+        class="admin-menu"
+      >
         <el-menu-item index="/home">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
-        <el-menu-item index="/tasks">
-          <el-icon><List /></el-icon>
-          <span>任务管理</span>
-        </el-menu-item>
-        <el-menu-item v-if="auth.user?.role !== 'child'" index="/submissions">
-          <el-icon><DocumentChecked /></el-icon>
-          <span>提交管理</span>
-        </el-menu-item>
-        <el-menu-item v-if="auth.user?.role !== 'child'" index="/families">
-          <el-icon><House /></el-icon>
-          <span>家庭管理</span>
-        </el-menu-item>
-        <el-menu-item v-if="auth.user?.role === 'admin'" index="/users">
-          <el-icon><UserFilled /></el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-        <el-menu-item v-if="auth.user?.role === 'admin'" index="/access-records">
-          <el-icon><View /></el-icon>
-          <span>访问记录</span>
-        </el-menu-item>
+        <el-sub-menu index="task-management">
+          <template #title>
+            <el-icon><List /></el-icon>
+            <span>任务管理</span>
+          </template>
+          <el-menu-item index="/tasks">
+            <el-icon><List /></el-icon>
+            <span>任务列表</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.user?.role !== 'child'" index="/submissions">
+            <el-icon><DocumentChecked /></el-icon>
+            <span>提交记录</span>
+          </el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu v-if="auth.user?.role !== 'child'" index="system-management">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统管理</span>
+          </template>
+          <el-menu-item index="/families">
+            <el-icon><House /></el-icon>
+            <span>家庭管理</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.user?.role === 'admin'" index="/users">
+            <el-icon><UserFilled /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.user?.role === 'admin'" index="/access-records">
+            <el-icon><View /></el-icon>
+            <span>访问记录</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
 
       <div class="sidebar-account">
