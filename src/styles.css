@@ -326,24 +326,34 @@ h1, h2, h3, p { margin: 0; }
 .review-help { color: var(--muted); font-size: 15px; cursor: help; }
 .review-help:hover { color: var(--green); }
 .review-submit-button.el-button { justify-self: end; margin: 0; }
-.review-tool-group { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 6px; background: #181a1e; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
-.review-tool-button.el-button { width: 32px; min-width: 32px; height: 32px; margin: 0; padding: 0; border-color: transparent; border-radius: 4px; background: transparent; color: #d4d8df; font-size: 17px; }
+.review-tool-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 6px; background: #181a1e; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
+.review-tool-group > * { display: inline-flex; flex: 0 0 32px; width: 32px; }
+.review-tool-button.el-button { width: 32px; min-width: 32px; height: 32px; margin: 0 !important; padding: 0; border-color: transparent; border-radius: 4px; background: transparent; color: #d4d8df; font-size: 17px; }
 .review-tool-button.el-button:hover, .review-tool-button.el-button.is-active { border-color: transparent; background: rgba(0, 198, 120, .14); color: #00c678; }
 .review-tool-button.el-button--success { border-color: transparent; background: rgba(0, 198, 120, .18); color: #00c678; }
 .review-tool-button.el-button.is-disabled { color: #60646c; background: transparent; border-color: transparent; }
 .review-tool-button--text { font-family: Georgia, serif; font-size: 17px !important; font-weight: 700; }
-.review-tool-button--size { font-family: Georgia, serif; font-size: 18px !important; font-weight: 700; }
-.review-tool-color-indicator { display: block; width: 17px; height: 17px; border: 1px solid rgba(255, 255, 255, .52); border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .28); }
+.review-tool-button--arrow { font-size: 21px !important; font-weight: 400; line-height: 1; }
 .review-photo-position { min-width: 34px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.review-tool-popper.el-popper { margin-top: 8px !important; padding: 8px 10px; border: 1px solid #353941; border-radius: 5px; background: #24262b; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+.review-tool-popper.el-popper { margin-top: 8px !important; padding: 8px 10px; border: 1px solid #353941; border-radius: 4px; background: #24262b; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
 .review-tool-popper.el-popper .el-popper__arrow::before { border-color: #353941; background: #24262b; }
-.review-option-panel { display: flex; align-items: center; gap: 10px; min-height: 28px; }
-.review-color-option { width: 17px; height: 17px; padding: 0; border: 2px solid transparent; border-radius: 2px; cursor: pointer; box-shadow: 0 0 0 1px rgba(0, 0, 0, .32); }
-.review-color-option:hover, .review-color-option.is-active { outline: 1px solid #00c678; outline-offset: 2px; }
-.review-size-options { justify-content: center; gap: 8px; }
-.review-size-options button { display: grid; width: 40px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #ccd1d8; font-size: 12px; cursor: pointer; }
-.review-size-options button:hover, .review-size-options button.is-active { border-color: rgba(0, 198, 120, .76); background: rgba(0, 198, 120, .13); color: #00c678; }
-.review-size-options i { display: block; border-radius: 50%; background: currentColor; }
+.review-tool-options { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.review-option-sizes, .review-option-colors { display: inline-flex; align-items: center; gap: 9px; }
+.review-emoji-options { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; }
+.review-emoji-options button { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; font-size: 18px; line-height: 1; cursor: pointer; }
+.review-emoji-options button:hover, .review-emoji-options button.is-active { border-color: var(--accent); background: rgba(0, 200, 119, .12); }
+.review-option-sizes button, .review-option-colors button { display: grid; width: 20px; height: 20px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #aeb4bd; cursor: pointer; }
+.review-option-sizes button:hover, .review-option-sizes button.is-active, .review-option-colors button:hover, .review-option-colors button.is-active { outline: 1px solid #00c678; outline-offset: 2px; }
+.review-option-sizes i { display: block; border-radius: 50%; background: #aeb4bd; }
+.review-option-sizes button.is-active i, .review-option-sizes button:hover i { background: #00c678; }
+.review-option-colors button { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
+.review-option-divider { width: 1px; height: 22px; background: #43474f; }
+.review-option-font-sizes { gap: 7px; }
+.review-option-font-sizes button { width: 24px; color: #d4d8df; font-variant-numeric: tabular-nums; }
+.review-option-font-sizes button:nth-child(1) { font-size: 11px; }
+.review-option-font-sizes button:nth-child(2) { font-size: 14px; }
+.review-option-font-sizes button:nth-child(3) { font-size: 17px; }
+.review-option-font-sizes button.is-active, .review-option-font-sizes button:hover { color: #00c678; }
 .review-photo-navigation { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; margin: 8px 0 2px; }
 .review-page-button.el-button { min-width: 78px; margin: 0; }
 .review-page-button .el-icon { margin: 0 2px; }
@@ -354,12 +364,17 @@ h1, h2, h3, p { margin: 0; }
 .review-stage { position: relative; flex: none; }
 .review-canvas { display: block; cursor: crosshair; }
 .review-annotation-layer { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.review-shape-annotation { fill: transparent; stroke-linecap: round; stroke-linejoin: round; pointer-events: stroke; cursor: move; vector-effect: non-scaling-stroke; }
+.review-shape-annotation { fill: transparent; stroke-linecap: round; stroke-linejoin: round; cursor: move; vector-effect: non-scaling-stroke; }
+.review-shape-annotation--path { pointer-events: stroke; }
+.review-shape-annotation--rectangle { pointer-events: all; }
+.review-arrowhead { pointer-events: all; cursor: move; }
 .review-shape-annotation:hover, .review-shape-annotation.is-selected { filter: drop-shadow(0 0 2px currentColor); }
-.review-shape-annotation.is-selected { stroke-dasharray: 8 4; }
+.review-shape-annotation.is-selected { stroke-dasharray: none; }
+.review-selection-node { fill: #fff; stroke: #9ba3ae; stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
 .review-text-annotation { position: absolute; z-index: 3; margin: 0; padding: 1px 3px; border: 1px dashed transparent; border-radius: 3px; background: transparent; font-family: inherit; font-weight: 700; line-height: 1.2; white-space: pre; cursor: move; user-select: none; transform: translateY(-2px); }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
+.review-text-annotation--emoji.is-selected { border-color: #9ba3ae; background: rgba(255, 255, 255, .14); }
 .review-text-editor { position: absolute; z-index: 4; width: min(230px, calc(100% - 8px)); min-width: 120px; box-sizing: border-box; margin: 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 4px; outline: 2px solid color-mix(in srgb, currentColor 26%, transparent); background: rgba(16, 18, 22, .88); font-family: inherit; font-weight: 700; line-height: 1.25; caret-color: currentColor; transform: translateY(-3px); }
 .review-text-editor::placeholder { color: currentColor; opacity: .55; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
