@@ -85,6 +85,8 @@ let movingAnnotation: { id: string; startPoint: ReviewPoint; initial: ReviewAnno
 let resizingAnnotation: { id: string; handle: ReviewResizeHandle; startPoint: ReviewPoint; initial: ReviewRectangleAnnotation | ReviewPathAnnotation } | null = null;
 let drawingAnnotationId: string | null = null;
 let drawingStartPoint: ReviewPoint | null = null;
+const reviewPanning = ref(false);
+let reviewPanStart: { x: number; y: number; scrollLeft: number; scrollTop: number } | null = null;
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
 const statusRepairVisible = ref(false);
@@ -750,6 +752,20 @@ function startReviewDrawing(event: MouseEvent) {
   drawingStartPoint = point;
 }
 
+function startReviewPan(event: MouseEvent) {
+  if (event.button !== 2) return;
+  const shell = reviewCanvasShell.value;
+  if (!shell) return;
+  reviewPanning.value = true;
+  reviewPanStart = {
+    x: event.clientX,
+    y: event.clientY,
+    scrollLeft: shell.scrollLeft,
+    scrollTop: shell.scrollTop
+  };
+  event.preventDefault();
+}
+
 function startReviewTextEditor(point: ReviewPoint) {
   reviewTextEditor.value = { x: point.x, y: point.y, value: "" };
   selectedReviewAnnotationId.value = null;
@@ -1046,6 +1062,14 @@ function insertReviewEmoji(point: { x: number; y: number }) {
 }
 
 function continueReviewDrawing(event: MouseEvent | PointerEvent) {
+  if (reviewPanning.value && reviewPanStart) {
+    const shell = reviewCanvasShell.value;
+    if (shell) {
+      shell.scrollLeft = reviewPanStart.scrollLeft - (event.clientX - reviewPanStart.x);
+      shell.scrollTop = reviewPanStart.scrollTop - (event.clientY - reviewPanStart.y);
+    }
+    return;
+  }
   if (movingAnnotation) {
     moveAnnotation(event);
     return;
@@ -1069,6 +1093,8 @@ function continueReviewDrawing(event: MouseEvent | PointerEvent) {
 }
 
 function stopReviewDrawing() {
+  reviewPanning.value = false;
+  reviewPanStart = null;
   drawingAnnotationId = null;
   drawingStartPoint = null;
 }
@@ -1581,7 +1607,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
-        <div ref="reviewStage" class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }" @wheel.prevent="handleReviewZoomWheel" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @pointermove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing">
+        <div ref="reviewStage" class="review-stage" :class="{ 'is-panning': reviewPanning }" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }" @wheel.prevent="handleReviewZoomWheel" @mousedown.capture="startReviewPan" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @pointermove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" @contextmenu.prevent>
           <canvas ref="reviewCanvas" class="review-canvas" />
           <svg v-if="reviewCanvasSize.width" class="review-annotation-layer" :viewBox="`0 0 ${reviewCanvasSize.width} ${reviewCanvasSize.height}`" aria-label="可拖动的图片批改">
             <template v-for="annotation in reviewShapeAnnotations" :key="annotation.id">
