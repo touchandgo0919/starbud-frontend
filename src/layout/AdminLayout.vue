@@ -12,7 +12,7 @@ const pageDescription = computed(() => String(route.meta.description || ""));
 const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
 
 async function logout() {
-  auth.signOut();
+  await auth.signOut();
   await router.replace("/login");
 }
 </script>

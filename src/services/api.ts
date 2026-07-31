@@ -126,6 +126,10 @@ export async function registerParent(payload: RegisterPayload) {
   return body.user;
 }
 
+export async function logout() {
+  await request<{ loggedOut: true }>("/api/auth/logout", { method: "POST" });
+}
+
 export async function getMe() {
   const body = await request<{ user: User }>("/api/me");
   return body.user;
@@ -324,7 +328,11 @@ export async function submitSubmissionReview(submissionId: string, images: Blob[
   const token = getStoredToken();
   const response = await fetch(apiUrl(`/api/submissions/${submissionId}/review`), {
     method: "POST",
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    headers: {
+      "x-starbud-client": "web",
+      "x-starbud-session-id": getSessionId(),
+      ...(token ? { authorization: `Bearer ${token}` } : {})
+    },
     body: formData
   });
 

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import AdminLayout from "../layout/AdminLayout.vue";
 import pinia from "../store";
 import { useAuthStore } from "../store/auth";
-import { trackAccessEvent } from "../services/api";
 
 const DashboardView = () => import("../views/DashboardView.vue");
 const FamilyManagementView = () => import("../views/FamilyManagementView.vue");
@@ -66,10 +65,6 @@ const router = createRouter({
     },
     { path: "/:pathMatch(.*)*", redirect: "/home" }
   ]
-});
-
-router.afterEach((to) => {
-  void trackAccessEvent({ eventName: "page_view", route: to.fullPath });
 });
 
 router.beforeEach(async (to) => {

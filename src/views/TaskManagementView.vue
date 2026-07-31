@@ -313,19 +313,17 @@ let reviewSourceImage: HTMLImageElement | null = null;
 let reviewImageLoadVersion = 0;
 let reviewZoomAnchorJob = 0;
 
-function trackReviewEvent(eventName: string, metadata: Record<string, unknown> = {}) {
+function trackTaskDetail(task: Task) {
   void trackAccessEvent({
-    eventName,
+    eventName: "task_detail_viewed",
     route: "/tasks",
     resourceType: "task",
-    resourceId: detailTask.value?.id,
-    metadata
+    resourceId: task.id
   });
 }
 
 function selectReviewTool(tool: "pen" | "text" | "rectangle" | "emoji" | "arrow") {
   reviewTool.value = tool;
-  trackReviewEvent("review_tool_selected", { tool });
 }
 
 async function openDetail(task: Task) {
@@ -339,7 +337,7 @@ async function openDetail(task: Task) {
   reviewReplacementImageId.value = null;
   submissionReviewRounds.value = [];
   detailVisible.value = true;
-  trackReviewEvent("task_detail_opened", { hasSubmission: hasSubmission(task) });
+  trackTaskDetail(task);
 
   if (!hasSubmission(task)) return;
 
@@ -487,7 +485,6 @@ async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [p
   reviewTool.value = null;
   resetReviewCanvas();
   reviewVisible.value = true;
-  trackReviewEvent("review_opened", { photoCount: photos.length, resumed: preserveStagedReviews });
   await nextTick();
   loadReviewCanvas();
 }
@@ -499,7 +496,6 @@ async function switchReviewPhoto(offset: number) {
   try {
     await stashCurrentReviewedImage();
     await openReview(photo, reviewPhotos.value, true);
-    trackReviewEvent("review_photo_switched", { direction: offset, photoIndex: nextIndex });
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "暂存当前批改图片失败。");
   }
@@ -1124,7 +1120,6 @@ function undoReviewAction() {
     return;
   }
   if (selectedReviewAnnotationId.value === annotation.id) selectedReviewAnnotationId.value = null;
-  trackReviewEvent("review_undo");
 }
 
 function deleteSelectedReviewAnnotation() {
@@ -1148,7 +1143,6 @@ function clearAllReviewAnnotations() {
   stopReviewDrawing();
   stopMoveAnnotation();
   stopResizeAnnotation();
-  trackReviewEvent("review_cleared");
 }
 
 function handleReviewDeleteKey(event: KeyboardEvent) {

@@ -11,17 +11,14 @@ const filters = reactive({ eventName: "", clientType: "", userId: "", timeRange:
 const currentPage = ref(1);
 const pageSize = 50;
 const eventLabels: Record<string, string> = {
-  login_succeeded: "登录成功", login_attempt: "登录失败", page_view: "页面访问",
-  task_list_viewed: "查看任务", task_searched: "搜索任务", task_detail_viewed: "查看任务详情",
-  task_claimed: "领取任务", task_completed: "完成任务", task_created: "创建任务",
-  submission_list_viewed: "查看提交", submission_searched: "搜索提交", submission_detail_viewed: "查看提交详情",
-  submission_created: "创建提交", submission_photo_uploaded: "上传作业图片", submission_submitted: "提交作业",
-  submission_review_submitted: "提交批改", submission_review_finalized: "完成批改", submission_reopened: "退回修改",
-  submission_note_updated: "修改提交备注", submission_photo_viewed: "查看作业图片", review_image_viewed: "查看批改图片",
-  notification_marked_read: "已读通知", notifications_viewed: "查看通知", family_created: "创建家庭", family_child_created: "创建子女",
-  family_member_added: "添加家庭成员", family_member_updated: "修改家庭成员", family_member_removed: "移除家庭成员", user_created: "创建用户", user_updated: "修改用户",
-  task_detail_opened: "打开任务详情", review_opened: "打开批改", review_photo_switched: "切换批改图片",
-  review_tool_selected: "选择批改工具", review_undo: "撤销批改", review_cleared: "清空批改"
+  login_succeeded: "登录成功", login_attempt: "登录失败", logout: "退出登录", parent_registered: "注册家长账号",
+  task_searched: "搜索任务", task_detail_viewed: "查看任务详情", task_claimed: "领取任务", task_completed: "完成任务",
+  task_created: "创建任务", task_updated: "编辑任务", task_deleted: "删除任务", task_reminder_sent: "发起提醒", task_status_updated: "修正任务状态",
+  submission_searched: "搜索提交", submission_submitted: "提交作业", submission_reopened: "退回重交", submission_deleted: "删除提交",
+  submission_review_submitted: "提交批改", submission_review_finalized: "完成批改",
+  family_created: "创建家庭", family_updated: "编辑家庭", family_deleted: "删除家庭", family_child_created: "创建子女",
+  family_member_added: "添加家庭成员", family_member_updated: "修改家庭成员", family_member_removed: "移除家庭成员",
+  user_created: "创建用户", user_updated: "编辑用户"
 };
 const clientLabels: Record<string, string> = { web: "网页版", mini_program: "小程序", desktop_app: "桌面 App" };
 

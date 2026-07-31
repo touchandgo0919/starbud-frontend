@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { clearStoredToken, getMe, getStoredToken, login, registerParent } from "../services/api";
+import { clearStoredToken, getMe, getStoredToken, login, logout, registerParent } from "../services/api";
 import type { RegisterPayload, User } from "../types/task";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -43,10 +43,16 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  function signOut() {
-    clearStoredToken();
-    user.value = null;
-    initialized.value = true;
+  async function signOut() {
+    try {
+      await logout();
+    } catch {
+      // Local sign-out remains available when the network is unavailable.
+    } finally {
+      clearStoredToken();
+      user.value = null;
+      initialized.value = true;
+    }
   }
 
   return { user, initialized, loading, bootstrap, register, signIn, signOut };
