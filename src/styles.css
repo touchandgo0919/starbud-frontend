@@ -338,6 +338,9 @@ h1, h2, h3, p { margin: 0; }
 .review-tool-slider input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 4px; background: transparent; cursor: pointer; }
 .review-tool-slider input[type="range"] { width: 96px; accent-color: var(--green); }
 .review-tool-slider span, .review-photo-position { min-width: 34px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.review-text-color { margin-left: 2px; }
+.review-text-size > span:first-child { min-width: auto; color: #d4d8df; font-weight: 700; }
+.review-text-size > span:last-child { min-width: 42px; }
 .review-photo-navigation { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; margin: 8px 0 2px; }
 .review-page-button.el-button { min-width: 78px; margin: 0; }
 .review-page-button .el-icon { margin: 0 2px; }
@@ -354,6 +357,8 @@ h1, h2, h3, p { margin: 0; }
 .review-text-annotation { position: absolute; z-index: 3; margin: 0; padding: 1px 3px; border: 1px dashed transparent; border-radius: 3px; background: transparent; font-family: inherit; font-weight: 700; line-height: 1.2; white-space: pre; cursor: move; user-select: none; transform: translateY(-2px); }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
+.review-text-editor { position: absolute; z-index: 4; width: min(230px, calc(100% - 8px)); min-width: 120px; box-sizing: border-box; margin: 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 4px; outline: 2px solid color-mix(in srgb, currentColor 26%, transparent); background: rgba(16, 18, 22, .88); font-family: inherit; font-weight: 700; line-height: 1.25; caret-color: currentColor; transform: translateY(-3px); }
+.review-text-editor::placeholder { color: currentColor; opacity: .55; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }

@@ -13,6 +13,7 @@ type ReviewTextAnnotation = { id: string; type: "text" | "emoji"; text: string; 
 type ReviewRectangleAnnotation = { id: string; type: "rectangle"; x: number; y: number; width: number; height: number; color: string; lineWidth: number };
 type ReviewPathAnnotation = { id: string; type: "path"; points: ReviewPoint[]; color: string; lineWidth: number };
 type ReviewAnnotation = ReviewTextAnnotation | ReviewRectangleAnnotation | ReviewPathAnnotation;
+type ReviewTextEditor = { x: number; y: number; value: string };
 
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
@@ -55,6 +56,8 @@ const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
 const reviewAnnotations = ref<ReviewAnnotation[]>([]);
 const selectedReviewAnnotationId = ref<string | null>(null);
+const reviewTextEditor = ref<ReviewTextEditor | null>(null);
+const reviewTextInput = ref<HTMLInputElement | null>(null);
 const reviewCanvasDisplay = ref({ width: 0, height: 0 });
 const reviewCanvasSize = ref({ width: 0, height: 0 });
 const reviewShapeAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewRectangleAnnotation | ReviewPathAnnotation => annotation.type === "rectangle" || annotation.type === "path"));
@@ -376,6 +379,7 @@ function resetReviewCanvas() {
   stopReviewDrawing();
   reviewAnnotations.value = [];
   selectedReviewAnnotationId.value = null;
+  reviewTextEditor.value = null;
   reviewCanvasDisplay.value = { width: 0, height: 0 };
   reviewCanvasSize.value = { width: 0, height: 0 };
   const canvas = reviewCanvas.value;
@@ -464,6 +468,7 @@ function rotateReviewImage(degrees: number) {
   if (!reviewSourceImage || !canvas) return;
   const oldWidth = canvas.width;
   const oldHeight = canvas.height;
+  commitReviewText();
   const clockwise = degrees > 0;
   reviewAnnotations.value = reviewAnnotations.value.map((annotation) => rotateReviewAnnotation(annotation, oldWidth, oldHeight, clockwise));
   reviewRotation.value = (reviewRotation.value + degrees + 360) % 360;
@@ -559,8 +564,9 @@ function startReviewDrawing(event: MouseEvent) {
   if (event.button !== 0) return;
   const point = reviewPoint(event);
   if (!point) return;
+  commitReviewText();
   if (reviewTool.value === "text") {
-    void insertReviewText(point);
+    startReviewTextEditor(point);
     return;
   }
   if (reviewTool.value === "emoji") {
@@ -576,25 +582,50 @@ function startReviewDrawing(event: MouseEvent) {
   drawingStartPoint = point;
 }
 
-async function insertReviewText(point: ReviewPoint) {
-  try {
-    const { value } = await ElMessageBox.prompt("请输入要添加到图片上的批注文字。", "插入文字", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      inputPlaceholder: "例如：这里需要修改",
-      inputValidator: (value) => value.trim().length > 0 || "请输入文字"
-    });
-    const annotation: ReviewTextAnnotation = { id: reviewAnnotationId(), type: "text", text: value.trim(), x: point.x, y: point.y, color: reviewColor.value, fontSize: reviewFontSize.value };
+function startReviewTextEditor(point: ReviewPoint) {
+  reviewTextEditor.value = { x: point.x, y: point.y, value: "" };
+  selectedReviewAnnotationId.value = null;
+  nextTick(() => reviewTextInput.value?.focus());
+}
+
+function commitReviewText() {
+  const editor = reviewTextEditor.value;
+  if (!editor) return;
+  const text = editor.value.trim();
+  if (text) {
+    const annotation: ReviewTextAnnotation = {
+      id: reviewAnnotationId(),
+      type: "text",
+      text,
+      x: editor.x,
+      y: editor.y,
+      color: reviewColor.value,
+      fontSize: reviewFontSize.value
+    };
     reviewAnnotations.value.push(annotation);
     selectedReviewAnnotationId.value = annotation.id;
-  } catch {
-    // 取消文字输入时不修改图片。
-  } finally {
-    reviewTool.value = "pen";
+  }
+  reviewTextEditor.value = null;
+  reviewTool.value = "pen";
+}
+
+function cancelReviewText() {
+  reviewTextEditor.value = null;
+  reviewTool.value = "pen";
+}
+
+function handleReviewTextEditorKeydown(event: KeyboardEvent) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    commitReviewText();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    cancelReviewText();
   }
 }
 
 function startMoveAnnotation(event: MouseEvent, annotation: ReviewAnnotation) {
+  commitReviewText();
   const point = reviewPoint(event);
   if (!point) return;
   selectedReviewAnnotationId.value = annotation.id;
@@ -631,6 +662,20 @@ function annotationStyle(annotation: ReviewTextAnnotation) {
     top: `${annotation.y * scale}px`,
     color: annotation.color,
     fontSize: `${annotation.fontSize * scale}px`
+  };
+}
+
+function reviewTextEditorStyle() {
+  const editor = reviewTextEditor.value;
+  const canvas = reviewCanvas.value;
+  const display = reviewCanvasDisplay.value;
+  if (!editor || !canvas || !canvas.width || !canvas.height || !display.width) return {};
+  const scale = display.width / canvas.width;
+  return {
+    left: `${editor.x * scale}px`,
+    top: `${editor.y * scale}px`,
+    color: reviewColor.value,
+    fontSize: `${reviewFontSize.value * scale}px`
   };
 }
 
@@ -722,6 +767,7 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
 }
 
 async function reviewedImageBlob() {
+  commitReviewText();
   const canvas = reviewCanvas.value;
   if (!canvas) return null;
   const exportCanvas = createReviewedExportCanvas(canvas);
@@ -1084,6 +1130,8 @@ onBeforeUnmount(() => {
             </div>
             <div class="review-tool-group">
               <el-tooltip content="插入文字" placement="bottom"><el-button class="review-tool-button review-tool-button--text" :class="{ 'is-active': reviewTool === 'text' }" :type="reviewTool === 'text' ? 'success' : 'default'" aria-label="插入文字" @click="reviewTool = 'text'">T</el-button></el-tooltip>
+              <label class="review-tool-slider review-text-color" title="字体颜色"><input v-model="reviewColor" type="color" aria-label="字体颜色" /></label>
+              <label class="review-tool-slider review-text-size" title="字体大小"><span>Aa</span><input v-model.number="reviewFontSize" type="range" min="14" max="64" step="1" aria-label="字体大小" /><span>{{ reviewFontSize }} px</span></label>
               <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-tooltip content="表情" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" :type="reviewTool === 'emoji' ? 'success' : 'default'" aria-label="表情"><el-icon><ChatDotRound /></el-icon></el-button></el-tooltip><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
               <el-tooltip content="矩形框" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" :type="reviewTool === 'rectangle' ? 'success' : 'default'" aria-label="矩形框" @click="reviewTool = 'rectangle'"><el-icon><Crop /></el-icon></el-button></el-tooltip>
             </div>
@@ -1110,6 +1158,7 @@ onBeforeUnmount(() => {
               <rect v-else class="review-shape-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id }" :x="annotation.x" :y="annotation.y" :width="annotation.width" :height="annotation.height" :stroke="annotation.color" :stroke-width="annotation.lineWidth" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)" />
             </template>
           </svg>
+          <input v-if="reviewTextEditor" ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" :style="reviewTextEditorStyle()" placeholder="输入批注" aria-label="图片批注文字" @mousedown.stop @keydown.stop="handleReviewTextEditorKeydown" @blur="commitReviewText" />
           <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji' }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
         </div>
       </div>
