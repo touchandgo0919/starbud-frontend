@@ -120,10 +120,14 @@ const calendarTaskDates = computed(() => calendarTasks.value.reduce<Record<strin
   if (!current || calendarDotPriority[status] > calendarDotPriority[current]) dates[task.occurrenceDate] = status;
   return dates;
 }, {}));
-const completedTaskCount = computed(() => tasks.value.filter((task) => task.status === "completed").length);
-const taskProgressPercent = computed(() => tasks.value.length ? Math.round((completedTaskCount.value / tasks.value.length) * 100) : 0);
 const dialogTitle = computed(() => editingTaskId.value ? "编辑任务" : "新建任务");
 const quickMemberOptions = computed(() => {
+  const toProgress = (completed: number, total: number) => ({
+    completed,
+    total,
+    label: `${completed}/${total}`,
+    percent: total ? Math.round((completed / total) * 100) : 0
+  });
   const progress = new Map<string, { completed: number; total: number }>();
   allTasksForSelectedDate.value.forEach((task) => {
     const current = progress.get(task.childId) || { completed: 0, total: 0 };
@@ -139,13 +143,11 @@ const quickMemberOptions = computed(() => {
     { completed: 0, total: 0 }
   );
   return [
-    { id: "", name: "全部", progress: `${allProgress.completed}/${allProgress.total}`, initial: "全" },
-    ...children.value.map((child) => ({
-      id: child.id,
-      name: child.name,
-      progress: `${progress.get(child.id)?.completed || 0}/${progress.get(child.id)?.total || 0}`,
-      initial: child.name.slice(0, 1)
-    }))
+    { id: "", name: "全部", progress: toProgress(allProgress.completed, allProgress.total) },
+    ...children.value.map((child) => {
+      const childProgress = progress.get(child.id) || { completed: 0, total: 0 };
+      return { id: child.id, name: child.name, progress: toProgress(childProgress.completed, childProgress.total) };
+    })
   ];
 });
 
@@ -218,9 +220,12 @@ async function loadTasks() {
       if (!hasSubmission(task)) return [taskRowKey(task), [] as SubmissionPhoto[]] as const;
       try {
         const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
-        const previewPhotos = submission.photos.length
-          ? submission.photos
-          : submission.reviewRounds.flatMap((round) => round.photos);
+        // 当前提交的照片与已进入批改记录的照片可能是同一批，按照片 ID 去重。
+        // 因此这里既能累计多轮提交的所有作业照片，也不会把同一轮重复计算两次。
+        const photoById = new Map<string, SubmissionPhoto>();
+        [...submission.reviewRounds.flatMap((round) => round.photos), ...submission.photos]
+          .forEach((photo) => photoById.set(photo.id, photo));
+        const previewPhotos = [...photoById.values()];
         return [taskRowKey(task), previewPhotos] as const;
       } catch { return [taskRowKey(task), [] as SubmissionPhoto[]] as const; }
     }));
@@ -1327,13 +1332,10 @@ onBeforeUnmount(() => {
             role="listitem"
             @click="selectQuickMember(member.id)"
           >
-            <span class="task-quick-switch-avatar">{{ member.initial }}</span>
             <span class="task-quick-switch-name">{{ member.name }}</span>
-            <b>{{ member.progress }}</b>
+            <b>{{ member.progress.label }}</b>
+            <span class="task-quick-switch-progress" :aria-label="`${member.name} 已完成 ${member.progress.completed} 项，共 ${member.progress.total} 项`"><i :style="{ width: `${member.progress.percent}%` }" /></span>
           </button>
-        </div>
-        <div class="panel-heading-progress" :aria-label="`已完成 ${completedTaskCount} 项，共 ${tasks.length} 项任务`">
-          <div class="task-progress-track" aria-hidden="true"><i :style="{ width: `${taskProgressPercent}%` }" /></div>
         </div>
         <div v-if="auth.user?.role !== 'child'" class="panel-heading-actions">
           <el-button type="primary" :icon="Plus" @click="openCreate">新建任务</el-button>
