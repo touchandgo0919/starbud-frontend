@@ -251,9 +251,8 @@ h1, h2, h3, p { margin: 0; }
 .dialog-form-row > .el-form-item { width: 100%; min-width: 0; }
 .dialog-form-row .el-form-item__content { min-width: 0; }
 .dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100% !important; }
-.task-options-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.task-options-row .el-form-item:nth-child(3) { grid-column: span 2; }
-.task-options-row .el-form-item { margin-bottom: 18px; }
+.task-options-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.task-options-row .el-form-item { margin-bottom: 10px; }
 .task-options-row .el-checkbox { white-space: nowrap; }
 .task-options-row .el-input-number { width: 100%; }
 .task-option-label { display: inline-flex; align-items: center; gap: 5px; }
@@ -332,7 +331,7 @@ h1, h2, h3, p { margin: 0; }
 .review-tool-button.el-button:hover, .review-tool-button.el-button.is-active { border-color: transparent; background: rgba(0, 198, 120, .14); color: #00c678; }
 .review-tool-button.el-button--success { border-color: transparent; background: rgba(0, 198, 120, .18); color: #00c678; }
 .review-tool-button.el-button.is-disabled { color: #60646c; background: transparent; border-color: transparent; }
-.review-arrow-tool-icon { transform: scaleX(1.25); transform-origin: center; }
+.review-arrow-tool-icon { transform: none; }
 .review-photo-position { min-width: 34px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .review-tool-popper.el-popper { margin-top: 8px !important; padding: 8px 10px; border: 1px solid #353941; border-radius: 4px; background: #24262b; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
 .review-tool-popper.el-popper .el-popper__arrow::before { border-color: #353941; background: #24262b; }
@@ -369,7 +368,12 @@ h1, h2, h3, p { margin: 0; }
 .review-arrowhead { pointer-events: all; cursor: move; stroke-linejoin: miter; }
 .review-shape-annotation:hover, .review-shape-annotation.is-selected { filter: drop-shadow(0 0 2px currentColor); }
 .review-shape-annotation.is-selected { stroke-dasharray: none; }
-.review-selection-node { fill: #fff; stroke: #9ba3ae; stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.review-selection-node { fill: #fff; stroke: #9ba3ae; stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: all; }
+.review-selection-node--top-left, .review-selection-node--bottom-right { cursor: nwse-resize; }
+.review-selection-node--top-right, .review-selection-node--bottom-left { cursor: nesw-resize; }
+.review-selection-node--top, .review-selection-node--bottom { cursor: ns-resize; }
+.review-selection-node--left, .review-selection-node--right { cursor: ew-resize; }
+.review-selection-node--start, .review-selection-node--end { cursor: crosshair; }
 .review-text-annotation { position: absolute; z-index: 3; margin: 0; padding: 1px 3px; border: 1px dashed transparent; border-radius: 3px; background: transparent; font-family: inherit; font-weight: 700; line-height: 1.2; white-space: pre; cursor: move; user-select: none; transform: translateY(-2px); }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
