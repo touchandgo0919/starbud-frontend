@@ -40,6 +40,7 @@ const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
 const selectedReviewPhoto = ref<SubmissionPhoto | null>(null);
+const reviewReplacementImageId = ref<string | null>(null);
 const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
@@ -317,6 +318,7 @@ async function openDetail(task: Task) {
   submissionReviewImageUrl.value = null;
   selectedReviewImageUrl.value = null;
   selectedReviewPhoto.value = null;
+  reviewReplacementImageId.value = null;
   submissionReviewRounds.value = [];
   detailVisible.value = true;
 
@@ -371,6 +373,7 @@ async function restartReview() {
   const reviewedPhoto = selectedReviewPhoto.value;
   selectedReviewPhoto.value = null;
   if (reviewedPhoto) {
+    reviewReplacementImageId.value = reviewedPhoto.id;
     await openReview(reviewedPhoto);
     return;
   }
@@ -383,6 +386,7 @@ async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPho
     originalPreviewVisible.value = true;
     return;
   }
+  reviewReplacementImageId.value = null;
   await openReview(photo, photos);
 }
 
@@ -399,6 +403,7 @@ async function reReviewImage(image: SubmissionPhoto) {
   }
   selectedReviewPhoto.value = image;
   selectedReviewImageUrl.value = null;
+  reviewReplacementImageId.value = image.id;
   reviewResultVisible.value = false;
   await openReview(image);
 }
@@ -1172,9 +1177,16 @@ async function submitReviewedImage() {
       .map((photo) => reviewedPhotoBlobs.value[photo.id])
       .filter((image): image is Blob => Boolean(image));
     if (!images.length) throw new Error("请至少批改一张图片。");
-    await submitSubmissionReview(selectedSubmissionId.value, images);
+    const replacementImageId = reviewReplacementImageId.value;
+    const submission = await submitSubmissionReview(selectedSubmissionId.value, images, replacementImageId);
+    submissionPhotos.value = submission.photos;
+    submissionSubmittedAt.value = submission.submittedAt;
+    submissionNote.value = submission.note.trim();
+    submissionReviewImageUrl.value = submission.reviewImageUrl;
+    submissionReviewRounds.value = submission.reviewRounds;
+    reviewReplacementImageId.value = null;
     reviewVisible.value = false;
-    ElMessage.success(`已提交 ${images.length} 张批改图片，已通知小朋友。`);
+    ElMessage.success(replacementImageId ? "已更新这张批改图片，已通知小朋友。" : `已提交 ${images.length} 张批改图片，已通知小朋友。`);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
   } finally {
