@@ -36,6 +36,7 @@ const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
 const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
+const selectedReviewPhoto = ref<SubmissionPhoto | null>(null);
 const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
@@ -172,6 +173,10 @@ function canReviewSubmission(task: Task | null) {
   return Boolean(task && task.reviewStatus === "pending_review" && auth.user?.role !== "child");
 }
 
+function canReReviewSubmission(task: Task | null) {
+  return Boolean(task && task.submissionStatus === "submitted" && !task.finalizedAt && auth.user?.role !== "child");
+}
+
 async function loadTasks() {
   loading.value = true;
   try {
@@ -277,6 +282,7 @@ async function openDetail(task: Task) {
   submissionNote.value = "";
   submissionReviewImageUrl.value = null;
   selectedReviewImageUrl.value = null;
+  selectedReviewPhoto.value = null;
   submissionReviewRounds.value = [];
   detailVisible.value = true;
 
@@ -328,6 +334,12 @@ async function restartReview() {
   if (task?.finalizedAt) return;
   reviewResultVisible.value = false;
   selectedReviewImageUrl.value = null;
+  const reviewedPhoto = selectedReviewPhoto.value;
+  selectedReviewPhoto.value = null;
+  if (reviewedPhoto) {
+    await openReview(reviewedPhoto);
+    return;
+  }
   if (task) await openTaskReview(task);
 }
 
@@ -340,9 +352,21 @@ async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPho
   await openReview(photo, photos);
 }
 
-function viewRoundReview(url: string) {
-  selectedReviewImageUrl.value = url;
+function viewRoundReview(image: SubmissionPhoto) {
+  selectedReviewPhoto.value = image;
+  selectedReviewImageUrl.value = image.url;
   reviewResultVisible.value = true;
+}
+
+async function reReviewImage(image: SubmissionPhoto) {
+  if (!canReReviewSubmission(detailTask.value)) {
+    viewRoundReview(image);
+    return;
+  }
+  selectedReviewPhoto.value = image;
+  selectedReviewImageUrl.value = null;
+  reviewResultVisible.value = false;
+  await openReview(image);
 }
 
 async function finalizeCurrentReview() {
@@ -1078,7 +1102,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
-              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" title="查看批改" @click="viewRoundReview(image.url)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>查看批改</span></button></div>
+              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
             </div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
@@ -1110,7 +1134,7 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
       <img v-if="selectedReviewImageUrl || submissionReviewImageUrl" class="review-result-image" :src="selectedReviewImageUrl || submissionReviewImageUrl || ''" alt="批改后照片" />
-      <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button v-if="!detailTask?.finalizedAt" type="success" @click="restartReview">重新批改</el-button></template>
+      <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button v-if="canReReviewSubmission(detailTask)" type="success" @click="restartReview">重新批改</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="originalPreviewVisible" title="原图" width="min(860px, 92vw)" class="form-dialog">
