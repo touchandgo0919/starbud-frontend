@@ -248,7 +248,9 @@ h1, h2, h3, p { margin: 0; }
 .empty-state { padding: 32px 20px; border: 1px dashed #3a3e47; border-radius: 8px; color: var(--muted); font-size: 13px; text-align: center; }
 
 .dialog-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100%; }
+.dialog-form-row > .el-form-item { width: 100%; min-width: 0; }
+.dialog-form-row .el-form-item__content { min-width: 0; }
+.dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100% !important; }
 .task-options-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .task-options-row .el-form-item:nth-child(3) { grid-column: span 2; }
 .task-options-row .el-form-item { margin-bottom: 18px; }
