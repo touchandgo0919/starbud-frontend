@@ -943,14 +943,28 @@ function annotationStyle(annotation: ReviewTextAnnotation) {
   const display = reviewCanvasDisplay.value;
   if (!canvas || !canvas.width || !canvas.height || !display.width) return {};
   const scale = display.width / canvas.width;
+  const layout = reviewTextLayout(annotation.fontSize, Boolean(annotation.backgroundColor));
   return {
-    left: `${annotation.x * scale}px`,
-    top: `${annotation.y * scale}px`,
+    // Text annotations use their visible glyph's top-left corner as the saved anchor.
+    // Subtract background padding only from the wrapper, so the glyph remains at x/y.
+    left: `${(annotation.x - layout.paddingX) * scale}px`,
+    top: `${(annotation.y - layout.paddingY) * scale}px`,
     color: annotation.color,
     backgroundColor: annotation.backgroundColor || "transparent",
     fontSize: `${annotation.fontSize * scale}px`,
-    transform: `translateY(-2px) rotate(${annotation.rotation || 0}deg)`,
+    padding: `${layout.paddingY * scale}px ${layout.paddingX * scale}px`,
+    transform: `rotate(${annotation.rotation || 0}deg)`,
     transformOrigin: "0 0"
+  };
+}
+
+function reviewTextLayout(fontSize: number, withBackground: boolean) {
+  const paddingX = withBackground ? Math.round(fontSize * .28) : 0;
+  const paddingY = withBackground ? Math.round(fontSize * .16) : 0;
+  return {
+    paddingX,
+    paddingY,
+    contentHeight: Math.ceil(fontSize * 1.2)
   };
 }
 
@@ -961,19 +975,20 @@ function reviewTextEditorFrameStyle() {
   if (!editor || !canvas || !canvas.width || !canvas.height || !display.width) return {};
   const scale = display.width / canvas.width;
   const fontSize = reviewFontSize.value;
+  const layout = reviewTextLayout(fontSize, reviewTextWithBackground.value);
   // 左边缘保持不动，宽度取输入元素的真实内容宽度，中文输入法组合阶段也不会裁字。
   const measuredWidth = reviewTextInput.value ? Math.ceil(reviewTextInput.value.scrollWidth / scale) : 0;
   const estimatedWidth = 18 + editor.value.length * fontSize * .78;
-  const width = Math.min(420, Math.max(42, estimatedWidth, measuredWidth + 2));
-  const height = Math.max(34, Math.ceil(fontSize * 1.35));
+  const contentWidth = Math.min(420, Math.max(42, estimatedWidth, measuredWidth + 2));
   return {
-    left: `${editor.x * scale}px`,
-    top: `${editor.y * scale}px`,
+    left: `${(editor.x - layout.paddingX) * scale}px`,
+    top: `${(editor.y - layout.paddingY) * scale}px`,
     color: reviewTextWithBackground.value ? "#ffffff" : reviewColor.value,
     backgroundColor: reviewTextWithBackground.value ? reviewColor.value : "transparent",
     fontSize: `${fontSize * scale}px`,
-    width: `${width * scale}px`,
-    height: `${height * scale}px`
+    padding: `${layout.paddingY * scale}px ${layout.paddingX * scale}px`,
+    width: `${(contentWidth + layout.paddingX * 2) * scale}px`,
+    height: `${(layout.contentHeight + layout.paddingY * 2) * scale}px`
   };
 }
 
@@ -1095,13 +1110,12 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
       context.translate(annotation.x, annotation.y);
       context.rotate(((annotation.rotation || 0) * Math.PI) / 180);
       if (annotation.backgroundColor) {
-        const paddingX = Math.round(annotation.fontSize * .28);
-        const top = -Math.round(annotation.fontSize * .92);
-        const width = Math.ceil(context.measureText(annotation.text).width) + paddingX * 2;
-        const height = Math.round(annotation.fontSize * 1.28);
+        const layout = reviewTextLayout(annotation.fontSize, true);
+        const width = Math.ceil(context.measureText(annotation.text).width) + layout.paddingX * 2;
+        const height = layout.contentHeight + layout.paddingY * 2;
         context.fillStyle = annotation.backgroundColor;
         context.beginPath();
-        context.roundRect(-paddingX, top, width, height, Math.max(4, Math.round(annotation.fontSize * .2)));
+        context.roundRect(-layout.paddingX, -layout.paddingY, width, height, Math.max(4, Math.round(annotation.fontSize * .2)));
         context.fill();
       }
       context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
