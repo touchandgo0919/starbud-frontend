@@ -33,6 +33,11 @@ const completed = computed(() => todayTasks.value.filter(isCompleted).length);
 const pending = computed(() => todayTasks.value.length - completed.value);
 const completionRate = computed(() => todayTasks.value.length ? Math.round((completed.value / todayTasks.value.length) * 100) : 0);
 const nextTask = computed(() => todayTasks.value.find((task) => !isCompleted(task)));
+const familyMemberCount = computed(() => {
+  const memberIds = new Set<string>();
+  families.value.forEach((family) => family.members.forEach((member) => memberIds.add(member.id)));
+  return memberIds.size;
+});
 const trendRange = computed(() => getTrendRange(trendPeriod.value));
 const periodLabel = computed(() => trendPeriod.value === "week" ? "本周" : "本月");
 const trendPoints = computed<TrendPoint[]>(() => {
@@ -63,7 +68,8 @@ const trendUnfinished = computed(() => trendTotal.value - trendCompleted.value);
 const trendCompletionRate = computed(() => trendTotal.value ? Math.round((trendCompleted.value / trendTotal.value) * 100) : 0);
 
 function isCompleted(task: Task) {
-  return task.status === "completed" || task.reviewStatus === "completed";
+  // 已完成的任务再次补交照片，仍按已完成统计；本轮批改状态单独展示。
+  return task.status === "completed" || task.reviewStatus === "completed" || Boolean(task.finalizedAt);
 }
 
 function childName(childId: string) {
@@ -177,7 +183,7 @@ onMounted(load);
         <div class="metric-icon metric-icon--blue"><el-icon><House /></el-icon></div>
         <div>
           <span>{{ auth.user?.role === "admin" ? "系统用户" : "家庭成员" }}</span>
-          <strong>{{ auth.user?.role === "admin" ? users.length : children.length }}</strong>
+          <strong>{{ auth.user?.role === "admin" ? users.length : familyMemberCount }}</strong>
           <small>{{ auth.user?.role === "admin" ? `${users.filter((user) => user.active).length} 个账号启用` : `${families.length} 个家庭` }}</small>
         </div>
       </article>
