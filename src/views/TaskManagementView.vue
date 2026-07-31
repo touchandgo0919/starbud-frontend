@@ -309,6 +309,7 @@ function openEdit(task: Task) {
 
 let reviewSourceImage: HTMLImageElement | null = null;
 let reviewImageLoadVersion = 0;
+let reviewZoomAnchorJob = 0;
 
 async function openDetail(task: Task) {
   detailTask.value = task;
@@ -565,7 +566,30 @@ function changeReviewZoom(delta: number) {
 
 function handleReviewZoomWheel(event: WheelEvent) {
   if (!event.deltaY) return;
-  changeReviewZoom(event.deltaY < 0 ? 10 : -10);
+  const shell = reviewCanvasShell.value;
+  const stage = reviewStage.value;
+  if (!shell || !stage) {
+    changeReviewZoom(event.deltaY < 0 ? 10 : -10);
+    return;
+  }
+
+  const before = stage.getBoundingClientRect();
+  if (!before.width || !before.height) return;
+  const anchorX = Math.max(0, Math.min(1, (event.clientX - before.left) / before.width));
+  const anchorY = Math.max(0, Math.min(1, (event.clientY - before.top) / before.height));
+  const nextZoom = Math.max(25, Math.min(250, reviewZoom.value + (event.deltaY < 0 ? 10 : -10)));
+  if (nextZoom === reviewZoom.value) return;
+
+  reviewZoom.value = nextZoom;
+  fitReviewCanvas();
+  const job = ++reviewZoomAnchorJob;
+  void nextTick().then(() => {
+    if (job !== reviewZoomAnchorJob) return;
+    const after = stage.getBoundingClientRect();
+    // 缩放后把鼠标下的同一像素点移回原来的屏幕位置。
+    shell.scrollLeft += after.left + (after.width * anchorX) - event.clientX;
+    shell.scrollTop += after.top + (after.height * anchorY) - event.clientY;
+  });
 }
 
 function reviewPoint(event: MouseEvent): ReviewPoint | null {
