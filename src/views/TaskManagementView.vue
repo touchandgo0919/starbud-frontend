@@ -124,14 +124,26 @@ const completedTaskCount = computed(() => tasks.value.filter((task) => task.stat
 const taskProgressPercent = computed(() => tasks.value.length ? Math.round((completedTaskCount.value / tasks.value.length) * 100) : 0);
 const dialogTitle = computed(() => editingTaskId.value ? "编辑任务" : "新建任务");
 const quickMemberOptions = computed(() => {
-  const counts = new Map<string, number>();
-  allTasksForSelectedDate.value.forEach((task) => counts.set(task.childId, (counts.get(task.childId) || 0) + 1));
+  const progress = new Map<string, { completed: number; total: number }>();
+  allTasksForSelectedDate.value.forEach((task) => {
+    const current = progress.get(task.childId) || { completed: 0, total: 0 };
+    current.total += 1;
+    if (task.status === "completed") current.completed += 1;
+    progress.set(task.childId, current);
+  });
+  const allProgress = allTasksForSelectedDate.value.reduce(
+    (current, task) => ({
+      total: current.total + 1,
+      completed: current.completed + (task.status === "completed" ? 1 : 0)
+    }),
+    { completed: 0, total: 0 }
+  );
   return [
-    { id: "", name: "全部", count: allTasksForSelectedDate.value.length, initial: "全" },
+    { id: "", name: "全部", progress: `${allProgress.completed}/${allProgress.total}`, initial: "全" },
     ...children.value.map((child) => ({
       id: child.id,
       name: child.name,
-      count: counts.get(child.id) || 0,
+      progress: `${progress.get(child.id)?.completed || 0}/${progress.get(child.id)?.total || 0}`,
       initial: child.name.slice(0, 1)
     }))
   ];
@@ -1317,12 +1329,10 @@ onBeforeUnmount(() => {
           >
             <span class="task-quick-switch-avatar">{{ member.initial }}</span>
             <span class="task-quick-switch-name">{{ member.name }}</span>
-            <b>{{ member.count }}</b>
+            <b>{{ member.progress }}</b>
           </button>
         </div>
         <div class="panel-heading-progress" :aria-label="`已完成 ${completedTaskCount} 项，共 ${tasks.length} 项任务`">
-          <strong>{{ completedTaskCount }} / {{ tasks.length }}</strong>
-          <span>已完成</span>
           <div class="task-progress-track" aria-hidden="true"><i :style="{ width: `${taskProgressPercent}%` }" /></div>
         </div>
         <div v-if="auth.user?.role !== 'child'" class="panel-heading-actions">
