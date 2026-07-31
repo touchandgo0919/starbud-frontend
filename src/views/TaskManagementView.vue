@@ -10,7 +10,7 @@ import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
 type ReviewPoint = { x: number; y: number };
-type ReviewTextAnnotation = { id: string; type: "text" | "emoji"; text: string; x: number; y: number; color: string; fontSize: number; rotation: number };
+type ReviewTextAnnotation = { id: string; type: "text" | "emoji"; text: string; x: number; y: number; color: string; backgroundColor?: string; fontSize: number; rotation: number };
 type ReviewRectangleAnnotation = { id: string; type: "rectangle"; x: number; y: number; width: number; height: number; color: string; lineWidth: number };
 type ReviewPathAnnotation = { id: string; type: "path"; points: ReviewPoint[]; color: string; lineWidth: number; arrow?: boolean };
 type ReviewAnnotation = ReviewTextAnnotation | ReviewRectangleAnnotation | ReviewPathAnnotation;
@@ -57,8 +57,9 @@ const reviewLineWidth = ref(6);
 const reviewZoom = ref(100);
 const reviewRotation = ref(0);
 const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji" | "arrow" | null>(null);
-const reviewFontSize = ref(28);
+const reviewFontSize = ref(42);
 const reviewEmoji = ref("👍");
+const reviewTextWithBackground = ref(false);
 const reviewColorPalette = ["#20a8ee", "#9ad400", "#ffc400", "#55585e", "#ffffff", "#ff5a63"];
 const reviewLineSizes = [
   { label: "小", value: 3 },
@@ -66,9 +67,9 @@ const reviewLineSizes = [
   { label: "大", value: 10 }
 ];
 const reviewTextSizes = [
-  { label: "小", value: 18 },
-  { label: "中", value: 28 },
-  { label: "大", value: 40 }
+  { label: "小", value: 27 },
+  { label: "中", value: 42 },
+  { label: "大", value: 60 }
 ];
 const reviewAnnotations = ref<ReviewAnnotation[]>([]);
 const selectedReviewAnnotationId = ref<string | null>(null);
@@ -78,6 +79,7 @@ const reviewCanvasDisplay = ref({ width: 0, height: 0 });
 const reviewCanvasSize = ref({ width: 0, height: 0 });
 const reviewShapeAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewRectangleAnnotation | ReviewPathAnnotation => annotation.type === "rectangle" || annotation.type === "path"));
 const reviewTextAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewTextAnnotation => annotation.type === "text" || annotation.type === "emoji"));
+const selectedReviewAnnotation = computed(() => reviewAnnotations.value.find((annotation) => annotation.id === selectedReviewAnnotationId.value) || null);
 let movingAnnotation: { id: string; startPoint: ReviewPoint; initial: ReviewAnnotation } | null = null;
 let resizingAnnotation: { id: string; handle: ReviewResizeHandle; startPoint: ReviewPoint; initial: ReviewRectangleAnnotation | ReviewPathAnnotation } | null = null;
 let drawingAnnotationId: string | null = null;
@@ -727,7 +729,8 @@ function commitReviewText() {
       text,
       x: editor.x,
       y: editor.y,
-      color: reviewColor.value,
+      color: reviewTextWithBackground.value ? "#ffffff" : reviewColor.value,
+      backgroundColor: reviewTextWithBackground.value ? reviewColor.value : undefined,
       fontSize: reviewFontSize.value,
       rotation: 0
     };
@@ -766,11 +769,76 @@ function closeReviewTextEditorOutsideImage(event: PointerEvent) {
   commitReviewText();
 }
 
+function replaceSelectedReviewAnnotation(annotation: ReviewAnnotation) {
+  const index = reviewAnnotations.value.findIndex((item) => item.id === annotation.id);
+  if (index >= 0) reviewAnnotations.value.splice(index, 1, annotation);
+}
+
+function selectReviewAnnotation(annotation: ReviewAnnotation) {
+  selectedReviewAnnotationId.value = annotation.id;
+  if (annotation.type === "text" || annotation.type === "emoji") {
+    reviewTool.value = annotation.type;
+    if (annotation.type === "text") {
+      reviewFontSize.value = annotation.fontSize;
+      reviewTextWithBackground.value = Boolean(annotation.backgroundColor);
+      reviewColor.value = annotation.backgroundColor || annotation.color;
+    }
+    return;
+  }
+  if (annotation.type === "rectangle") {
+    reviewTool.value = "rectangle";
+    reviewLineWidth.value = annotation.lineWidth;
+    reviewColor.value = annotation.color;
+    return;
+  }
+  if (annotation.type === "path") {
+    reviewTool.value = annotation.arrow ? "arrow" : "pen";
+    reviewLineWidth.value = annotation.lineWidth;
+    reviewColor.value = annotation.color;
+  }
+}
+
+function setReviewColor(color: string) {
+  reviewColor.value = color;
+  const annotation = selectedReviewAnnotation.value;
+  if (!annotation) return;
+  if (annotation.type === "text") {
+    replaceSelectedReviewAnnotation(annotation.backgroundColor
+      ? { ...annotation, backgroundColor: color, color: "#ffffff" }
+      : { ...annotation, color });
+    return;
+  }
+  if (annotation.type !== "emoji") replaceSelectedReviewAnnotation({ ...annotation, color });
+}
+
+function setReviewLineWidth(value: number) {
+  reviewLineWidth.value = value;
+  const annotation = selectedReviewAnnotation.value;
+  if (annotation && (annotation.type === "rectangle" || annotation.type === "path")) {
+    replaceSelectedReviewAnnotation({ ...annotation, lineWidth: value });
+  }
+}
+
+function setReviewFontSize(value: number) {
+  reviewFontSize.value = value;
+  const annotation = selectedReviewAnnotation.value;
+  if (annotation?.type === "text") replaceSelectedReviewAnnotation({ ...annotation, fontSize: value });
+}
+
+function toggleReviewTextBackground() {
+  reviewTextWithBackground.value = !reviewTextWithBackground.value;
+  const annotation = selectedReviewAnnotation.value;
+  if (annotation?.type !== "text") return;
+  replaceSelectedReviewAnnotation(reviewTextWithBackground.value
+    ? { ...annotation, backgroundColor: reviewColor.value, color: "#ffffff" }
+    : { ...annotation, backgroundColor: undefined, color: reviewColor.value });
+}
+
 function startMoveAnnotation(event: MouseEvent | PointerEvent, annotation: ReviewAnnotation) {
   commitReviewText();
   const point = reviewPoint(event);
   if (!point) return;
-  selectedReviewAnnotationId.value = annotation.id;
+  selectReviewAnnotation(annotation);
   movingAnnotation = { id: annotation.id, startPoint: point, initial: copyReviewAnnotation(annotation) };
   if (event instanceof PointerEvent && event.currentTarget instanceof Element) event.currentTarget.setPointerCapture?.(event.pointerId);
   window.addEventListener("pointermove", moveAnnotation);
@@ -784,7 +852,7 @@ function startResizeAnnotation(event: MouseEvent | PointerEvent, annotation: Rev
   commitReviewText();
   const point = reviewPoint(event);
   if (!point) return;
-  selectedReviewAnnotationId.value = annotation.id;
+  selectReviewAnnotation(annotation);
   resizingAnnotation = { id: annotation.id, handle, startPoint: point, initial: copyReviewAnnotation(annotation) as ReviewRectangleAnnotation | ReviewPathAnnotation };
   if (event instanceof PointerEvent && event.currentTarget instanceof Element) event.currentTarget.setPointerCapture?.(event.pointerId);
   window.addEventListener("pointermove", resizeAnnotation);
@@ -879,6 +947,7 @@ function annotationStyle(annotation: ReviewTextAnnotation) {
     left: `${annotation.x * scale}px`,
     top: `${annotation.y * scale}px`,
     color: annotation.color,
+    backgroundColor: annotation.backgroundColor || "transparent",
     fontSize: `${annotation.fontSize * scale}px`,
     transform: `translateY(-2px) rotate(${annotation.rotation || 0}deg)`,
     transformOrigin: "0 0"
@@ -900,7 +969,8 @@ function reviewTextEditorFrameStyle() {
   return {
     left: `${editor.x * scale}px`,
     top: `${editor.y * scale}px`,
-    color: reviewColor.value,
+    color: reviewTextWithBackground.value ? "#ffffff" : reviewColor.value,
+    backgroundColor: reviewTextWithBackground.value ? reviewColor.value : "transparent",
     fontSize: `${fontSize * scale}px`,
     width: `${width * scale}px`,
     height: `${height * scale}px`
@@ -1020,11 +1090,21 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
       context.lineWidth = annotation.lineWidth;
       context.strokeRect(annotation.x, annotation.y, annotation.width, annotation.height);
     } else {
-      context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
       context.font = `${annotation.type === "text" ? "700 " : ""}${annotation.fontSize}px sans-serif`;
       context.save();
       context.translate(annotation.x, annotation.y);
       context.rotate(((annotation.rotation || 0) * Math.PI) / 180);
+      if (annotation.backgroundColor) {
+        const paddingX = Math.round(annotation.fontSize * .28);
+        const top = -Math.round(annotation.fontSize * .92);
+        const width = Math.ceil(context.measureText(annotation.text).width) + paddingX * 2;
+        const height = Math.round(annotation.fontSize * 1.28);
+        context.fillStyle = annotation.backgroundColor;
+        context.beginPath();
+        context.roundRect(-paddingX, top, width, height, Math.max(4, Math.round(annotation.fontSize * .2)));
+        context.fill();
+      }
+      context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
       context.fillText(annotation.text, 0, 0);
       context.restore();
     }
@@ -1408,7 +1488,7 @@ onBeforeUnmount(() => {
             <div class="review-tool-group">
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
                 <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" aria-label="矩形框" title="矩形框" @click="reviewTool = 'rectangle'"><Square :size="18" :stroke-width="1.6" /></el-button></template>
-                <div class="review-tool-options" aria-label="矩形框粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="reviewLineWidth = size.value"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div></div>
+                <div class="review-tool-options" aria-label="矩形框粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="260" trigger="click" popper-class="review-tool-popper">
                 <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" aria-label="表情" title="表情" @click="reviewTool = 'emoji'"><Smile :size="19" :stroke-width="1.6" /></el-button></template>
@@ -1416,15 +1496,15 @@ onBeforeUnmount(() => {
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
                 <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'arrow' }" aria-label="箭头" title="箭头" @click="reviewTool = 'arrow'"><ArrowUpRight class="review-arrow-tool-icon" :size="26" :stroke-width="1.3" /></el-button></template>
-                <div class="review-tool-options" aria-label="箭头粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="reviewLineWidth = size.value"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div></div>
+                <div class="review-tool-options" aria-label="箭头粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
                 <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" aria-label="画笔" title="画笔" @click="reviewTool = 'pen'"><Pencil :size="19" :stroke-width="1.6" /></el-button></template>
-                <div class="review-tool-options" aria-label="画笔粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="reviewLineWidth = size.value"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div></div>
+                <div class="review-tool-options" aria-label="画笔粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
-              <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
+              <el-popover placement="bottom-start" :width="360" trigger="click" popper-class="review-tool-popper">
                 <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'text' }" aria-label="插入文字" title="插入文字" @click="reviewTool = 'text'"><Type :size="19" :stroke-width="1.6" /></el-button></template>
-                <div class="review-tool-options" aria-label="字体大小和颜色"><div class="review-option-sizes review-option-font-sizes"><button v-for="size in reviewTextSizes" :key="size.value" type="button" :class="{ 'is-active': reviewFontSize === size.value }" @click="reviewFontSize = size.value">{{ size.label }}</button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div></div>
+                <div class="review-tool-options" aria-label="字体大小、颜色和底色"><div class="review-option-sizes review-option-font-sizes"><button v-for="size in reviewTextSizes" :key="size.value" type="button" :class="{ 'is-active': reviewFontSize === size.value }" @click="setReviewFontSize(size.value)">{{ size.label }}</button></div><span class="review-option-divider"></span><button type="button" class="review-text-background-toggle" :class="{ 'is-active': reviewTextWithBackground }" title="文字底色" aria-label="文字底色" @click="toggleReviewTextBackground"><span>T</span></button><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-tooltip content="左转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="左转 90°" @click="rotateReviewImage(-90)"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
               <el-tooltip content="右转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="右转 90°" @click="rotateReviewImage(90)"><el-icon><RefreshRight /></el-icon></el-button></el-tooltip>
@@ -1453,7 +1533,7 @@ onBeforeUnmount(() => {
             <input ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" aria-label="图片批注文字" @input="syncReviewTextEditor" @compositionupdate="syncReviewTextEditor" @keydown.stop="handleReviewTextEditorKeydown" />
             <span v-for="corner in ['top-left', 'top-right', 'bottom-left', 'bottom-right']" :key="corner" class="review-text-editor-node" :class="`review-text-editor-node--${corner}`"></span>
           </div>
-          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji' }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @pointerdown.stop.prevent="startMoveAnnotation($event, annotation)" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
+          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji', 'review-text-annotation--with-background': !!annotation.backgroundColor }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @pointerdown.stop.prevent="startMoveAnnotation($event, annotation)" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
         </div>
       </div>
       <div v-if="reviewPhotos.length > 1" class="review-photo-navigation">
