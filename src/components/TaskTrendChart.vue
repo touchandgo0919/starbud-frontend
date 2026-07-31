@@ -1,14 +1,26 @@
-<script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { init, use, type ComposeOption, type ECharts } from "echarts/core";
-import { BarChart, LineChart, type BarSeriesOption, type LineSeriesOption } from "echarts/charts";
-import { GridComponent, LegendComponent, TooltipComponent, type GridComponentOption, type LegendComponentOption, type TooltipComponentOption } from "echarts/components";
+<script lang="ts">
+import * as echartsCore from "echarts/core";
+import { BarChart, LineChart } from "echarts/charts";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 
-use([BarChart, LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
+// 在模块加载时注册一次，避免调试环境热更新时重复注册组件。
+echartsCore.use([BarChart, LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
+</script>
+
+<script setup lang="ts">
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import * as echarts from "echarts/core";
+import type { ComposeOption, ECharts } from "echarts/core";
+import type { BarSeriesOption, LineSeriesOption } from "echarts/charts";
+import type { GridComponentOption, LegendComponentOption, TooltipComponentOption } from "echarts/components";
 
 type TaskTrendChartOption = ComposeOption<
-  BarSeriesOption | LineSeriesOption | GridComponentOption | LegendComponentOption | TooltipComponentOption
+  | BarSeriesOption
+  | LineSeriesOption
+  | GridComponentOption
+  | LegendComponentOption
+  | TooltipComponentOption
 >;
 
 interface TrendPoint {
@@ -125,7 +137,7 @@ function renderChart() {
 onMounted(async () => {
   await nextTick();
   if (!chartElement.value) return;
-  chart = init(chartElement.value, undefined, { renderer: "canvas" });
+  chart = echarts.init(chartElement.value, undefined, { renderer: "canvas" });
   renderChart();
   resizeObserver = new ResizeObserver(() => chart?.resize());
   resizeObserver.observe(chartElement.value);
