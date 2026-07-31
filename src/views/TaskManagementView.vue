@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { ArrowLeft, ArrowRight, Brush, ChatDotRound, Crop, Delete, EditPen, FullScreen, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
+import { ArrowLeft, ArrowRight, ChatDotRound, Crop, Delete, EditPen, FullScreen, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
 import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
@@ -54,6 +54,9 @@ const reviewRotation = ref(0);
 const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji">("pen");
 const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
+const reviewColorPalette = ["#70757d", "#00a86b", "#20a8ee", "#9ad400", "#ffc400", "#55585e", "#ffffff", "#ff5a63"];
+const reviewLineWidths = [3, 6, 10, 14, 20];
+const reviewFontSizes = [18, 24, 28, 36, 48];
 const reviewAnnotations = ref<ReviewAnnotation[]>([]);
 const selectedReviewAnnotationId = ref<string | null>(null);
 const reviewTextEditor = ref<ReviewTextEditor | null>(null);
@@ -1124,24 +1127,22 @@ onBeforeUnmount(() => {
           </div>
           <div class="review-toolbar">
             <div class="review-tool-group">
-              <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" :type="reviewTool === 'pen' ? 'success' : 'default'" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
-              <label class="review-tool-slider" title="笔色"><input v-model="reviewColor" type="color" aria-label="批改笔色" /></label>
-              <label class="review-tool-slider" title="批改笔粗细"><el-icon><Brush /></el-icon><input v-model.number="reviewLineWidth" type="range" min="2" max="24" step="1" aria-label="批改笔粗细" /><span>{{ reviewLineWidth }}</span></label>
-            </div>
-            <div class="review-tool-group">
-              <el-tooltip content="插入文字" placement="bottom"><el-button class="review-tool-button review-tool-button--text" :class="{ 'is-active': reviewTool === 'text' }" :type="reviewTool === 'text' ? 'success' : 'default'" aria-label="插入文字" @click="reviewTool = 'text'">T</el-button></el-tooltip>
-              <label class="review-tool-slider review-text-color" title="字体颜色"><input v-model="reviewColor" type="color" aria-label="字体颜色" /></label>
-              <label class="review-tool-slider review-text-size" title="字体大小"><span>Aa</span><input v-model.number="reviewFontSize" type="range" min="14" max="64" step="1" aria-label="字体大小" /><span>{{ reviewFontSize }} px</span></label>
+              <el-tooltip content="画笔" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" aria-label="画笔" @click="reviewTool = 'pen'"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
+              <el-popover placement="bottom" :width="282" trigger="click" popper-class="review-tool-popper">
+                <template #reference><el-button class="review-tool-button" aria-label="选择颜色"><span class="review-tool-color-indicator" :style="{ backgroundColor: reviewColor }"></span></el-button></template>
+                <div class="review-option-panel" aria-label="颜色选项"><button v-for="color in reviewColorPalette" :key="color" type="button" class="review-color-option" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div>
+              </el-popover>
+              <el-popover placement="bottom" :width="260" trigger="click" popper-class="review-tool-popper">
+                <template #reference><el-button class="review-tool-button review-tool-button--size" aria-label="选择大小">A</el-button></template>
+                <div v-if="reviewTool === 'text'" class="review-option-panel review-size-options" aria-label="字体大小选项"><button v-for="size in reviewFontSizes" :key="size" type="button" :class="{ 'is-active': reviewFontSize === size }" @click="reviewFontSize = size">{{ size }} px</button></div>
+                <div v-else class="review-option-panel review-size-options" aria-label="笔画大小选项"><button v-for="width in reviewLineWidths" :key="width" type="button" :class="{ 'is-active': reviewLineWidth === width }" @click="reviewLineWidth = width"><i :style="{ width: `${Math.max(5, width)}px`, height: `${Math.max(5, width)}px` }"></i></button></div>
+              </el-popover>
+              <el-tooltip content="矩形框" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" aria-label="矩形框" @click="reviewTool = 'rectangle'"><el-icon><Crop /></el-icon></el-button></el-tooltip>
+              <el-tooltip content="插入文字" placement="bottom"><el-button class="review-tool-button review-tool-button--text" :class="{ 'is-active': reviewTool === 'text' }" aria-label="插入文字" @click="reviewTool = 'text'">T</el-button></el-tooltip>
               <el-dropdown trigger="click" @command="(emoji: string) => { reviewEmoji = emoji; reviewTool = 'emoji'; }"><el-tooltip content="表情" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" :type="reviewTool === 'emoji' ? 'success' : 'default'" aria-label="表情"><el-icon><ChatDotRound /></el-icon></el-button></el-tooltip><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="emoji in ['👍', '😊', '😠', '⭐', '🎉']" :key="emoji" :command="emoji">{{ emoji }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
-              <el-tooltip content="矩形框" placement="bottom"><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" :type="reviewTool === 'rectangle' ? 'success' : 'default'" aria-label="矩形框" @click="reviewTool = 'rectangle'"><el-icon><Crop /></el-icon></el-button></el-tooltip>
-            </div>
-            <div class="review-tool-group">
               <el-tooltip content="左转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="左转 90°" @click="rotateReviewImage(-90)"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
               <el-tooltip content="右转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="右转 90°" @click="rotateReviewImage(90)"><el-icon><RefreshRight /></el-icon></el-button></el-tooltip>
-              <label class="review-tool-slider" title="图片缩放"><input v-model.number="reviewZoom" type="range" min="50" max="200" step="10" aria-label="图片缩放" @input="fitReviewCanvas" /><span>{{ reviewZoom }}%</span></label>
               <el-tooltip content="全图" placement="bottom"><el-button class="review-tool-button" aria-label="全图" @click="showWholeReviewImage"><el-icon><FullScreen /></el-icon></el-button></el-tooltip>
-            </div>
-            <div class="review-tool-group">
               <el-tooltip content="撤销上一步" placement="bottom"><el-button class="review-tool-button" aria-label="撤销上一步" @click="undoReviewAction"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
               <el-tooltip content="删除选中批改（Delete）" placement="bottom"><el-button class="review-tool-button" :disabled="!selectedReviewAnnotationId" aria-label="删除选中批改" @click="deleteSelectedReviewAnnotation"><el-icon><Delete /></el-icon></el-button></el-tooltip>
             </div>
