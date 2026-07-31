@@ -635,10 +635,14 @@ function reviewArrowGeometry(annotation: ReviewPathAnnotation) {
   if (!annotation.arrow || annotation.points.length < 2) return null;
   const end = annotation.points.at(-1)!;
   const start = annotation.points.at(-2)!;
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  // 使用更窄、更长的三角箭头。箭杆在三角底边中心收束，避免圆角端帽把箭尖画钝。
-  const headLength = Math.max(15, annotation.lineWidth * 3);
-  const spread = Math.PI / 9;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 1) return null;
+  const angle = Math.atan2(dy, dx);
+  // 加大、加宽箭头尖端；短箭头仍保留足够的箭杆，避免箭头被箭尖完全覆盖。
+  const headLength = Math.min(Math.max(24, annotation.lineWidth * 4), distance * 0.7);
+  const spread = Math.PI / 6;
   const left = { x: end.x - headLength * Math.cos(angle - spread), y: end.y - headLength * Math.sin(angle - spread) };
   const right = { x: end.x - headLength * Math.cos(angle + spread), y: end.y - headLength * Math.sin(angle + spread) };
   const base = { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 };
@@ -1411,7 +1415,7 @@ onBeforeUnmount(() => {
                 <div class="review-emoji-options" aria-label="常用表情"><button v-for="emoji in ['👍', '👏', '😊', '😠', '⭐', '🎉', '💯']" :key="emoji" type="button" :class="{ 'is-active': reviewEmoji === emoji }" :title="`使用表情 ${emoji}`" @click="reviewEmoji = emoji; reviewTool = 'emoji'">{{ emoji }}</button></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'arrow' }" aria-label="箭头" title="箭头" @click="reviewTool = 'arrow'"><ArrowUpRight class="review-arrow-tool-icon" :size="21" :stroke-width="1.35" /></el-button></template>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'arrow' }" aria-label="箭头" title="箭头" @click="reviewTool = 'arrow'"><ArrowUpRight class="review-arrow-tool-icon" :size="26" :stroke-width="1.3" /></el-button></template>
                 <div class="review-tool-options" aria-label="箭头粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="reviewLineWidth = size.value"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="reviewColor = color"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">

@@ -375,7 +375,7 @@ h1, h2, h3, p { margin: 0; }
 .review-selection-node--top-right, .review-selection-node--bottom-left { cursor: nesw-resize; }
 .review-selection-node--top, .review-selection-node--bottom { cursor: ns-resize; }
 .review-selection-node--left, .review-selection-node--right { cursor: ew-resize; }
-.review-selection-node--start, .review-selection-node--end { cursor: crosshair; }
+.review-selection-node--start, .review-selection-node--end { cursor: move; }
 .review-text-annotation { position: absolute; z-index: 3; margin: 0; padding: 1px 3px; border: 1px dashed transparent; border-radius: 3px; background: transparent; font-family: inherit; font-weight: 700; line-height: 1.2; white-space: pre; cursor: move; user-select: none; transform: translateY(-2px); }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
