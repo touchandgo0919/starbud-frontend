@@ -8,6 +8,11 @@ import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionR
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
+type ReviewPoint = { x: number; y: number };
+type ReviewTextAnnotation = { id: string; type: "text" | "emoji"; text: string; x: number; y: number; color: string; fontSize: number };
+type ReviewRectangleAnnotation = { id: string; type: "rectangle"; x: number; y: number; width: number; height: number; color: string; lineWidth: number };
+type ReviewPathAnnotation = { id: string; type: "path"; points: ReviewPoint[]; color: string; lineWidth: number };
+type ReviewAnnotation = ReviewTextAnnotation | ReviewRectangleAnnotation | ReviewPathAnnotation;
 
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
@@ -48,9 +53,15 @@ const reviewRotation = ref(0);
 const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji">("pen");
 const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
-const reviewTextAnnotations = ref<Array<{ id: string; text: string; x: number; y: number; color: string; fontSize: number }>>([]);
+const reviewAnnotations = ref<ReviewAnnotation[]>([]);
+const selectedReviewAnnotationId = ref<string | null>(null);
 const reviewCanvasDisplay = ref({ width: 0, height: 0 });
-let movingAnnotation: { id: string; offsetX: number; offsetY: number } | null = null;
+const reviewCanvasSize = ref({ width: 0, height: 0 });
+const reviewShapeAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewRectangleAnnotation | ReviewPathAnnotation => annotation.type === "rectangle" || annotation.type === "path"));
+const reviewTextAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewTextAnnotation => annotation.type === "text" || annotation.type === "emoji"));
+let movingAnnotation: { id: string; startPoint: ReviewPoint; initial: ReviewAnnotation } | null = null;
+let drawingAnnotationId: string | null = null;
+let drawingStartPoint: ReviewPoint | null = null;
 const reviewSubmitting = ref(false);
 const selectedSubmissionId = ref<string | null>(null);
 const statusRepairVisible = ref(false);
@@ -252,11 +263,6 @@ function openEdit(task: Task) {
 
 let reviewSourceImage: HTMLImageElement | null = null;
 let reviewImageLoadVersion = 0;
-let isReviewDrawing = false;
-let previousReviewPoint: { x: number; y: number } | null = null;
-let rectangleStart: { x: number; y: number } | null = null;
-let rectangleBase: ImageData | null = null;
-const reviewHistory: ImageData[] = [];
 
 async function openDetail(task: Task) {
   detailTask.value = task;
@@ -368,9 +374,10 @@ function resetReviewCanvas() {
   reviewImageLoadVersion += 1;
   reviewSourceImage = null;
   stopReviewDrawing();
-  reviewHistory.length = 0;
-  reviewTextAnnotations.value = [];
+  reviewAnnotations.value = [];
+  selectedReviewAnnotationId.value = null;
   reviewCanvasDisplay.value = { width: 0, height: 0 };
+  reviewCanvasSize.value = { width: 0, height: 0 };
   const canvas = reviewCanvas.value;
   const context = canvas?.getContext("2d");
   if (canvas && context) {
@@ -441,6 +448,7 @@ function renderReviewSourceImage() {
   const isSideways = normalizedRotation === 90 || normalizedRotation === 270;
   canvas.width = isSideways ? image.naturalHeight : image.naturalWidth;
   canvas.height = isSideways ? image.naturalWidth : image.naturalHeight;
+  reviewCanvasSize.value = { width: canvas.width, height: canvas.height };
   const context = canvas.getContext("2d");
   if (!context) return;
   context.save();
@@ -452,10 +460,13 @@ function renderReviewSourceImage() {
 }
 
 function rotateReviewImage(degrees: number) {
-  if (!reviewSourceImage) return;
+  const canvas = reviewCanvas.value;
+  if (!reviewSourceImage || !canvas) return;
+  const oldWidth = canvas.width;
+  const oldHeight = canvas.height;
+  const clockwise = degrees > 0;
+  reviewAnnotations.value = reviewAnnotations.value.map((annotation) => rotateReviewAnnotation(annotation, oldWidth, oldHeight, clockwise));
   reviewRotation.value = (reviewRotation.value + degrees + 360) % 360;
-  reviewHistory.length = 0;
-  reviewTextAnnotations.value = [];
   stopReviewDrawing();
   renderReviewSourceImage();
 }
@@ -476,7 +487,7 @@ function showWholeReviewImage() {
   fitReviewCanvas();
 }
 
-function reviewPoint(event: MouseEvent) {
+function reviewPoint(event: MouseEvent): ReviewPoint | null {
   const canvas = reviewCanvas.value;
   if (!canvas) return null;
   const bounds = canvas.getBoundingClientRect();
@@ -486,17 +497,62 @@ function reviewPoint(event: MouseEvent) {
   };
 }
 
-function drawReviewLine(from: { x: number; y: number }, to: { x: number; y: number }) {
-  const context = reviewCanvas.value?.getContext("2d");
-  if (!context) return;
-  context.strokeStyle = reviewColor.value;
-  context.lineWidth = reviewLineWidth.value;
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.beginPath();
-  context.moveTo(from.x, from.y);
-  context.lineTo(to.x, to.y);
-  context.stroke();
+function reviewAnnotationId() {
+  return `${Date.now()}-${Math.random()}`;
+}
+
+function translateReviewAnnotation(annotation: ReviewAnnotation, deltaX: number, deltaY: number, maxWidth: number, maxHeight: number): ReviewAnnotation {
+  if (annotation.type === "path") {
+    return {
+      ...annotation,
+      points: annotation.points.map((point) => ({
+        x: Math.max(0, Math.min(maxWidth, point.x + deltaX)),
+        y: Math.max(0, Math.min(maxHeight, point.y + deltaY))
+      }))
+    };
+  }
+  if (annotation.type === "rectangle") {
+    return {
+      ...annotation,
+      x: Math.max(0, Math.min(maxWidth - annotation.width, annotation.x + deltaX)),
+      y: Math.max(0, Math.min(maxHeight - annotation.height, annotation.y + deltaY))
+    };
+  }
+  return {
+    ...annotation,
+    x: Math.max(0, Math.min(maxWidth, annotation.x + deltaX)),
+    y: Math.max(0, Math.min(maxHeight, annotation.y + deltaY))
+  };
+}
+
+function rotateReviewPoint(point: ReviewPoint, width: number, height: number, clockwise: boolean): ReviewPoint {
+  return clockwise ? { x: height - point.y, y: point.x } : { x: point.y, y: width - point.x };
+}
+
+function rotateReviewAnnotation(annotation: ReviewAnnotation, width: number, height: number, clockwise: boolean): ReviewAnnotation {
+  if (annotation.type === "path") {
+    return { ...annotation, points: annotation.points.map((point) => rotateReviewPoint(point, width, height, clockwise)) };
+  }
+  if (annotation.type !== "rectangle") {
+    return { ...annotation, ...rotateReviewPoint(annotation, width, height, clockwise) };
+  }
+  const corners = [
+    rotateReviewPoint({ x: annotation.x, y: annotation.y }, width, height, clockwise),
+    rotateReviewPoint({ x: annotation.x + annotation.width, y: annotation.y }, width, height, clockwise),
+    rotateReviewPoint({ x: annotation.x, y: annotation.y + annotation.height }, width, height, clockwise),
+    rotateReviewPoint({ x: annotation.x + annotation.width, y: annotation.y + annotation.height }, width, height, clockwise)
+  ];
+  const xs = corners.map((point) => point.x);
+  const ys = corners.map((point) => point.y);
+  return { ...annotation, x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+}
+
+function reviewPathData(annotation: ReviewPathAnnotation) {
+  if (annotation.points.length === 1) {
+    const [point] = annotation.points;
+    return `M${point.x} ${point.y}L${point.x + 0.01} ${point.y + 0.01}`;
+  }
+  return annotation.points.map((point, index) => `${index ? "L" : "M"}${point.x} ${point.y}`).join(" ");
 }
 
 function startReviewDrawing(event: MouseEvent) {
@@ -511,22 +567,16 @@ function startReviewDrawing(event: MouseEvent) {
     insertReviewEmoji(point);
     return;
   }
-  if (reviewTool.value === "rectangle") {
-    const canvas = reviewCanvas.value;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    rectangleStart = point;
-    rectangleBase = context.getImageData(0, 0, canvas.width, canvas.height);
-    reviewHistory.push(rectangleBase);
-    return;
-  }
-  saveReviewHistory();
-  isReviewDrawing = true;
-  previousReviewPoint = point;
-  drawReviewLine(point, { x: point.x + 0.01, y: point.y + 0.01 });
+  const annotation: ReviewAnnotation = reviewTool.value === "rectangle"
+    ? { id: reviewAnnotationId(), type: "rectangle", x: point.x, y: point.y, width: 0, height: 0, color: reviewColor.value, lineWidth: reviewLineWidth.value }
+    : { id: reviewAnnotationId(), type: "path", points: [point], color: reviewColor.value, lineWidth: reviewLineWidth.value };
+  reviewAnnotations.value.push(annotation);
+  selectedReviewAnnotationId.value = annotation.id;
+  drawingAnnotationId = annotation.id;
+  drawingStartPoint = point;
 }
 
-async function insertReviewText(point: { x: number; y: number }) {
+async function insertReviewText(point: ReviewPoint) {
   try {
     const { value } = await ElMessageBox.prompt("请输入要添加到图片上的批注文字。", "插入文字", {
       confirmButtonText: "确定",
@@ -534,7 +584,9 @@ async function insertReviewText(point: { x: number; y: number }) {
       inputPlaceholder: "例如：这里需要修改",
       inputValidator: (value) => value.trim().length > 0 || "请输入文字"
     });
-    reviewTextAnnotations.value.push({ id: `${Date.now()}-${Math.random()}`, text: value.trim(), x: point.x, y: point.y, color: reviewColor.value, fontSize: reviewFontSize.value });
+    const annotation: ReviewTextAnnotation = { id: reviewAnnotationId(), type: "text", text: value.trim(), x: point.x, y: point.y, color: reviewColor.value, fontSize: reviewFontSize.value };
+    reviewAnnotations.value.push(annotation);
+    selectedReviewAnnotationId.value = annotation.id;
   } catch {
     // 取消文字输入时不修改图片。
   } finally {
@@ -542,23 +594,26 @@ async function insertReviewText(point: { x: number; y: number }) {
   }
 }
 
-function startMoveAnnotation(event: MouseEvent, annotation: { id: string; x: number; y: number }) {
-  const canvas = reviewCanvas.value;
-  if (!canvas) return;
-  const bounds = canvas.getBoundingClientRect();
-  movingAnnotation = { id: annotation.id, offsetX: event.clientX - bounds.left - annotation.x * (bounds.width / canvas.width), offsetY: event.clientY - bounds.top - annotation.y * (bounds.height / canvas.height) };
+function startMoveAnnotation(event: MouseEvent, annotation: ReviewAnnotation) {
+  const point = reviewPoint(event);
+  if (!point) return;
+  selectedReviewAnnotationId.value = annotation.id;
+  movingAnnotation = { id: annotation.id, startPoint: point, initial: structuredClone(annotation) };
   window.addEventListener("mousemove", moveAnnotation);
   window.addEventListener("mouseup", stopMoveAnnotation, { once: true });
 }
 
 function moveAnnotation(event: MouseEvent) {
   if (!movingAnnotation || !reviewCanvas.value) return;
-  const canvas = reviewCanvas.value;
-  const bounds = canvas.getBoundingClientRect();
-  const annotation = reviewTextAnnotations.value.find((item) => item.id === movingAnnotation?.id);
-  if (!annotation) return;
-  annotation.x = Math.max(0, Math.min(canvas.width, (event.clientX - bounds.left - movingAnnotation.offsetX) * (canvas.width / bounds.width)));
-  annotation.y = Math.max(0, Math.min(canvas.height, (event.clientY - bounds.top - movingAnnotation.offsetY) * (canvas.height / bounds.height)));
+  const point = reviewPoint(event);
+  if (!point) return;
+  const index = reviewAnnotations.value.findIndex((item) => item.id === movingAnnotation?.id);
+  if (index < 0) return;
+  const { initial, startPoint } = movingAnnotation;
+  const deltaX = point.x - startPoint.x;
+  const deltaY = point.y - startPoint.y;
+  const moved = translateReviewAnnotation(initial, deltaX, deltaY, reviewCanvas.value.width, reviewCanvas.value.height);
+  reviewAnnotations.value.splice(index, 1, moved);
 }
 
 function stopMoveAnnotation() {
@@ -566,7 +621,7 @@ function stopMoveAnnotation() {
   window.removeEventListener("mousemove", moveAnnotation);
 }
 
-function annotationStyle(annotation: { x: number; y: number; color: string; fontSize: number }) {
+function annotationStyle(annotation: ReviewTextAnnotation) {
   const canvas = reviewCanvas.value;
   const display = reviewCanvasDisplay.value;
   if (!canvas || !canvas.width || !canvas.height || !display.width) return {};
@@ -580,63 +635,58 @@ function annotationStyle(annotation: { x: number; y: number; color: string; font
 }
 
 function insertReviewEmoji(point: { x: number; y: number }) {
-  const context = reviewCanvas.value?.getContext("2d");
-  if (!context) return;
-  saveReviewHistory();
-  context.font = `48px sans-serif`;
-  context.textBaseline = "top";
-  context.fillText(reviewEmoji.value, point.x, point.y);
+  const annotation: ReviewTextAnnotation = { id: reviewAnnotationId(), type: "emoji", text: reviewEmoji.value, x: point.x, y: point.y, color: reviewColor.value, fontSize: 48 };
+  reviewAnnotations.value.push(annotation);
+  selectedReviewAnnotationId.value = annotation.id;
   reviewTool.value = "pen";
 }
 
 function continueReviewDrawing(event: MouseEvent) {
-  if (reviewTool.value === "rectangle" && rectangleStart && rectangleBase) {
-    const point = reviewPoint(event);
-    const context = reviewCanvas.value?.getContext("2d");
-    if (!point || !context) return;
-    context.putImageData(rectangleBase, 0, 0);
-    context.strokeStyle = reviewColor.value;
-    context.lineWidth = reviewLineWidth.value;
-    context.strokeRect(rectangleStart.x, rectangleStart.y, point.x - rectangleStart.x, point.y - rectangleStart.y);
-    return;
-  }
-  if (!isReviewDrawing || !previousReviewPoint) return;
   const point = reviewPoint(event);
   if (!point) return;
-  drawReviewLine(previousReviewPoint, point);
-  previousReviewPoint = point;
+  const annotation = reviewAnnotations.value.find((item) => item.id === drawingAnnotationId);
+  if (!annotation) return;
+  if (annotation.type === "path") {
+    annotation.points.push(point);
+  } else if (annotation.type === "rectangle" && drawingStartPoint) {
+    annotation.x = Math.min(drawingStartPoint.x, point.x);
+    annotation.y = Math.min(drawingStartPoint.y, point.y);
+    annotation.width = Math.abs(point.x - drawingStartPoint.x);
+    annotation.height = Math.abs(point.y - drawingStartPoint.y);
+  }
 }
 
 function stopReviewDrawing() {
-  isReviewDrawing = false;
-  previousReviewPoint = null;
-  rectangleStart = null;
-  rectangleBase = null;
-}
-
-function clearReviewDrawing() {
-  if (!reviewCanvas.value || !reviewSourceImage) return;
-  saveReviewHistory();
-  reviewTextAnnotations.value = [];
-  renderReviewSourceImage();
-}
-
-function saveReviewHistory() {
-  const canvas = reviewCanvas.value;
-  const context = canvas?.getContext("2d");
-  if (!canvas || !context) return;
-  reviewHistory.push(context.getImageData(0, 0, canvas.width, canvas.height));
-  if (reviewHistory.length > 30) reviewHistory.shift();
+  drawingAnnotationId = null;
+  drawingStartPoint = null;
 }
 
 function undoReviewAction() {
-  const snapshot = reviewHistory.pop();
-  const context = reviewCanvas.value?.getContext("2d");
-  if (!snapshot || !context) {
+  const annotation = reviewAnnotations.value.pop();
+  if (!annotation) {
     ElMessage.info("没有可撤销的批注。");
     return;
   }
-  context.putImageData(snapshot, 0, 0);
+  if (selectedReviewAnnotationId.value === annotation.id) selectedReviewAnnotationId.value = null;
+}
+
+function deleteSelectedReviewAnnotation() {
+  const id = selectedReviewAnnotationId.value;
+  if (!id) {
+    ElMessage.info("请先点击要删除的批改内容。");
+    return;
+  }
+  reviewAnnotations.value = reviewAnnotations.value.filter((annotation) => annotation.id !== id);
+  selectedReviewAnnotationId.value = null;
+}
+
+function handleReviewDeleteKey(event: KeyboardEvent) {
+  if (!reviewVisible.value || (event.key !== "Delete" && event.key !== "Backspace")) return;
+  const target = event.target;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+  if (!selectedReviewAnnotationId.value) return;
+  event.preventDefault();
+  deleteSelectedReviewAnnotation();
 }
 
 function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
@@ -647,10 +697,26 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
   if (!context) return null;
   context.drawImage(canvas, 0, 0);
   context.textBaseline = "top";
-  for (const annotation of reviewTextAnnotations.value) {
-    context.fillStyle = annotation.color;
-    context.font = `700 ${annotation.fontSize}px sans-serif`;
-    context.fillText(annotation.text, annotation.x, annotation.y);
+  for (const annotation of reviewAnnotations.value) {
+    if (annotation.type === "path") {
+      if (annotation.points.length < 2) continue;
+      context.strokeStyle = annotation.color;
+      context.lineWidth = annotation.lineWidth;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(annotation.points[0].x, annotation.points[0].y);
+      annotation.points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+      context.stroke();
+    } else if (annotation.type === "rectangle") {
+      context.strokeStyle = annotation.color;
+      context.lineWidth = annotation.lineWidth;
+      context.strokeRect(annotation.x, annotation.y, annotation.width, annotation.height);
+    } else {
+      context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
+      context.font = `${annotation.type === "text" ? "700 " : ""}${annotation.fontSize}px sans-serif`;
+      context.fillText(annotation.text, annotation.x, annotation.y);
+    }
   }
   return exportCanvas;
 }
@@ -802,6 +868,7 @@ async function removeTask(task: Task) {
 
 onMounted(async () => {
   window.addEventListener("resize", updateDetailColumns);
+  window.addEventListener("keydown", handleReviewDeleteKey);
   try {
     children.value = await getChildren();
     await refreshTaskData();
@@ -813,6 +880,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopMoveAnnotation();
   window.removeEventListener("resize", updateDetailColumns);
+  window.removeEventListener("keydown", handleReviewDeleteKey);
 });
 </script>
 
@@ -1027,7 +1095,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="review-tool-group">
               <el-tooltip content="撤销上一步" placement="bottom"><el-button class="review-tool-button" aria-label="撤销上一步" @click="undoReviewAction"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>
-              <el-tooltip content="清空笔迹" placement="bottom"><el-button class="review-tool-button" aria-label="清空笔迹" @click="clearReviewDrawing"><el-icon><Delete /></el-icon></el-button></el-tooltip>
+              <el-tooltip content="删除选中批改（Delete）" placement="bottom"><el-button class="review-tool-button" :disabled="!selectedReviewAnnotationId" aria-label="删除选中批改" @click="deleteSelectedReviewAnnotation"><el-icon><Delete /></el-icon></el-button></el-tooltip>
             </div>
           </div>
           <el-button class="review-submit-button" type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button>
@@ -1036,7 +1104,13 @@ onBeforeUnmount(() => {
       <div ref="reviewCanvasShell" class="review-canvas-shell">
         <div class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }">
           <canvas ref="reviewCanvas" class="review-canvas" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing" />
-          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :style="annotationStyle(annotation)" title="拖动调整文字位置" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
+          <svg v-if="reviewCanvasSize.width" class="review-annotation-layer" :viewBox="`0 0 ${reviewCanvasSize.width} ${reviewCanvasSize.height}`" aria-label="可拖动的图片批改" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing">
+            <template v-for="annotation in reviewShapeAnnotations" :key="annotation.id">
+              <path v-if="annotation.type === 'path'" class="review-shape-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id }" :d="reviewPathData(annotation)" :stroke="annotation.color" :stroke-width="annotation.lineWidth" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)" />
+              <rect v-else class="review-shape-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id }" :x="annotation.x" :y="annotation.y" :width="annotation.width" :height="annotation.height" :stroke="annotation.color" :stroke-width="annotation.lineWidth" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)" />
+            </template>
+          </svg>
+          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji' }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
         </div>
       </div>
       <div v-if="reviewPhotos.length > 1" class="review-photo-navigation">
