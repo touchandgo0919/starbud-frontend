@@ -332,12 +332,7 @@ h1, h2, h3, p { margin: 0; }
 .review-tool-button.el-button:hover, .review-tool-button.el-button.is-active { border-color: transparent; background: rgba(0, 198, 120, .14); color: #00c678; }
 .review-tool-button.el-button--success { border-color: transparent; background: rgba(0, 198, 120, .18); color: #00c678; }
 .review-tool-button.el-button.is-disabled { color: #60646c; background: transparent; border-color: transparent; }
-.review-tool-glyph { display: inline-grid; width: 18px; height: 18px; place-items: center; box-sizing: border-box; color: currentColor; line-height: 1; }
-.review-tool-glyph--rectangle { width: 17px; height: 17px; border: 1.5px solid currentColor; }
-.review-tool-glyph--emoji { border: 1.5px solid currentColor; border-radius: 50%; font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; }
-.review-tool-glyph--arrow { font-family: Arial, sans-serif; font-size: 22px; font-weight: 300; transform: translate(-1px, -1px); }
-.review-tool-glyph--pen { font-family: Georgia, serif; font-size: 22px; font-weight: 400; transform: rotate(-14deg); }
-.review-tool-glyph--text { width: 17px; height: 17px; border: 1px solid currentColor; font-family: Arial, sans-serif; font-size: 12px; font-weight: 700; }
+.review-arrow-tool-icon { transform: scaleX(1.25); transform-origin: center; }
 .review-photo-position { min-width: 34px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .review-tool-popper.el-popper { margin-top: 8px !important; padding: 8px 10px; border: 1px solid #353941; border-radius: 4px; background: #24262b; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
 .review-tool-popper.el-popper .el-popper__arrow::before { border-color: #353941; background: #24262b; }
@@ -365,13 +360,13 @@ h1, h2, h3, p { margin: 0; }
 .review-dialog.is-fullscreen { display: flex; flex-direction: column; }
 .review-dialog.is-fullscreen .el-dialog__body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 .review-canvas-shell { display: grid; flex: 1; min-height: 0; overflow: auto; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #101216; }
-.review-stage { position: relative; flex: none; }
+.review-stage { position: relative; flex: none; touch-action: none; }
 .review-canvas { display: block; cursor: crosshair; }
 .review-annotation-layer { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: auto; }
 .review-shape-annotation { fill: transparent; stroke-linecap: round; stroke-linejoin: round; cursor: move; vector-effect: non-scaling-stroke; }
 .review-shape-annotation--path { pointer-events: stroke; }
 .review-shape-annotation--rectangle { pointer-events: all; }
-.review-arrowhead { pointer-events: all; cursor: move; }
+.review-arrowhead { pointer-events: all; cursor: move; stroke-linejoin: miter; }
 .review-shape-annotation:hover, .review-shape-annotation.is-selected { filter: drop-shadow(0 0 2px currentColor); }
 .review-shape-annotation.is-selected { stroke-dasharray: none; }
 .review-selection-node { fill: #fff; stroke: #9ba3ae; stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
@@ -379,8 +374,13 @@ h1, h2, h3, p { margin: 0; }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
 .review-text-annotation--emoji.is-selected { border-color: #9ba3ae; background: rgba(255, 255, 255, .14); }
-.review-text-editor { position: absolute; z-index: 4; width: min(230px, calc(100% - 8px)); min-width: 120px; height: 44px; box-sizing: border-box; margin: 0; padding: 4px 10px; border: 1px solid currentColor; border-radius: 4px; outline: none; background: #15171c; font-family: inherit; font-weight: 700; line-height: 34px; caret-color: currentColor; transform: translateY(-3px); }
-.review-text-editor::placeholder { color: currentColor; opacity: 1; }
+.review-text-editor-frame { position: absolute; z-index: 4; box-sizing: border-box; border: 1.5px solid currentColor; background: transparent; transform: translateY(-2px); }
+.review-text-editor { display: block; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 0 5px; border: 0; outline: none; background: transparent; color: currentColor; font-family: inherit; font-size: inherit; font-weight: 700; line-height: 1.2; caret-color: currentColor; }
+.review-text-editor-node { position: absolute; z-index: 1; width: 7px; height: 7px; box-sizing: border-box; border: 1px solid #8d969f; border-radius: 50%; background: #fff; pointer-events: none; }
+.review-text-editor-node--top-left { top: -5px; left: -5px; }
+.review-text-editor-node--top-right { top: -5px; right: -5px; }
+.review-text-editor-node--bottom-left { bottom: -5px; left: -5px; }
+.review-text-editor-node--bottom-right { right: -5px; bottom: -5px; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }
