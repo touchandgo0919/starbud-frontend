@@ -89,6 +89,19 @@ export interface User {
   role: "admin" | "parent" | "child";
 }
 
+export interface AccessEvent {
+  id: string;
+  eventName: string;
+  clientType: string;
+  route: string | null;
+  resourceType: string | null;
+  resourceId: string | null;
+  outcome: "success" | "failure";
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+  user: { id: string; username: string; displayName: string } | null;
+}
+
 export interface ManagedUser extends User {
   active: boolean;
   createdAt: string;

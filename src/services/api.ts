@@ -9,7 +9,8 @@ import type {
   Submission,
   Task,
   UpdateTaskPayload,
-  User
+  User,
+  AccessEvent
 } from "../types/task";
 
 const apiBaseUrls = {
@@ -34,6 +35,16 @@ const API_BASE_URL =
   apiBaseUrls["zhaojianing.com"];
 
 const tokenStorageKey = "starbud.authToken";
+const sessionStorageKey = "starbud.accessSessionId";
+
+function getSessionId() {
+  let sessionId = sessionStorage.getItem(sessionStorageKey);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(sessionStorageKey, sessionId);
+  }
+  return sessionId;
+}
 
 function apiUrl(path: string) {
   return /^https?:\/\//.test(path) ? path : `${API_BASE_URL}${path}`;
@@ -57,6 +68,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       "content-type": "application/json",
+      "x-starbud-client": "web",
+      "x-starbud-session-id": getSessionId(),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...init?.headers
     }
@@ -68,6 +81,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function trackAccessEvent(input: {
+  eventName: string;
+  route?: string;
+  resourceType?: string;
+  resourceId?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await request("/api/access-events", { method: "POST", body: JSON.stringify(input) });
+  } catch {
+    // Analytics must never block the primary workflow.
+  }
+}
+
+export async function getAccessEvents(filters: { eventName?: string; clientType?: string; userId?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}) {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) query.set(key, String(value));
+  });
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return request<{ events: AccessEvent[]; total: number }>(`/api/access-events${suffix}`);
 }
 
 export async function login(username: string, password: string) {

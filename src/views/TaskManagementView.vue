@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "v
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, ArrowRight, Delete, FullScreen, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
 import { ArrowUpRight, Pencil, Smile, Square, Type, Undo2, ZoomIn, ZoomOut } from "@lucide/vue";
-import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
@@ -313,6 +313,21 @@ let reviewSourceImage: HTMLImageElement | null = null;
 let reviewImageLoadVersion = 0;
 let reviewZoomAnchorJob = 0;
 
+function trackReviewEvent(eventName: string, metadata: Record<string, unknown> = {}) {
+  void trackAccessEvent({
+    eventName,
+    route: "/tasks",
+    resourceType: "task",
+    resourceId: detailTask.value?.id,
+    metadata
+  });
+}
+
+function selectReviewTool(tool: "pen" | "text" | "rectangle" | "emoji" | "arrow") {
+  reviewTool.value = tool;
+  trackReviewEvent("review_tool_selected", { tool });
+}
+
 async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
@@ -324,6 +339,7 @@ async function openDetail(task: Task) {
   reviewReplacementImageId.value = null;
   submissionReviewRounds.value = [];
   detailVisible.value = true;
+  trackReviewEvent("task_detail_opened", { hasSubmission: hasSubmission(task) });
 
   if (!hasSubmission(task)) return;
 
@@ -471,6 +487,7 @@ async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [p
   reviewTool.value = null;
   resetReviewCanvas();
   reviewVisible.value = true;
+  trackReviewEvent("review_opened", { photoCount: photos.length, resumed: preserveStagedReviews });
   await nextTick();
   loadReviewCanvas();
 }
@@ -482,6 +499,7 @@ async function switchReviewPhoto(offset: number) {
   try {
     await stashCurrentReviewedImage();
     await openReview(photo, reviewPhotos.value, true);
+    trackReviewEvent("review_photo_switched", { direction: offset, photoIndex: nextIndex });
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "暂存当前批改图片失败。");
   }
@@ -1106,6 +1124,7 @@ function undoReviewAction() {
     return;
   }
   if (selectedReviewAnnotationId.value === annotation.id) selectedReviewAnnotationId.value = null;
+  trackReviewEvent("review_undo");
 }
 
 function deleteSelectedReviewAnnotation() {
@@ -1129,6 +1148,7 @@ function clearAllReviewAnnotations() {
   stopReviewDrawing();
   stopMoveAnnotation();
   stopResizeAnnotation();
+  trackReviewEvent("review_cleared");
 }
 
 function handleReviewDeleteKey(event: KeyboardEvent) {
@@ -1575,23 +1595,23 @@ onBeforeUnmount(() => {
           <div class="review-toolbar">
             <div class="review-tool-group">
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" aria-label="矩形框" title="矩形框" @click="reviewTool = 'rectangle'"><Square :size="18" :stroke-width="1.6" /></el-button></template>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'rectangle' }" aria-label="矩形框" title="矩形框" @click="selectReviewTool('rectangle')"><Square :size="18" :stroke-width="1.6" /></el-button></template>
                 <div class="review-tool-options" aria-label="矩形框粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="260" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" aria-label="表情" title="表情" @click="reviewTool = 'emoji'"><Smile :size="19" :stroke-width="1.6" /></el-button></template>
-                <div class="review-emoji-options" aria-label="常用表情"><button v-for="emoji in ['👍', '👏', '😊', '😠', '⭐', '🎉', '💯']" :key="emoji" type="button" :class="{ 'is-active': reviewEmoji === emoji }" :title="`使用表情 ${emoji}`" @click="reviewEmoji = emoji; reviewTool = 'emoji'">{{ emoji }}</button></div>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'emoji' }" aria-label="表情" title="表情" @click="selectReviewTool('emoji')"><Smile :size="19" :stroke-width="1.6" /></el-button></template>
+                <div class="review-emoji-options" aria-label="常用表情"><button v-for="emoji in ['👍', '👏', '😊', '😠', '⭐', '🎉', '💯']" :key="emoji" type="button" :class="{ 'is-active': reviewEmoji === emoji }" :title="`使用表情 ${emoji}`" @click="reviewEmoji = emoji; selectReviewTool('emoji')">{{ emoji }}</button></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'arrow' }" aria-label="箭头" title="箭头" @click="reviewTool = 'arrow'"><ArrowUpRight class="review-arrow-tool-icon" :size="26" :stroke-width="1.3" /></el-button></template>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'arrow' }" aria-label="箭头" title="箭头" @click="selectReviewTool('arrow')"><ArrowUpRight class="review-arrow-tool-icon" :size="26" :stroke-width="1.3" /></el-button></template>
                 <div class="review-tool-options" aria-label="箭头粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="310" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" aria-label="画笔" title="画笔" @click="reviewTool = 'pen'"><Pencil :size="19" :stroke-width="1.6" /></el-button></template>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'pen' }" aria-label="画笔" title="画笔" @click="selectReviewTool('pen')"><Pencil :size="19" :stroke-width="1.6" /></el-button></template>
                 <div class="review-tool-options" aria-label="画笔粗细和颜色"><div class="review-option-sizes"><button v-for="size in reviewLineSizes" :key="size.value" type="button" :class="{ 'is-active': reviewLineWidth === size.value }" :title="`粗细：${size.label}`" :aria-label="`粗细：${size.label}`" @click="setReviewLineWidth(size.value)"><i :style="{ width: `${size.value + 2}px`, height: `${size.value + 2}px` }"></i></button></div><span class="review-option-divider"></span><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-popover placement="bottom-start" :width="360" trigger="click" popper-class="review-tool-popper">
-                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'text' }" aria-label="插入文字" title="插入文字" @click="reviewTool = 'text'"><Type :size="19" :stroke-width="1.6" /></el-button></template>
+                <template #reference><el-button class="review-tool-button" :class="{ 'is-active': reviewTool === 'text' }" aria-label="插入文字" title="插入文字" @click="selectReviewTool('text')"><Type :size="19" :stroke-width="1.6" /></el-button></template>
                 <div class="review-tool-options" aria-label="字体大小、颜色和底色"><div class="review-option-sizes review-option-font-sizes"><button v-for="size in reviewTextSizes" :key="size.value" type="button" :class="{ 'is-active': reviewFontSize === size.value }" @click="setReviewFontSize(size.value)">{{ size.label }}</button></div><span class="review-option-divider"></span><button type="button" class="review-text-background-toggle" :class="{ 'is-active': reviewTextWithBackground }" title="文字底色" aria-label="文字底色" @click="toggleReviewTextBackground"><span>T</span></button><div class="review-option-colors"><button v-for="color in reviewColorPalette" :key="color" type="button" :class="{ 'is-active': reviewColor === color }" :style="{ backgroundColor: color }" :title="color" @click="setReviewColor(color)"></button></div></div>
               </el-popover>
               <el-tooltip content="左转 90°" placement="bottom"><el-button class="review-tool-button" aria-label="左转 90°" @click="rotateReviewImage(-90)"><el-icon><RefreshLeft /></el-icon></el-button></el-tooltip>

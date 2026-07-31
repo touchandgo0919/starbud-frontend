@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { DocumentChecked, HomeFilled, House, List, SwitchButton, UserFilled } from "@element-plus/icons-vue";
+import { DocumentChecked, HomeFilled, House, List, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 
 const route = useRoute();
@@ -46,6 +46,10 @@ async function logout() {
         <el-menu-item v-if="auth.user?.role === 'admin'" index="/users">
           <el-icon><UserFilled /></el-icon>
           <span>用户管理</span>
+        </el-menu-item>
+        <el-menu-item v-if="auth.user?.role === 'admin'" index="/access-records">
+          <el-icon><View /></el-icon>
+          <span>访问记录</span>
         </el-menu-item>
       </el-menu>
 

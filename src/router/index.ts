@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import AdminLayout from "../layout/AdminLayout.vue";
 import pinia from "../store";
 import { useAuthStore } from "../store/auth";
+import { trackAccessEvent } from "../services/api";
 
 const DashboardView = () => import("../views/DashboardView.vue");
 const FamilyManagementView = () => import("../views/FamilyManagementView.vue");
@@ -9,6 +10,7 @@ const LoginView = () => import("../views/LoginView.vue");
 const TaskManagementView = () => import("../views/TaskManagementView.vue");
 const SubmissionManagementView = () => import("../views/SubmissionManagementView.vue");
 const UserManagementView = () => import("../views/UserManagementView.vue");
+const AccessRecordsView = () => import("../views/AccessRecordsView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -53,11 +55,21 @@ const router = createRouter({
           name: "Users",
           component: UserManagementView,
           meta: { title: "用户管理", description: "配置系统账号、角色与登录状态", adminOnly: true }
+        },
+        {
+          path: "access-records",
+          name: "AccessRecords",
+          component: AccessRecordsView,
+          meta: { title: "访问记录", description: "查看网页、小程序和 App 的关键操作记录", adminOnly: true }
         }
       ]
     },
     { path: "/:pathMatch(.*)*", redirect: "/home" }
   ]
+});
+
+router.afterEach((to) => {
+  void trackAccessEvent({ eventName: "page_view", route: to.fullPath });
 });
 
 router.beforeEach(async (to) => {
