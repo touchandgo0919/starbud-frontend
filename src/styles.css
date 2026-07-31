@@ -379,8 +379,8 @@ h1, h2, h3, p { margin: 0; }
 .review-text-annotation:hover, .review-text-annotation.is-selected { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, transparent); }
 .review-text-annotation--emoji { color: #111 !important; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-weight: 400; }
 .review-text-annotation--emoji.is-selected { border-color: #9ba3ae; background: rgba(255, 255, 255, .14); }
-.review-text-editor { position: absolute; z-index: 4; width: min(230px, calc(100% - 8px)); min-width: 120px; min-height: 32px; box-sizing: border-box; margin: 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 4px; outline: 2px solid color-mix(in srgb, currentColor 26%, transparent); background: rgba(16, 18, 22, .88); font-family: inherit; font-weight: 700; line-height: 1.25; caret-color: currentColor; transform: translateY(-3px); }
-.review-text-editor::placeholder { color: currentColor; opacity: .55; }
+.review-text-editor { position: absolute; z-index: 4; width: min(230px, calc(100% - 8px)); min-width: 120px; height: 44px; box-sizing: border-box; margin: 0; padding: 4px 10px; border: 1px solid currentColor; border-radius: 4px; outline: none; background: #15171c; font-family: inherit; font-weight: 700; line-height: 34px; caret-color: currentColor; transform: translateY(-3px); }
+.review-text-editor::placeholder { color: currentColor; opacity: 1; }
 .review-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .el-dialog { border: 1px solid var(--border); border-radius: 12px !important; }
 .el-dialog__title { font-size: 18px; font-weight: 800; }

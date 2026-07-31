@@ -48,11 +48,12 @@ const canReviewPreviousPhoto = computed(() => reviewPhotoIndex.value > 0);
 const canReviewNextPhoto = computed(() => reviewPhotoIndex.value < reviewPhotos.value.length - 1);
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
 const reviewCanvasShell = ref<HTMLElement | null>(null);
+const reviewStage = ref<HTMLElement | null>(null);
 const reviewColor = ref("#ff5a63");
 const reviewLineWidth = ref(6);
 const reviewZoom = ref(100);
 const reviewRotation = ref(0);
-const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji" | "arrow">("pen");
+const reviewTool = ref<"pen" | "text" | "rectangle" | "emoji" | "arrow" | null>(null);
 const reviewFontSize = ref(28);
 const reviewEmoji = ref("👍");
 const reviewColorPalette = ["#20a8ee", "#9ad400", "#ffc400", "#55585e", "#ffffff", "#ff5a63"];
@@ -434,7 +435,7 @@ async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [p
   reviewPhoto.value = photo;
   reviewZoom.value = 100;
   reviewRotation.value = 0;
-  reviewTool.value = "pen";
+  reviewTool.value = null;
   resetReviewCanvas();
   reviewVisible.value = true;
   await nextTick();
@@ -630,6 +631,7 @@ function startReviewDrawing(event: MouseEvent) {
   const point = reviewPoint(event);
   if (!point) return;
   commitReviewText();
+  if (!reviewTool.value) return;
   if (reviewTool.value === "text") {
     startReviewTextEditor(point);
     return;
@@ -642,7 +644,8 @@ function startReviewDrawing(event: MouseEvent) {
     ? { id: reviewAnnotationId(), type: "rectangle", x: point.x, y: point.y, width: 0, height: 0, color: reviewColor.value, lineWidth: reviewLineWidth.value }
     : { id: reviewAnnotationId(), type: "path", points: [point], color: reviewColor.value, lineWidth: reviewLineWidth.value, arrow: reviewTool.value === "arrow" };
   reviewAnnotations.value.push(annotation);
-  selectedReviewAnnotationId.value = annotation.id;
+  // 新绘制的批注不进入选中态；需要编辑时由用户再次点击它。
+  selectedReviewAnnotationId.value = null;
   drawingAnnotationId = annotation.id;
   drawingStartPoint = point;
 }
@@ -668,7 +671,8 @@ function commitReviewText() {
       fontSize: reviewFontSize.value
     };
     reviewAnnotations.value.push(annotation);
-    selectedReviewAnnotationId.value = annotation.id;
+    // 文字确认后直接回到未选中状态，避免误移动或误删除。
+    selectedReviewAnnotationId.value = null;
   }
   reviewTextEditor.value = null;
 }
@@ -685,6 +689,13 @@ function handleReviewTextEditorKeydown(event: KeyboardEvent) {
     event.preventDefault();
     cancelReviewText();
   }
+}
+
+function closeReviewTextEditorOutsideImage(event: PointerEvent) {
+  if (!reviewVisible.value || !reviewTextEditor.value) return;
+  const target = event.target;
+  if (target instanceof Node && reviewStage.value?.contains(target)) return;
+  commitReviewText();
 }
 
 function startMoveAnnotation(event: MouseEvent, annotation: ReviewAnnotation) {
@@ -745,8 +756,8 @@ function reviewTextEditorStyle() {
 function insertReviewEmoji(point: { x: number; y: number }) {
   const annotation: ReviewTextAnnotation = { id: reviewAnnotationId(), type: "emoji", text: reviewEmoji.value, x: point.x, y: point.y, color: reviewColor.value, fontSize: 48 };
   reviewAnnotations.value.push(annotation);
-  selectedReviewAnnotationId.value = annotation.id;
-  reviewTool.value = "pen";
+  selectedReviewAnnotationId.value = null;
+  reviewTool.value = null;
 }
 
 function continueReviewDrawing(event: MouseEvent) {
@@ -991,6 +1002,7 @@ async function removeTask(task: Task) {
 onMounted(async () => {
   window.addEventListener("resize", updateDetailColumns);
   window.addEventListener("keydown", handleReviewDeleteKey);
+  window.addEventListener("pointerdown", closeReviewTextEditorOutsideImage, true);
   try {
     children.value = await getChildren();
     await refreshTaskData();
@@ -1003,6 +1015,7 @@ onBeforeUnmount(() => {
   stopMoveAnnotation();
   window.removeEventListener("resize", updateDetailColumns);
   window.removeEventListener("keydown", handleReviewDeleteKey);
+  window.removeEventListener("pointerdown", closeReviewTextEditorOutsideImage, true);
 });
 </script>
 
@@ -1231,7 +1244,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
-        <div class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing">
+        <div ref="reviewStage" class="review-stage" :style="{ width: `${reviewCanvasDisplay.width}px`, height: `${reviewCanvasDisplay.height}px` }" @mousedown="startReviewDrawing" @mousemove="continueReviewDrawing" @mouseup="stopReviewDrawing" @mouseleave="stopReviewDrawing">
           <canvas ref="reviewCanvas" class="review-canvas" />
           <svg v-if="reviewCanvasSize.width" class="review-annotation-layer" :viewBox="`0 0 ${reviewCanvasSize.width} ${reviewCanvasSize.height}`" aria-label="可拖动的图片批改">
             <template v-for="annotation in reviewShapeAnnotations" :key="annotation.id">
