@@ -1273,39 +1273,41 @@ onBeforeUnmount(() => {
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <div class="task-options-row">
-          <el-form-item>
-            <template #label>
-              <span class="task-option-label">上传照片
-                <el-tooltip placement="top" :show-after="200">
-                  <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是照片型任务：儿童领取后必须提交照片，家长才能批改或关闭。</template>
-                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                </el-tooltip>
-              </span>
-            </template>
-            <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
-          </el-form-item>
-          <el-form-item>
-            <template #label>
-              <span class="task-option-label">语音提醒
-                <el-tooltip placement="top" :show-after="200">
-                  <template #content>请让小朋友在设备上安装并登录星星芽 AI 助手 App，才能正常收到语音提醒。</template>
-                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                </el-tooltip>
-              </span>
-            </template>
-            <el-checkbox v-model="form.voiceEnabled">开启</el-checkbox>
-          </el-form-item>
-          <el-form-item>
-            <template #label>
-              <span class="task-option-label">催领任务
-                <el-tooltip placement="top" :show-after="200">
-                  <template #content>默认关闭。开启后，最后一次语音提醒播放结束 5 分钟仍未领取时，服务端每隔 5 分钟催领一次；领取后自动停止。</template>
-                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                </el-tooltip>
-              </span>
-            </template>
-            <el-checkbox v-model="form.claimReminderEnabled" :disabled="!form.voiceEnabled">开启</el-checkbox>
-          </el-form-item>
+          <div class="task-checkbox-options">
+            <el-form-item>
+              <template #label>
+                <span class="task-option-label">照片
+                  <el-tooltip placement="top" :show-after="200">
+                    <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是照片型任务：儿童领取后必须提交照片，家长才能批改或关闭。</template>
+                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
+            </el-form-item>
+            <el-form-item>
+              <template #label>
+                <span class="task-option-label">语音
+                  <el-tooltip placement="top" :show-after="200">
+                    <template #content>请让小朋友在设备上安装并登录星星芽 AI 助手 App，才能正常收到语音提醒。</template>
+                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-checkbox v-model="form.voiceEnabled">开启</el-checkbox>
+            </el-form-item>
+            <el-form-item>
+              <template #label>
+                <span class="task-option-label">催领
+                  <el-tooltip placement="top" :show-after="200">
+                    <template #content>默认关闭。开启后，最后一次语音提醒播放结束 5 分钟仍未领取时，服务端每隔 5 分钟催领一次，最多 3 次（15 分钟）；领取后自动停止。</template>
+                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-checkbox v-model="form.claimReminderEnabled" :disabled="!form.voiceEnabled">开启</el-checkbox>
+            </el-form-item>
+          </div>
           <el-form-item label="提醒次数">
             <el-input-number v-model="form.voiceReminderCount" :disabled="!form.voiceEnabled" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
           </el-form-item>

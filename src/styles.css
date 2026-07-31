@@ -251,8 +251,10 @@ h1, h2, h3, p { margin: 0; }
 .dialog-form-row > .el-form-item { width: 100%; min-width: 0; }
 .dialog-form-row .el-form-item__content { min-width: 0; }
 .dialog-form-row .el-select, .dialog-form-row .el-date-editor { width: 100% !important; }
-.task-options-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
-.task-options-row .el-form-item { margin-bottom: 10px; }
+.task-options-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: end; }
+.task-options-row > .el-form-item, .task-checkbox-options .el-form-item { width: 100%; margin-bottom: 10px; }
+.task-checkbox-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; min-width: 0; }
+.task-checkbox-options .el-form-item__label { min-width: 0; }
 .task-options-row .el-checkbox { white-space: nowrap; }
 .task-options-row .el-input-number { width: 100%; }
 .task-option-label { display: inline-flex; align-items: center; gap: 5px; }
