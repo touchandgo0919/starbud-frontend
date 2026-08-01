@@ -1317,9 +1317,15 @@ async function markComplete(task: Task) {
   }
 }
 
+function repairStatusFor(task: Task): "unclaimed" | "claimed" | "completed" {
+  // 以任务当前的真实状态为准，避免上一次打开弹窗的单选状态残留。
+  if (task.status === "completed" || task.completedAt) return "completed";
+  return task.claimedAt ? "claimed" : "unclaimed";
+}
+
 function openStatusRepair(task: Task) {
   statusRepairTask.value = task;
-  statusRepairValue.value = task.status === "completed" ? "completed" : task.claimedAt ? "claimed" : "unclaimed";
+  statusRepairValue.value = repairStatusFor(task);
   statusRepairVisible.value = true;
 }
 
@@ -1559,7 +1565,7 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="statusRepairVisible" title="修正任务状态" width="420px" class="form-dialog">
       <p class="dialog-hint">状态修正会同步到家长网页、儿童小程序和日历。</p>
-      <el-radio-group v-model="statusRepairValue" class="status-repair-options">
+      <el-radio-group :key="statusRepairTask ? taskRowKey(statusRepairTask) : 'none'" v-model="statusRepairValue" class="status-repair-options">
         <el-radio value="unclaimed">待领取</el-radio>
         <el-radio value="claimed">已领取／待完成</el-radio>
         <el-radio value="completed">已完成</el-radio>
