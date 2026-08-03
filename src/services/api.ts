@@ -97,7 +97,7 @@ export async function trackAccessEvent(input: {
   }
 }
 
-export async function getAccessEvents(filters: { eventName?: string; clientType?: string; userId?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}) {
+export async function getAccessEvents(filters: { eventName?: string; clientType?: string; userName?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}) {
   const query = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value) query.set(key, String(value));

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { Download, Refresh, Search } from "@element-plus/icons-vue";
+import { Refresh, Search } from "@element-plus/icons-vue";
 import { getAccessEvents } from "../services/api";
 import type { AccessEvent } from "../types/task";
 
 const events = ref<AccessEvent[]>([]);
 const loading = ref(false);
 const total = ref(0);
-const filters = reactive({ eventName: "", clientType: "", userId: "", timeRange: [] as string[] });
+const filters = reactive({ clientType: "", userName: "", timeRange: [] as string[] });
 const currentPage = ref(1);
 const pageSize = 50;
 const eventLabels: Record<string, string> = {
@@ -27,7 +27,7 @@ async function loadEvents(page = currentPage.value) {
   loading.value = true;
   try {
     const [from, to] = filters.timeRange;
-    const result = await getAccessEvents({ eventName: filters.eventName, clientType: filters.clientType, userId: filters.userId.trim(), from, to, page, pageSize });
+    const result = await getAccessEvents({ clientType: filters.clientType, userName: filters.userName.trim(), from, to, page, pageSize });
     events.value = result.events;
     total.value = result.total;
   } finally {
@@ -36,32 +36,24 @@ async function loadEvents(page = currentPage.value) {
 }
 
 function resetFilters() {
-  filters.eventName = "";
   filters.clientType = "";
-  filters.userId = "";
+  filters.userName = "";
   filters.timeRange = [];
   currentPage.value = 1;
   void loadEvents();
 }
 
-function exportCurrentPage() {
-  const header = ["时间", "用户", "事件", "来源", "页面/接口", "结果"];
-  const rows = events.value.map((event) => [
-    formatTime(event.occurredAt), event.user?.displayName || "未登录",
-    eventLabels[event.eventName] || event.eventName, clientLabels[event.clientType] || event.clientType,
-    event.route || "", event.outcome === "success" ? "成功" : "失败"
-  ]);
-  const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
-  const url = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `starbud-access-events-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "medium" }).format(new Date(value));
+  // 数据库存储的是不带时区的中国标准时间；固定以 UTC+8 解析、展示，
+  // 避免浏览器所在系统时区不同而出现偏移。
+  const parsed = new Date(`${value.replace(" ", "T")}+08:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    dateStyle: "short",
+    timeStyle: "medium",
+    hourCycle: "h23"
+  }).format(parsed);
 }
 
 onMounted(loadEvents);
@@ -71,11 +63,10 @@ onMounted(loadEvents);
   <div class="page-stack">
     <section class="content-panel filter-panel">
       <form class="filter-grid" @submit.prevent="loadEvents(1)">
-        <label class="field"><span>事件类型</span><el-select v-model="filters.eventName" clearable placeholder="全部事件"><el-option v-for="(label, value) in eventLabels" :key="value" :label="label" :value="value" /></el-select></label>
         <label class="field"><span>访问来源</span><el-select v-model="filters.clientType" clearable placeholder="全部来源"><el-option v-for="(label, value) in clientLabels" :key="value" :label="label" :value="value" /></el-select></label>
-        <label class="field"><span>用户 ID</span><el-input v-model="filters.userId" clearable placeholder="按用户 ID 筛选" /></label>
+        <label class="field"><span>用户名称</span><el-input v-model="filters.userName" clearable placeholder="输入用户名或显示名称" /></label>
         <label class="field"><span>时间范围</span><el-date-picker v-model="filters.timeRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" /></label>
-        <div class="filter-actions"><el-button :icon="Refresh" @click="resetFilters">重置</el-button><el-button :icon="Download" @click="exportCurrentPage">导出本页</el-button><el-button type="primary" :icon="Search" native-type="submit">查询</el-button></div>
+        <div class="filter-actions"><el-button :icon="Refresh" @click="resetFilters">重置</el-button><el-button type="primary" :icon="Search" native-type="submit">查询</el-button></div>
       </form>
     </section>
     <section class="content-panel table-panel">
