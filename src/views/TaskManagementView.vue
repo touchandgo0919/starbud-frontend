@@ -1592,7 +1592,14 @@ onBeforeUnmount(() => {
               <strong>批改前图片</strong>
               <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, round.photos)"><small class="round-image-time">{{ formatDateTime(round.submittedAt) }}</small><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
-            <div v-if="round.audios.length" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio v-for="audio in round.audios" :key="audio.id" controls preload="metadata" :src="audio.url">当前浏览器不支持播放录音。</audio></div></div>
+            <div v-if="round.audios.length" class="review-round-row">
+              <strong>提交录音</strong>
+              <div class="submission-audio-list">
+                <div v-for="audio in round.audios" :key="audio.id" class="submission-audio-card">
+                  <audio controls preload="metadata" :src="audio.url">当前浏览器不支持播放录音。</audio>
+                </div>
+              </div>
+            </div>
             <div v-if="round.reviewImages.length" class="review-round-row">
               <strong>批改后图片</strong>
               <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
@@ -1606,7 +1613,13 @@ onBeforeUnmount(() => {
               <strong>批改前图片</strong>
               <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, submissionPhotos)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
-            <div v-if="submissionAudio" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio><el-button v-if="canReviewSubmission(detailTask)" type="primary" size="small" @click="openAudioReview">评价录音</el-button></div></div>
+            <div v-if="submissionAudio" class="review-round-row">
+              <strong>提交录音</strong>
+              <div class="submission-audio-card">
+                <audio controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio>
+                <button v-if="canReviewSubmission(detailTask)" type="button" class="submission-audio-action" @click="openAudioReview">评价录音</button>
+              </div>
+            </div>
             <div v-if="submissionAudioFeedback" class="review-round-note"><strong>录音评价</strong><p>{{ submissionAudioFeedback }}</p></div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>{{ submissionAudioFeedback ? "已完成录音评价" : "家长未批改" }}</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
@@ -1724,5 +1737,43 @@ onBeforeUnmount(() => {
   display: block;
   max-width: 100%;
   width: 100%;
+}
+
+.submission-audio-card {
+  display: grid;
+  width: min(320px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #353535;
+}
+
+.submission-audio-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.submission-audio-card audio {
+  display: block;
+  width: 100%;
+  height: 54px;
+}
+
+.submission-audio-action {
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 0;
+  background: var(--green);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.submission-audio-action:hover {
+  filter: brightness(1.06);
 }
 </style>
