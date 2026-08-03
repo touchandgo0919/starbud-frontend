@@ -347,6 +347,14 @@ export async function submitSubmissionReview(submissionId: string, images: Blob[
   return normalizeSubmissionUrls(body.submission);
 }
 
+export async function submitSubmissionAudioReview(submissionId: string, feedback: string) {
+  const body = await request<{ submission: Submission }>(`/api/submissions/${submissionId}/audio-review`, {
+    method: "POST",
+    body: JSON.stringify({ feedback })
+  });
+  return normalizeSubmissionUrls(body.submission);
+}
+
 export async function finalizeSubmissionReview(submissionId: string) {
   const body = await request<{ submission: Submission }>(`/api/submissions/${submissionId}/finalize-review`, { method: "POST" });
   return normalizeSubmissionUrls(body.submission);

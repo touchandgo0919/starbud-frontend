@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "v
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, ArrowRight, Delete, FullScreen, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
 import { ArrowUpRight, Pencil, Smile, Square, Type, Undo2, ZoomIn, ZoomOut } from "@lucide/vue";
-import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionAudioReview, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionAudio, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
@@ -31,6 +31,7 @@ const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
 const submissionAudio = ref<SubmissionAudio | null>(null);
+const submissionAudioFeedback = ref("");
 const submissionSubmittedAt = ref<string | null>(null);
 const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
@@ -45,6 +46,9 @@ const reviewReplacementImageId = ref<string | null>(null);
 const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
+const audioReviewVisible = ref(false);
+const audioReviewFeedback = ref("");
+const audioReviewSubmitting = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewPhotos = ref<SubmissionPhoto[]>([]);
 const reviewPhotoIndex = ref(0);
@@ -331,6 +335,7 @@ async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
   submissionAudio.value = null;
+  submissionAudioFeedback.value = "";
   submissionSubmittedAt.value = null;
   submissionNote.value = "";
   submissionReviewImageUrl.value = null;
@@ -348,6 +353,7 @@ async function openDetail(task: Task) {
     const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
     submissionPhotos.value = submission.photos;
     submissionAudio.value = submission.audio;
+    submissionAudioFeedback.value = submission.audioFeedback;
     submissionSubmittedAt.value = submission.submittedAt;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
@@ -367,11 +373,51 @@ async function openTaskReview(task: Task) {
   }
   await openDetail(task);
   const original = submissionPhotos.value[0];
-  if (!original) return;
+  if (!original) {
+    if (submissionAudio.value) openAudioReview();
+    return;
+  }
   await openReview(
     submissionReviewImageUrl.value ? { ...original, url: submissionReviewImageUrl.value } : original,
     submissionReviewImageUrl.value ? undefined : submissionPhotos.value
   );
+}
+
+function openAudioReview() {
+  if (!selectedSubmissionId.value || !submissionAudio.value || !canReviewSubmission(detailTask.value)) {
+    ElMessage.info("当前录音暂不能评价。");
+    return;
+  }
+  audioReviewFeedback.value = submissionAudioFeedback.value;
+  audioReviewVisible.value = true;
+}
+
+async function submitAudioFeedback() {
+  if (!selectedSubmissionId.value) return;
+  const feedback = audioReviewFeedback.value.trim();
+  if (!feedback) {
+    ElMessage.warning("请填写录音评价。");
+    return;
+  }
+  audioReviewSubmitting.value = true;
+  try {
+    const submission = await submitSubmissionAudioReview(selectedSubmissionId.value, feedback);
+    submissionAudioFeedback.value = submission.audioFeedback;
+    submissionReviewImageUrl.value = submission.reviewImageUrl;
+    submissionReviewRounds.value = submission.reviewRounds;
+    audioReviewVisible.value = false;
+    ElMessage.success("录音评价已提交，已通知小朋友。");
+    await refreshTaskData();
+    const currentDetail = detailTask.value;
+    if (currentDetail) {
+      const refreshed = tasks.value.find((task) => taskRowKey(task) === taskRowKey(currentDetail));
+      if (refreshed) await openDetail(refreshed);
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "提交录音评价失败。");
+  } finally {
+    audioReviewSubmitting.value = false;
+  }
 }
 
 async function openReviewEntry(task: Task) {
@@ -1559,8 +1605,9 @@ onBeforeUnmount(() => {
               <strong>批改前图片</strong>
               <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, submissionPhotos)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
-            <div v-if="submissionAudio" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio></div></div>
-            <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>家长未批改</span></div>
+            <div v-if="submissionAudio" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio><el-button v-if="canReviewSubmission(detailTask)" type="primary" size="small" @click="openAudioReview">评价录音</el-button></div></div>
+            <div v-if="submissionAudioFeedback" class="review-round-note"><strong>录音评价</strong><p>{{ submissionAudioFeedback }}</p></div>
+            <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>{{ submissionAudioFeedback ? "已完成录音评价" : "家长未批改" }}</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
           </article>
         </section>
@@ -1578,6 +1625,14 @@ onBeforeUnmount(() => {
       <p v-if="statusRepairValue === 'unclaimed'" class="dialog-hint">已有作业提交的附件任务不能恢复为待领取，避免误删提交数据。</p>
       <p v-if="statusRepairTask?.requiresPhotoUpload && statusRepairValue === 'completed'" class="dialog-hint">附件任务已提交照片或录音后，可直接标记为已完成，无需先上传批改图。</p>
       <template #footer><el-button @click="statusRepairVisible = false">取消</el-button><el-button type="primary" :loading="statusRepairing" @click="saveStatusRepair">确认修正</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="audioReviewVisible" title="评价录音" width="480px" class="form-dialog">
+      <div class="audio-review-dialog">
+        <audio v-if="submissionAudio" controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio>
+        <el-input v-model="audioReviewFeedback" type="textarea" :rows="5" maxlength="500" show-word-limit placeholder="写下对内容、表达或完成情况的评价" aria-label="录音评价" />
+      </div>
+      <template #footer><el-button @click="audioReviewVisible = false">取消</el-button><el-button type="primary" :loading="audioReviewSubmitting" @click="submitAudioFeedback">提交评价</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
@@ -1657,3 +1712,16 @@ onBeforeUnmount(() => {
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.audio-review-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.audio-review-dialog audio {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+}
+</style>

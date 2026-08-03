@@ -85,6 +85,7 @@ export interface Submission {
   photoCount: number;
   photos: SubmissionPhoto[];
   audio: SubmissionAudio | null;
+  audioFeedback: string;
   createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
