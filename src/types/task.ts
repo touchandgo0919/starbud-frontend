@@ -65,6 +65,7 @@ export interface SubmissionReviewRound {
   id: string;
   sequence: number;
   note: string;
+  feedback: string;
   photos: SubmissionPhoto[];
   audios: SubmissionAudio[];
   reviewImages: SubmissionPhoto[];

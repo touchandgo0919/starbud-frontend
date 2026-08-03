@@ -1588,18 +1588,19 @@ onBeforeUnmount(() => {
           <h3>批改记录</h3>
           <article v-for="round in orderedSubmissionReviewRounds" :key="round.id" class="review-round">
             <h4>第 {{ round.sequence }} 次批改</h4>
-            <div class="review-round-row">
+            <div v-if="round.photos.length" class="review-round-row">
               <strong>批改前图片</strong>
               <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, round.photos)"><small class="round-image-time">{{ formatDateTime(round.submittedAt) }}</small><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
             <div v-if="round.audios.length" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio v-for="audio in round.audios" :key="audio.id" controls preload="metadata" :src="audio.url">当前浏览器不支持播放录音。</audio></div></div>
-            <div class="review-round-row">
+            <div v-if="round.reviewImages.length" class="review-round-row">
               <strong>批改后图片</strong>
               <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
             </div>
+            <div v-if="round.feedback" class="review-round-note"><strong>录音评价</strong><p>{{ round.feedback }}</p></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
-          <article v-if="(submissionPhotos.length || submissionAudio) && !submissionReviewImageUrl" class="review-round review-round--pending">
+          <article v-if="(submissionPhotos.length || submissionAudio) && !submissionReviewImageUrl && !submissionAudioFeedback" class="review-round review-round--pending">
             <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
