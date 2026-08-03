@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Delete, FullScreen, Plus, QuestionFilled, Refres
 import { ArrowUpRight, Pencil, Smile, Square, Type, Undo2, ZoomIn, ZoomOut } from "@lucide/vue";
 import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
-import type { Child, CreateTaskPayload, RepeatType, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
+import type { Child, CreateTaskPayload, RepeatType, SubmissionAudio, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
@@ -30,6 +30,7 @@ const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
 const submissionPhotos = ref<SubmissionPhoto[]>([]);
+const submissionAudio = ref<SubmissionAudio | null>(null);
 const submissionSubmittedAt = ref<string | null>(null);
 const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
@@ -329,6 +330,7 @@ function selectReviewTool(tool: "pen" | "text" | "rectangle" | "emoji" | "arrow"
 async function openDetail(task: Task) {
   detailTask.value = task;
   submissionPhotos.value = [];
+  submissionAudio.value = null;
   submissionSubmittedAt.value = null;
   submissionNote.value = "";
   submissionReviewImageUrl.value = null;
@@ -345,6 +347,7 @@ async function openDetail(task: Task) {
   try {
     const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
     submissionPhotos.value = submission.photos;
+    submissionAudio.value = submission.audio;
     submissionSubmittedAt.value = submission.submittedAt;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
@@ -1432,7 +1435,7 @@ onBeforeUnmount(() => {
         <el-table-column label="重复" width="72"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot task-state" :class="taskStateClass(scope.row)">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
-        <el-table-column label="作业照片" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column label="提交附件" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><button v-else-if="scope.row.submissionStatus" type="button" class="task-photo-preview task-audio-preview" title="已提交录音附件" @click="openDetail(scope.row)">音</button><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="scope.row.reviewStatus === 'not_required'" class="task-photo-empty">—</span><span v-else-if="scope.row.reviewStatus === 'completed'" class="task-photo-empty">已完成</span><span v-else-if="scope.row.reviewStatus === 'needs_revision'" class="task-photo-empty">待修改</span><el-button v-else-if="scope.row.reviewStatus === 'pending_review'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="scope.row.reviewStatus === 'submitting'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
@@ -1468,9 +1471,9 @@ onBeforeUnmount(() => {
           <div class="task-checkbox-options">
             <el-form-item>
               <template #label>
-                <span class="task-option-label">照片
+                <span class="task-option-label">提交附件
                   <el-tooltip placement="top" :show-after="200">
-                    <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是照片型任务：儿童领取后必须提交照片，家长才能批改或关闭。</template>
+                    <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是附件任务：儿童领取后必须提交照片或录音，家长才能批改或关闭。</template>
                     <el-icon class="task-option-help"><QuestionFilled /></el-icon>
                   </el-tooltip>
                 </span>
@@ -1527,15 +1530,15 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
         <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
-        <el-descriptions-item label="上传照片">{{ detailTask.requiresPhotoUpload ? "需要上传" : "无需上传" }}</el-descriptions-item>
+        <el-descriptions-item label="提交附件">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
-        <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? `已提交（${detailTask.submissionPhotoCount} 张照片）` : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
+        <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? "已提交" : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
         <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
-      <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
-        <section v-if="orderedSubmissionReviewRounds.length || submissionPhotos.length" class="review-rounds">
+      <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionAudio || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
+        <section v-if="orderedSubmissionReviewRounds.length || submissionPhotos.length || submissionAudio" class="review-rounds">
           <h3>批改记录</h3>
           <article v-for="round in orderedSubmissionReviewRounds" :key="round.id" class="review-round">
             <h4>第 {{ round.sequence }} 次批改</h4>
@@ -1543,18 +1546,20 @@ onBeforeUnmount(() => {
               <strong>批改前图片</strong>
               <div class="round-images round-originals"><button v-for="photo in round.photos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, round.photos)"><small class="round-image-time">{{ formatDateTime(round.submittedAt) }}</small><img :src="photo.url" alt="批改前图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
+            <div v-if="round.audios.length" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio v-for="audio in round.audios" :key="audio.id" controls preload="metadata" :src="audio.url">当前浏览器不支持播放录音。</audio></div></div>
             <div class="review-round-row">
               <strong>批改后图片</strong>
               <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
             </div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
           </article>
-          <article v-if="submissionPhotos.length && !submissionReviewImageUrl" class="review-round review-round--pending">
+          <article v-if="(submissionPhotos.length || submissionAudio) && !submissionReviewImageUrl" class="review-round review-round--pending">
             <h4>第 {{ orderedSubmissionReviewRounds.length + 1 }} 次提交</h4>
             <div class="review-round-row">
               <strong>批改前图片</strong>
               <div class="round-images"><button v-for="photo in submissionPhotos" :key="photo.id" type="button" class="round-image-action" :title="canReviewSubmission(detailTask) ? '批改这张' : '查看原图'" @click="reviewRoundOriginal(photo, submissionPhotos)"><small class="round-image-time">{{ formatDateTime(submissionSubmittedAt) }}</small><img :src="photo.url" alt="本次提交图片" /><span>{{ canReviewSubmission(detailTask) ? '批改这张' : '查看原图' }}</span></button></div>
             </div>
+            <div v-if="submissionAudio" class="review-round-row"><strong>提交录音</strong><div class="submission-audios"><audio controls preload="metadata" :src="submissionAudio.url">当前浏览器不支持播放录音。</audio></div></div>
             <div class="review-round-row review-round-pending-result"><strong>批改后图片</strong><span>家长未批改</span></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ submissionNote || "未填写" }}</p></div>
           </article>
@@ -1570,8 +1575,8 @@ onBeforeUnmount(() => {
         <el-radio value="claimed">已领取／待完成</el-radio>
         <el-radio value="completed">已完成</el-radio>
       </el-radio-group>
-      <p v-if="statusRepairValue === 'unclaimed'" class="dialog-hint">已有作业提交的照片型任务不能恢复为待领取，避免误删提交数据。</p>
-      <p v-if="statusRepairTask?.requiresPhotoUpload && statusRepairValue === 'completed'" class="dialog-hint">照片型任务已提交至少一张作业照片后，可直接标记为已完成，无需先上传批改图。</p>
+      <p v-if="statusRepairValue === 'unclaimed'" class="dialog-hint">已有作业提交的附件任务不能恢复为待领取，避免误删提交数据。</p>
+      <p v-if="statusRepairTask?.requiresPhotoUpload && statusRepairValue === 'completed'" class="dialog-hint">附件任务已提交照片或录音后，可直接标记为已完成，无需先上传批改图。</p>
       <template #footer><el-button @click="statusRepairVisible = false">取消</el-button><el-button type="primary" :loading="statusRepairing" @click="saveStatusRepair">确认修正</el-button></template>
     </el-dialog>
 

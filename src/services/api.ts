@@ -301,11 +301,13 @@ function normalizeSubmissionUrls(submission: Submission): Submission {
   return {
     ...submission,
     photos: submission.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+    audio: submission.audio ? { ...submission.audio, url: apiUrl(submission.audio.url) } : null,
     reviewImageUrl: submission.reviewImageUrl ? apiUrl(submission.reviewImageUrl) : null,
     reviewRounds: (submission.reviewRounds || []).map((round) => ({
       ...round,
       reviewImageUrl: apiUrl(round.reviewImageUrl),
       photos: round.photos.map((photo) => ({ ...photo, url: apiUrl(photo.url) })),
+      audios: (round.audios || []).map((audio) => ({ ...audio, url: apiUrl(audio.url) })),
       reviewImages: (round.reviewImages?.length ? round.reviewImages : [{ id: `legacy-${round.id}`, url: round.reviewImageUrl, contentType: "image/png", byteSize: 0, createdAt: round.reviewedAt }])
         .map((image) => ({ ...image, url: apiUrl(image.url) }))
     }))

@@ -71,7 +71,7 @@ function changePage(page: number) {
 
 async function removeSubmission(submission: Submission) {
   try {
-    await ElMessageBox.confirm(`删除“${submission.taskTitle}”的提交后，作业照片和批改图也会一并删除。`, "删除提交", {
+    await ElMessageBox.confirm(`删除“${submission.taskTitle}”的提交后，作业照片、录音和批改图也会一并删除。`, "删除提交", {
       confirmButtonText: "删除",
       cancelButtonText: "取消",
       type: "warning"
@@ -107,7 +107,7 @@ onMounted(() => {
         <el-table-column prop="taskTitle" label="任务名称" min-width="170" />
         <el-table-column label="提交人" width="110"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="提交状态" width="100"><template #default="scope"><span :class="scope.row.status === 'submitted' ? 'reviewed-label' : 'task-photo-empty'">{{ scope.row.status === "submitted" ? "已提交" : "提交中" }}</span></template></el-table-column>
-        <el-table-column label="作业照片" width="110"><template #default="scope"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column label="提交附件" width="110"><template #default="scope"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><span v-else-if="scope.row.audio" class="task-photo-empty">录音</span><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column label="批改状态" width="110"><template #default="scope"><span :class="scope.row.finalizedAt || scope.row.reviewedAt ? 'reviewed-label' : 'task-photo-empty'">{{ reviewStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="操作" width="90" fixed="right"><template #default="scope"><el-button link type="danger" @click="removeSubmission(scope.row)">删除</el-button></template></el-table-column>
       </el-table>

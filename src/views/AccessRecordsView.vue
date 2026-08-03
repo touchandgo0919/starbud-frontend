@@ -14,7 +14,7 @@ const eventLabels: Record<string, string> = {
   login_succeeded: "登录成功", login_attempt: "登录失败", logout: "退出登录", parent_registered: "注册家长账号",
   task_searched: "搜索任务", task_detail_viewed: "查看任务详情", task_claimed: "领取任务", task_completed: "完成任务",
   task_created: "创建任务", task_updated: "编辑任务", task_deleted: "删除任务", task_reminder_sent: "发起提醒", task_status_updated: "修正任务状态",
-  submission_searched: "搜索提交", submission_submitted: "提交作业", submission_reopened: "退回重交", submission_deleted: "删除提交",
+  submission_searched: "搜索提交", submission_audio_uploaded: "上传录音", submission_submitted: "提交作业", submission_reopened: "退回重交", submission_deleted: "删除提交",
   submission_review_submitted: "提交批改", submission_review_finalized: "完成批改",
   family_created: "创建家庭", family_updated: "编辑家庭", family_deleted: "删除家庭", family_child_created: "创建子女",
   family_member_added: "添加家庭成员", family_member_updated: "修改家庭成员", family_member_removed: "移除家庭成员",

@@ -52,11 +52,21 @@ export interface SubmissionPhoto {
   createdAt: string;
 }
 
+export interface SubmissionAudio {
+  id: string;
+  url: string;
+  contentType: string;
+  byteSize: number;
+  durationMs: number;
+  createdAt: string;
+}
+
 export interface SubmissionReviewRound {
   id: string;
   sequence: number;
   note: string;
   photos: SubmissionPhoto[];
+  audios: SubmissionAudio[];
   reviewImages: SubmissionPhoto[];
   reviewImageUrl: string;
   submittedAt: string | null;
@@ -74,6 +84,7 @@ export interface Submission {
   status: "draft" | "submitted";
   photoCount: number;
   photos: SubmissionPhoto[];
+  audio: SubmissionAudio | null;
   createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
