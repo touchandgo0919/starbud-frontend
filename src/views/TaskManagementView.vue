@@ -1435,7 +1435,7 @@ onBeforeUnmount(() => {
         <el-table-column label="重复" width="72"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot task-state" :class="taskStateClass(scope.row)">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
-        <el-table-column label="提交附件" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><button v-else-if="scope.row.submissionStatus" type="button" class="task-photo-preview task-audio-preview" title="已提交录音附件" @click="openDetail(scope.row)">音</button><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column label="附件" width="78"><template #default="scope"><button v-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><button v-else-if="scope.row.submissionStatus" type="button" class="task-photo-preview task-audio-preview" title="已提交录音附件" @click="openDetail(scope.row)">音</button><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="scope.row.reviewStatus === 'not_required'" class="task-photo-empty">—</span><span v-else-if="scope.row.reviewStatus === 'completed'" class="task-photo-empty">已完成</span><span v-else-if="scope.row.reviewStatus === 'needs_revision'" class="task-photo-empty">待修改</span><el-button v-else-if="scope.row.reviewStatus === 'pending_review'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="scope.row.reviewStatus === 'submitting'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
@@ -1471,7 +1471,7 @@ onBeforeUnmount(() => {
           <div class="task-checkbox-options">
             <el-form-item>
               <template #label>
-                <span class="task-option-label">提交附件
+                <span class="task-option-label">附件
                   <el-tooltip placement="top" :show-after="200">
                     <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是附件任务：儿童领取后必须提交照片或录音，家长才能批改或关闭。</template>
                     <el-icon class="task-option-help"><QuestionFilled /></el-icon>
@@ -1530,7 +1530,7 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
         <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
-        <el-descriptions-item label="提交附件">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
+        <el-descriptions-item label="附件">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? "已提交" : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
         <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
