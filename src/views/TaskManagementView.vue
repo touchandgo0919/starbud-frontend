@@ -1082,7 +1082,7 @@ function annotationStyle(annotation: ReviewTextAnnotation) {
     color: annotation.color,
     backgroundColor: annotation.backgroundColor || "transparent",
     fontSize: `${annotation.fontSize * scale}px`,
-    padding: `${(layout.paddingY + layout.visualOffsetY) * scale}px ${layout.paddingX * scale}px ${(layout.paddingY - layout.visualOffsetY) * scale}px`,
+    padding: `${layout.paddingY * scale}px ${layout.paddingX * scale}px`,
     transform: `rotate(${annotation.rotation || 0}deg)`,
     transformOrigin: "0 0"
   };
@@ -1091,13 +1091,9 @@ function annotationStyle(annotation: ReviewTextAnnotation) {
 function reviewTextLayout(fontSize: number, withBackground: boolean) {
   const paddingX = withBackground ? Math.round(fontSize * .28) : 0;
   const paddingY = withBackground ? Math.round(fontSize * .16) : 0;
-  // 中文字形在浏览器和 Canvas 的字体行框中视觉上略偏上；保持外框高度不变，
-  // 将上下内边距反向补偿，使可见文字而不是抽象行框真正垂直居中。
-  const visualOffsetY = withBackground ? Math.min(paddingY, Math.round(fontSize * .06)) : 0;
   return {
     paddingX,
     paddingY,
-    visualOffsetY,
     contentHeight: Math.ceil(fontSize * 1.2)
   };
 }
@@ -1120,7 +1116,7 @@ function reviewTextEditorFrameStyle() {
     color: reviewTextWithBackground.value ? "#ffffff" : reviewColor.value,
     backgroundColor: reviewTextWithBackground.value ? reviewColor.value : "transparent",
     fontSize: `${fontSize * scale}px`,
-    padding: `${(layout.paddingY + layout.visualOffsetY) * scale}px ${layout.paddingX * scale}px ${(layout.paddingY - layout.visualOffsetY) * scale}px`,
+    padding: `${layout.paddingY * scale}px ${layout.paddingX * scale}px`,
     width: `${(contentWidth + layout.paddingX * 2) * scale}px`,
     height: `${(layout.contentHeight + layout.paddingY * 2) * scale}px`
   };
@@ -1263,10 +1259,17 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
         context.fill();
       }
       context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
-      const textOffsetY = annotation.backgroundColor
-        ? reviewTextLayout(annotation.fontSize, true).visualOffsetY
-        : 0;
-      context.fillText(annotation.text, 0, textOffsetY);
+      if (annotation.backgroundColor) {
+        const layout = reviewTextLayout(annotation.fontSize, true);
+        const metrics = context.measureText(annotation.text);
+        const ascent = metrics.actualBoundingBoxAscent || annotation.fontSize * .8;
+        const descent = metrics.actualBoundingBoxDescent || annotation.fontSize * .2;
+        context.textBaseline = "alphabetic";
+        context.fillText(annotation.text, 0, (layout.contentHeight - ascent - descent) / 2 + ascent);
+      } else {
+        context.textBaseline = "top";
+        context.fillText(annotation.text, 0, 0);
+      }
       context.restore();
     }
   }
