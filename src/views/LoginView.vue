@@ -116,12 +116,15 @@ function switchMode(nextMode: "login" | "register") {
         </label>
       </template>
 
+      <div class="login-agreement-row">
+      <span class="agreement-required" aria-hidden="true">*</span>
       <el-checkbox v-model="agreementAccepted" class="login-agreement">
         我已阅读并同意
         <a href="/legal/user-agreement.html" target="_blank" rel="noopener" @click.stop>《用户服务协议》</a>
         和
         <a href="/legal/privacy-policy.html" target="_blank" rel="noopener" @click.stop>《隐私政策》</a>
       </el-checkbox>
+      </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading" :disabled="!agreementAccepted">
         {{ mode === "register" ? "注册并登录" : "登录" }}
