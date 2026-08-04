@@ -1582,18 +1582,18 @@ onBeforeUnmount(() => {
     <el-dialog v-model="detailVisible" title="任务详情" width="560px" class="form-dialog">
       <el-descriptions v-if="detailTask" :column="detailColumnCount" border class="task-detail-descriptions">
         <el-descriptions-item label="任务名称" :span="2">{{ detailTask.title }}</el-descriptions-item>
-        <el-descriptions-item label="任务对象">{{ childName(detailTask.childId) }}</el-descriptions-item>
-        <el-descriptions-item label="执行日期">{{ detailTask.occurrenceDate || "—" }}</el-descriptions-item>
+        <el-descriptions-item label="任务对象" :span="2">{{ childName(detailTask.childId) }}</el-descriptions-item>
+        <el-descriptions-item label="任务日期">{{ detailTask.occurrenceDate || "—" }}</el-descriptions-item>
         <el-descriptions-item label="提醒时间">{{ detailTask.scheduleTime }}</el-descriptions-item>
         <el-descriptions-item label="重复方式">{{ repeatLabels[detailTask.repeatType] }}</el-descriptions-item>
-        <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="提醒方式">{{ detailTask.voiceEnabled ? `语音提醒 ${detailTask.voiceReminderCount} 次` : "静默提醒" }}</el-descriptions-item>
-        <el-descriptions-item label="附件">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
+        <el-descriptions-item label="任务状态">{{ taskStatusLabel(detailTask) }}</el-descriptions-item>
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? "已提交" : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
+        <el-descriptions-item label="附件要求">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="提醒语音内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
+        <el-descriptions-item label="语音提醒内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionAudio || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
         <section v-if="orderedSubmissionReviewRounds.length || submissionPhotos.length || submissionAudio" class="review-rounds">
