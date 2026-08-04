@@ -284,6 +284,7 @@ h1, h2, h3, p { margin: 0; }
 .task-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
 .task-photo-preview span { position: absolute; right: 2px; bottom: 1px; min-width: 14px; border-radius: 8px; background: var(--green); color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
 .task-audio-preview { display: flex; align-items: center; justify-content: center; color: var(--green); }
+.task-attachment-loading { display: inline-flex; width: 52px; height: 38px; align-items: center; justify-content: center; color: var(--green); }
 .submission-photo-preview { position: relative; width: 52px; height: 38px; overflow: hidden; border: 1px solid var(--border); border-radius: 5px; background: #12151b; }
 .submission-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
 .submission-photo-preview span { position: absolute; right: 2px; bottom: 1px; min-width: 14px; border-radius: 8px; background: var(--green); color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
