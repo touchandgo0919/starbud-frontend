@@ -10,11 +10,16 @@ const auth = useAuthStore();
 const error = ref("");
 const showPassword = ref(false);
 const mode = ref<"login" | "register">("login");
+const agreementAccepted = ref(false);
 const form = reactive({ username: "admin", password: "" });
 const registerForm = reactive({ username: "", displayName: "", password: "" });
 
 async function submit() {
   error.value = "";
+  if (!agreementAccepted.value) {
+    error.value = "请先阅读并同意《用户服务协议》和《隐私政策》。";
+    return;
+  }
   try {
     if (mode.value === "register") {
       await auth.register({
@@ -36,6 +41,7 @@ function switchMode(nextMode: "login" | "register") {
   mode.value = nextMode;
   error.value = "";
   showPassword.value = false;
+  agreementAccepted.value = false;
 }
 </script>
 
@@ -110,8 +116,14 @@ function switchMode(nextMode: "login" | "register") {
         </label>
       </template>
 
+      <el-checkbox v-model="agreementAccepted" class="login-agreement">
+        我已阅读并同意
+        <a href="/legal/user-agreement.html" target="_blank" rel="noopener" @click.stop>《用户服务协议》</a>
+        和
+        <a href="/legal/privacy-policy.html" target="_blank" rel="noopener" @click.stop>《隐私政策》</a>
+      </el-checkbox>
       <p v-if="error" class="form-error">{{ error }}</p>
-      <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading">
+      <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading" :disabled="!agreementAccepted">
         {{ mode === "register" ? "注册并登录" : "登录" }}
       </el-button>
       <p class="login-help">{{ mode === "register" ? "注册账号默认为家长权限" : "初始管理员：admin" }}</p>
