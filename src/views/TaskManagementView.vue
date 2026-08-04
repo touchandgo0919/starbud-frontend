@@ -1579,7 +1579,7 @@ onBeforeUnmount(() => {
       <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitTask">{{ editingTaskId ? "保存修改" : "保存任务" }}</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="detailVisible" title="任务详情" width="560px" class="form-dialog">
+    <el-dialog v-model="detailVisible" title="任务详情" width="640px" class="form-dialog">
       <el-descriptions v-if="detailTask" :column="detailColumnCount" border class="task-detail-descriptions">
         <el-descriptions-item label="任务名称" :span="2">{{ detailTask.title }}</el-descriptions-item>
         <el-descriptions-item label="任务对象" :span="2">{{ childName(detailTask.childId) }}</el-descriptions-item>
@@ -1591,8 +1591,8 @@ onBeforeUnmount(() => {
         <el-descriptions-item label="领取状态">{{ detailTask.claimedAt ? "已领取" : "未领取" }}</el-descriptions-item>
         <el-descriptions-item label="提交状态">{{ detailTask.submissionStatus === "submitted" ? "已提交" : detailTask.submissionStatus === "draft" ? "提交中" : "未提交" }}</el-descriptions-item>
         <el-descriptions-item label="附件要求">{{ detailTask.requiresPhotoUpload ? "照片或录音至少一项" : "无需提交" }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" class-name="task-detail-time-cell">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间" class-name="task-detail-time-cell">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
         <el-descriptions-item label="语音提醒内容" :span="2">{{ detailTask.voiceEnabled ? detailTask.voiceContent : "未开启语音提醒" }}</el-descriptions-item>
       </el-descriptions>
       <section v-if="detailTask && (detailTask.submissionStatus === 'submitted' || submissionPhotos.length || submissionAudio || submissionReviewRounds.length)" v-loading="submissionPhotosLoading" class="task-submission-section">
