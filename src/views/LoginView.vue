@@ -3,6 +3,7 @@ import { reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Hide, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
+import IcpRecord from "../components/IcpRecord.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -131,5 +132,6 @@ function switchMode(nextMode: "login" | "register") {
       </el-button>
       <p class="login-help">{{ mode === "register" ? "注册账号默认为家长权限" : "初始管理员：admin" }}</p>
     </form>
+    <IcpRecord />
   </main>
 </template>

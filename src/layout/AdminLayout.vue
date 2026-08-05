@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { DocumentChecked, HomeFilled, House, List, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
+import IcpRecord from "../components/IcpRecord.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -101,6 +102,9 @@ async function logout() {
       <el-main class="admin-main">
         <RouterView />
       </el-main>
+      <el-footer class="admin-footer" height="44px">
+        <IcpRecord />
+      </el-footer>
     </el-container>
   </el-container>
 </template>

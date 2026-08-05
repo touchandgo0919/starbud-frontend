@@ -51,10 +51,11 @@ button { -webkit-tap-highlight-color: transparent; }
 h1, h2, h3, p { margin: 0; }
 
 .login-page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   padding: 32px 20px;
-  place-items: center;
+  align-items: center;
   background:
     radial-gradient(circle at 50% 12%, rgba(0, 185, 107, 0.12), transparent 34%),
     var(--bg);
@@ -63,6 +64,7 @@ h1, h2, h3, p { margin: 0; }
 .login-card {
   display: grid;
   width: min(100%, 420px);
+  margin: auto;
   gap: 20px;
   padding: 36px;
   border: 1px solid var(--border);
@@ -81,6 +83,9 @@ h1, h2, h3, p { margin: 0; }
 .login-heading p { margin-top: 8px; color: var(--muted); font-size: 14px; }
 .login-button { width: 100%; margin-top: 2px; font-weight: 700; }
 .login-help { color: #737985; font-size: 12px; text-align: center; }
+.icp-record { display: inline-flex; align-items: center; justify-content: center; color: #686e79; font-size: 12px; line-height: 1.5; text-decoration: none; transition: color .16s ease; }
+.icp-record:hover, .icp-record:focus-visible { color: #8f96a1; text-decoration: underline; text-underline-offset: 3px; }
+.login-page > .icp-record { flex: 0 0 auto; margin-top: 24px; }
 .login-agreement-row { display: flex; align-items: flex-start; gap: 5px; margin: -4px 0 0; }
 .agreement-required { color: #ff5a63; font-size: 16px; font-weight: 800; line-height: 22px; }
 .login-agreement { color: var(--muted); font-size: 12px; line-height: 1.65; white-space: normal; }
@@ -116,7 +121,8 @@ h1, h2, h3, p { margin: 0; }
 .admin-header h1 { color: var(--text); font-size: 23px; line-height: 1.2; }
 .admin-header p { margin-top: 6px; color: var(--muted); font-size: 13px; }
 .header-date { color: #7f858f; font-size: 13px; }
-.admin-main { min-height: calc(100vh - 92px); padding: 26px 30px 40px !important; background: var(--bg); }
+.admin-main { min-height: calc(100vh - 136px); padding: 26px 30px 40px !important; background: var(--bg); }
+.admin-footer { display: flex; align-items: center; justify-content: center; padding: 0 24px !important; border-top: 1px solid rgba(48, 52, 60, .7); background: var(--bg); }
 .page-stack { display: grid; gap: 20px; }
 
 .task-calendar-panel { padding: 18px 20px 14px; }
