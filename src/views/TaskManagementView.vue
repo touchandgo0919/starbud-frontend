@@ -81,7 +81,7 @@ const reviewTextSizes = [
 const reviewAnnotations = ref<ReviewAnnotation[]>([]);
 const selectedReviewAnnotationId = ref<string | null>(null);
 const reviewTextEditor = ref<ReviewTextEditor | null>(null);
-const reviewTextInput = ref<HTMLInputElement | null>(null);
+const reviewTextInput = ref<HTMLTextAreaElement | null>(null);
 const reviewCanvasDisplay = ref({ width: 0, height: 0 });
 const reviewCanvasSize = ref({ width: 0, height: 0 });
 const reviewShapeAnnotations = computed(() => reviewAnnotations.value.filter((annotation): annotation is ReviewRectangleAnnotation | ReviewPathAnnotation => annotation.type === "rectangle" || annotation.type === "path"));
@@ -876,7 +876,7 @@ function cancelReviewText() {
 }
 
 function handleReviewTextEditorKeydown(event: KeyboardEvent) {
-  if (event.key === "Enter") {
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
     commitReviewText();
   } else if (event.key === "Escape") {
@@ -887,7 +887,7 @@ function handleReviewTextEditorKeydown(event: KeyboardEvent) {
 
 function syncReviewTextEditor(event: Event) {
   const input = event.target;
-  if (!(input instanceof HTMLInputElement) || !reviewTextEditor.value) return;
+  if (!(input instanceof HTMLTextAreaElement) || !reviewTextEditor.value) return;
   // v-model 在中文输入法组合阶段可能延后同步；这里直接同步，确保输入框实时增宽。
   reviewTextEditor.value.value = input.value;
 }
@@ -1098,6 +1098,10 @@ function reviewTextLayout(fontSize: number, withBackground: boolean) {
   };
 }
 
+function reviewTextLines(text: string) {
+  return text.split("\n");
+}
+
 function reviewTextEditorFrameStyle() {
   const editor = reviewTextEditor.value;
   const canvas = reviewCanvas.value;
@@ -1106,10 +1110,13 @@ function reviewTextEditorFrameStyle() {
   const scale = display.width / canvas.width;
   const fontSize = reviewFontSize.value;
   const layout = reviewTextLayout(fontSize, reviewTextWithBackground.value);
-  // 左边缘保持不动，宽度取输入元素的真实内容宽度，中文输入法组合阶段也不会裁字。
+  // 左边缘保持不动，宽度按最长一行扩展；高度随回车行数同步增加。
+  const lines = reviewTextLines(editor.value);
+  const longestLineLength = Math.max(0, ...lines.map((line) => [...line].length));
   const measuredWidth = reviewTextInput.value ? Math.ceil(reviewTextInput.value.scrollWidth / scale) : 0;
-  const estimatedWidth = 18 + editor.value.length * fontSize * .78;
+  const estimatedWidth = 18 + longestLineLength * fontSize * .78;
   const contentWidth = Math.min(420, Math.max(42, estimatedWidth, measuredWidth + 2));
+  const contentHeight = layout.contentHeight * Math.max(1, lines.length);
   return {
     left: `${(editor.x - layout.paddingX) * scale}px`,
     top: `${(editor.y - layout.paddingY) * scale}px`,
@@ -1118,7 +1125,7 @@ function reviewTextEditorFrameStyle() {
     fontSize: `${fontSize * scale}px`,
     padding: `${layout.paddingY * scale}px ${layout.paddingX * scale}px`,
     width: `${(contentWidth + layout.paddingX * 2) * scale}px`,
-    height: `${(layout.contentHeight + layout.paddingY * 2) * scale}px`
+    height: `${(contentHeight + layout.paddingY * 2) * scale}px`
   };
 }
 
@@ -1249,10 +1256,11 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
       context.save();
       context.translate(annotation.x, annotation.y);
       context.rotate(((annotation.rotation || 0) * Math.PI) / 180);
+      const lines = reviewTextLines(annotation.text);
       if (annotation.backgroundColor) {
         const layout = reviewTextLayout(annotation.fontSize, true);
-        const width = Math.ceil(context.measureText(annotation.text).width) + layout.paddingX * 2;
-        const height = layout.contentHeight + layout.paddingY * 2;
+        const width = Math.ceil(Math.max(0, ...lines.map((line) => context.measureText(line).width))) + layout.paddingX * 2;
+        const height = layout.contentHeight * lines.length + layout.paddingY * 2;
         context.fillStyle = annotation.backgroundColor;
         context.beginPath();
         context.roundRect(-layout.paddingX, -layout.paddingY, width, height, Math.max(4, Math.round(annotation.fontSize * .2)));
@@ -1263,13 +1271,15 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
         const layout = reviewTextLayout(annotation.fontSize, true);
         // TextMetrics 的 ascent/descent 会受当前 textBaseline 影响，测量和绘制必须使用同一基线。
         context.textBaseline = "alphabetic";
-        const metrics = context.measureText(annotation.text);
+        const metrics = context.measureText(lines.find((line) => line) || "国");
         const ascent = metrics.actualBoundingBoxAscent || annotation.fontSize * .8;
         const descent = metrics.actualBoundingBoxDescent || annotation.fontSize * .2;
-        context.fillText(annotation.text, 0, (layout.contentHeight - ascent - descent) / 2 + ascent);
+        const baselineOffset = (layout.contentHeight - ascent - descent) / 2 + ascent;
+        lines.forEach((line, index) => context.fillText(line, 0, index * layout.contentHeight + baselineOffset));
       } else {
         context.textBaseline = "top";
-        context.fillText(annotation.text, 0, 0);
+        const layout = reviewTextLayout(annotation.fontSize, false);
+        lines.forEach((line, index) => context.fillText(line, 0, index * layout.contentHeight));
       }
       context.restore();
     }
@@ -1728,7 +1738,7 @@ onBeforeUnmount(() => {
             </template>
           </svg>
           <div v-if="reviewTextEditor" class="review-text-editor-frame" :style="reviewTextEditorFrameStyle()" @mousedown.stop @click.stop>
-            <input ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" aria-label="图片批注文字" @input="syncReviewTextEditor" @compositionupdate="syncReviewTextEditor" @keydown.stop="handleReviewTextEditorKeydown" />
+            <textarea ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" aria-label="图片批注文字" rows="1" wrap="off" @input="syncReviewTextEditor" @compositionupdate="syncReviewTextEditor" @keydown.stop="handleReviewTextEditorKeydown"></textarea>
             <span v-for="corner in ['top-left', 'top-right', 'bottom-left', 'bottom-right']" :key="corner" class="review-text-editor-node" :class="`review-text-editor-node--${corner}`"></span>
           </div>
           <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji', 'review-text-annotation--with-background': !!annotation.backgroundColor }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @pointerdown.stop.prevent="startMoveAnnotation($event, annotation)" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
