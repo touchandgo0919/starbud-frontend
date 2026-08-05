@@ -1261,10 +1261,11 @@ function createReviewedExportCanvas(canvas: HTMLCanvasElement) {
       context.fillStyle = annotation.type === "emoji" ? "#111" : annotation.color;
       if (annotation.backgroundColor) {
         const layout = reviewTextLayout(annotation.fontSize, true);
+        // TextMetrics 的 ascent/descent 会受当前 textBaseline 影响，测量和绘制必须使用同一基线。
+        context.textBaseline = "alphabetic";
         const metrics = context.measureText(annotation.text);
         const ascent = metrics.actualBoundingBoxAscent || annotation.fontSize * .8;
         const descent = metrics.actualBoundingBoxDescent || annotation.fontSize * .2;
-        context.textBaseline = "alphabetic";
         context.fillText(annotation.text, 0, (layout.contentHeight - ascent - descent) / 2 + ascent);
       } else {
         context.textBaseline = "top";
