@@ -64,6 +64,7 @@ h1, h2, h3, p { margin: 0; }
 .login-card {
   display: grid;
   width: min(100%, 420px);
+  min-width: 0;
   margin: auto;
   gap: 20px;
   padding: 36px;
@@ -86,10 +87,14 @@ h1, h2, h3, p { margin: 0; }
 .icp-record { display: inline-flex; align-items: center; justify-content: center; color: #686e79; font-size: 12px; line-height: 1.5; text-decoration: none; transition: color .16s ease; }
 .icp-record:hover, .icp-record:focus-visible { color: #8f96a1; text-decoration: underline; text-underline-offset: 3px; }
 .login-page > .icp-record { flex: 0 0 auto; margin-top: 24px; }
-.login-agreement-row { display: flex; align-items: flex-start; gap: 5px; margin: -4px 0 0; }
-.agreement-required { color: #ff5a63; font-size: 16px; font-weight: 800; line-height: 22px; }
-.login-agreement { color: var(--muted); font-size: 12px; line-height: 1.65; white-space: normal; }
-.login-agreement .el-checkbox__label { overflow: visible; padding-left: 7px; white-space: normal; }
+.login-card > .el-segmented { width: 100%; min-width: 0; }
+.login-card > .el-segmented .el-segmented__group,
+.login-card > .el-segmented .el-segmented__item { min-width: 0; }
+.login-agreement-row { min-width: 0; margin: -4px 0 0; }
+.login-agreement { width: 100%; height: auto; min-width: 0; align-items: flex-start; color: var(--muted); font-size: 12px; white-space: normal; }
+.login-agreement .el-checkbox__input { flex: 0 0 auto; margin-top: 3px; }
+.login-agreement .el-checkbox__label { display: block; min-width: 0; overflow: visible; padding-left: 10px; line-height: 1.7; white-space: normal; }
+.login-agreement-copy { display: block; white-space: nowrap; }
 .login-agreement a { color: #32cb82; text-decoration: none; }
 .login-agreement a:hover { color: #68e3a4; text-decoration: underline; }
 .input-icon-button { display: grid; width: 28px; height: 28px; padding: 0; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
@@ -500,4 +505,10 @@ h1, h2, h3, p { margin: 0; }
   .el-dialog { width: calc(100% - 24px) !important; }
   .submission-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .review-toolbar { align-items: flex-start; }
+}
+
+@media (max-width: 360px) {
+  .login-page { padding-inline: 12px; }
+  .login-card { padding-inline: 16px; }
+  .login-agreement { font-size: 11px; }
 }

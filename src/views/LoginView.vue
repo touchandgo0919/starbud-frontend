@@ -18,7 +18,7 @@ const registerForm = reactive({ username: "", displayName: "", password: "" });
 async function submit() {
   error.value = "";
   if (!agreementAccepted.value) {
-    error.value = "请先阅读并同意《用户服务协议》和《隐私政策》。";
+    error.value = "请先阅读并同意《用户协议》和《隐私政策》。";
     return;
   }
   try {
@@ -59,6 +59,7 @@ function switchMode(nextMode: "login" | "register") {
       </div>
 
       <el-segmented
+        block
         :model-value="mode"
         :options="[
           { label: '登录', value: 'login' },
@@ -118,13 +119,11 @@ function switchMode(nextMode: "login" | "register") {
       </template>
 
       <div class="login-agreement-row">
-      <span class="agreement-required" aria-hidden="true">*</span>
-      <el-checkbox v-model="agreementAccepted" class="login-agreement">
-        我已阅读并同意
-        <a href="/legal/user-agreement.html" target="_blank" rel="noopener" @click.stop>《用户服务协议》</a>
-        和
-        <a href="/legal/privacy-policy.html" target="_blank" rel="noopener" @click.stop>《隐私政策》</a>
-      </el-checkbox>
+        <el-checkbox v-model="agreementAccepted" class="login-agreement">
+          <span class="login-agreement-copy">
+            我已阅读并同意<a href="/legal/user-agreement.html" target="_blank" rel="noopener" @click.stop>《用户协议》</a>和<a href="/legal/privacy-policy.html" target="_blank" rel="noopener" @click.stop>《隐私政策》</a>
+          </span>
+        </el-checkbox>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading" :disabled="!agreementAccepted">
