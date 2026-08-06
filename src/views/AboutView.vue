@@ -64,6 +64,15 @@ const steps = [
   { number: "02", title: "孩子行动", description: "在小程序领取任务，用照片或录音提交。" },
   { number: "03", title: "家长反馈", description: "查看附件并批改，需要时发起下一轮提交。" }
 ];
+
+function scrollToSection(event: MouseEvent, sectionId: string) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  event.preventDefault();
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.replaceState(null, "", `#${sectionId}`);
+}
 </script>
 
 <template>
@@ -74,28 +83,33 @@ const steps = [
         <span>星星芽AI助手</span>
       </a>
       <nav aria-label="介绍页导航">
-        <a href="#workflow">使用流程</a>
-        <a href="#features">核心功能</a>
-        <a href="#children">儿童端</a>
+        <a href="#workflow" @click="scrollToSection($event, 'workflow')">使用流程</a>
+        <a href="#features" @click="scrollToSection($event, 'features')">核心功能</a>
+        <a href="#children" @click="scrollToSection($event, 'children')">儿童端</a>
         <a class="about-nav-login" href="/login">家长端登录</a>
       </nav>
     </header>
 
     <main>
       <section class="about-hero" aria-labelledby="about-title">
-        <div class="about-hero-shade" aria-hidden="true"></div>
         <div class="about-shell about-hero-content">
-          <img class="about-hero-logo" src="/starbud-icon.png" alt="" />
-          <p class="about-kicker">家庭任务与习惯协作</p>
-          <h1 id="about-title">星星芽AI助手</h1>
-          <p class="about-hero-summary">让家长把任务讲清楚，让孩子在合适的时间收到提醒、完成并提交，让每一次反馈都有记录。</p>
-          <div class="about-actions">
-            <a class="about-button about-button--primary" href="/login">
-              进入家长端
-              <ArrowRight :size="18" aria-hidden="true" />
-            </a>
-            <a class="about-button about-button--secondary" href="#workflow">查看使用流程</a>
+          <div class="about-hero-copy">
+            <img class="about-hero-logo" src="/starbud-icon.png" alt="" />
+            <p class="about-kicker">家庭任务与习惯协作</p>
+            <h1 id="about-title">星星芽AI助手</h1>
+            <p class="about-hero-summary">让家长把任务讲清楚，让孩子在合适的时间收到提醒、完成并提交，让每一次反馈都有记录。</p>
+            <div class="about-actions">
+              <a class="about-button about-button--primary" href="/login">
+                进入家长端
+                <ArrowRight :size="18" aria-hidden="true" />
+              </a>
+              <a class="about-button about-button--secondary" href="#workflow" @click="scrollToSection($event, 'workflow')">查看使用流程</a>
+            </div>
           </div>
+          <figure class="about-hero-preview">
+            <img src="/screenshots/task-management.png" alt="星星芽AI助手家长端任务管理页面" />
+            <figcaption><span>家长网页</span><strong>任务、提醒与批改状态集中管理</strong></figcaption>
+          </figure>
         </div>
       </section>
 
@@ -286,15 +300,18 @@ const steps = [
 .about-shell { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
 
 .about-nav {
-  position: absolute;
+  position: fixed;
   inset: 0 0 auto;
-  z-index: 5;
+  z-index: 20;
   display: flex;
   height: 72px;
   padding: 0 max(24px, calc((100% - 1160px) / 2));
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(5, 36, 28, .94);
+  box-shadow: 0 8px 24px rgba(4, 27, 20, .14);
+  backdrop-filter: blur(14px);
   color: #fff;
 }
 
@@ -308,26 +325,34 @@ const steps = [
 .about-hero {
   position: relative;
   display: flex;
-  min-height: 680px;
-  height: 78svh;
-  max-height: 780px;
+  min-height: 650px;
+  padding-top: 72px;
   align-items: center;
   overflow: hidden;
-  background: #123c2e url("/screenshots/task-management.png") center / cover no-repeat;
+  border-bottom: 1px solid #d7e3dd;
+  background: #eef5f1;
 }
 
-.about-hero-shade { position: absolute; inset: 0; background: rgba(4, 27, 20, .73); }
-.about-hero-content { position: relative; z-index: 1; padding-top: 60px; color: #fff; }
-.about-hero-logo { width: 64px; height: 64px; margin-bottom: 24px; border-radius: 15px; box-shadow: 0 12px 30px rgba(0, 0, 0, .25); }
+.about-hero-content { display: grid; padding: 72px 0 68px; grid-template-columns: minmax(330px, .82fr) minmax(0, 1.18fr); gap: 54px; align-items: center; }
+.about-hero-copy { min-width: 0; }
+.about-hero-logo { width: 58px; height: 58px; margin-bottom: 22px; border-radius: 13px; box-shadow: 0 12px 28px rgba(20, 70, 50, .16); }
 .about-kicker { color: #58dc9d; font-size: 14px; font-weight: 800; }
-.about-hero h1 { margin-top: 12px; font-size: 64px; line-height: 1.08; }
-.about-hero-summary { width: min(610px, 100%); margin-top: 24px !important; color: rgba(255, 255, 255, .84); font-size: 19px; line-height: 1.75; }
+.about-hero .about-kicker { color: #00985c; }
+.about-hero h1 { margin-top: 12px; color: #173128; font-size: 56px; line-height: 1.1; }
+.about-hero-summary { width: min(520px, 100%); margin-top: 22px !important; color: #5e7169; font-size: 18px; line-height: 1.75; }
 .about-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .about-button { display: inline-flex; min-height: 46px; padding: 0 20px; align-items: center; justify-content: center; gap: 8px; border-radius: 7px; font-size: 14px; font-weight: 800; text-decoration: none; }
 .about-button--primary { background: #00ae67; color: #fff; }
 .about-button--primary:hover, .about-button--primary:focus-visible { background: #009b5c; }
-.about-button--secondary { border: 1px solid rgba(255, 255, 255, .5); color: #fff; }
-.about-button--secondary:hover, .about-button--secondary:focus-visible { border-color: #fff; background: rgba(255, 255, 255, .09); }
+.about-button--secondary { border: 1px solid #9db5aa; color: #245344; }
+.about-button--secondary:hover, .about-button--secondary:focus-visible { border-color: #17865a; background: #e1eee8; }
+.about-hero-preview { overflow: hidden; margin: 0; border: 1px solid #c6d6ce; border-radius: 8px; background: #fff; box-shadow: 0 24px 60px rgba(21, 61, 44, .16); }
+.about-hero-preview img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f7faf8; }
+.about-hero-preview figcaption { display: flex; min-height: 66px; padding: 14px 17px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid #dce6e1; }
+.about-hero-preview figcaption span { color: #00985c; font-size: 11px; font-weight: 800; }
+.about-hero-preview figcaption strong { color: #274138; font-size: 13px; text-align: right; }
+
+#workflow, #features, #children { scroll-margin-top: 72px; }
 
 .about-workflow { padding: 74px 0 82px; background: #fff; }
 .about-section-heading > p { color: #00985c; font-size: 13px; font-weight: 800; }
@@ -428,7 +453,8 @@ const steps = [
 .about-footer-links a:hover { color: #087c50; }
 
 @media (max-width: 900px) {
-  .about-hero h1 { font-size: 52px; }
+  .about-hero-content { grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); gap: 32px; }
+  .about-hero h1 { font-size: 46px; }
   .about-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .about-screen figcaption { align-items: flex-start; flex-direction: column; gap: 8px; }
   .about-screen figcaption p { width: 100%; }
@@ -441,20 +467,23 @@ const steps = [
 
 @media (max-width: 680px) {
   .about-shell { width: min(100% - 32px, 560px); }
-  .about-nav { height: 64px; padding: 0 16px; }
-  .about-nav nav { gap: 8px; }
-  .about-nav nav > a:not(.about-nav-login) { display: none; }
+  .about-nav { height: 104px; padding: 10px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .about-nav nav { width: 100%; justify-content: space-between; gap: 6px; }
+  .about-nav nav a { font-size: 12px; white-space: nowrap; }
   .about-brand { font-size: 14px; }
   .about-brand img { width: 30px; height: 30px; }
-  .about-nav .about-nav-login { padding: 8px 11px; font-size: 12px; }
-  .about-hero { min-height: 570px; height: 76svh; background-position: 38% center; }
-  .about-hero-shade { background: rgba(4, 27, 20, .79); }
-  .about-hero-content { padding-top: 48px; }
-  .about-hero-logo { width: 52px; height: 52px; margin-bottom: 20px; }
-  .about-hero h1 { font-size: 42px; }
+  .about-nav .about-nav-login { padding: 6px 8px; font-size: 12px; }
+  #workflow, #features, #children { scroll-margin-top: 104px; }
+  .about-hero { min-height: 0; padding-top: 104px; }
+  .about-hero-content { padding: 42px 0 48px; grid-template-columns: 1fr; gap: 32px; }
+  .about-hero-copy { text-align: left; }
+  .about-hero-logo { width: 50px; height: 50px; margin-bottom: 18px; }
+  .about-hero h1 { font-size: 40px; }
   .about-hero-summary { margin-top: 18px !important; font-size: 16px; line-height: 1.7; }
   .about-actions { margin-top: 26px; }
   .about-button { min-height: 44px; padding: 0 16px; }
+  .about-hero-preview figcaption { min-height: 58px; padding: 12px 14px; }
+  .about-hero-preview figcaption strong { max-width: 65%; font-size: 12px; }
   .about-workflow, .about-features, .about-child-experience, .about-reminder-band, .about-platforms { padding: 64px 0; }
   .about-section-heading h2, .about-cta h2 { font-size: 28px; }
   .about-steps { grid-template-columns: 1fr; gap: 28px; }

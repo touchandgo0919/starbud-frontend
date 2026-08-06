@@ -130,7 +130,7 @@ function switchMode(nextMode: "login" | "register") {
       <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading" :disabled="!agreementAccepted">
         {{ mode === "register" ? "注册并登录" : "登录" }}
       </el-button>
-      <RouterLink v-if="mode === 'register'" class="login-about-button" to="/about">
+      <RouterLink class="login-about-button" to="/about">
         <Info :size="16" :stroke-width="1.8" aria-hidden="true" />
         关于星星芽
       </RouterLink>
