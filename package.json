@@ -8,7 +8,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && wrangler dev",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test": "npm run typecheck && npm run test:unit && npm run build",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -26,10 +28,13 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.47.0",
     "@types/node": "^22.10.2",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^18.0.1",
     "typescript": "^5.7.2",
     "unocss": "^65.4.3",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",
+    "vitest": "^3.2.7",
     "vue-tsc": "^2.2.0",
     "wrangler": "^4.114.0"
   },

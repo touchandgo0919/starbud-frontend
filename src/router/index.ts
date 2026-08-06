@@ -10,6 +10,7 @@ const TaskManagementView = () => import("../views/TaskManagementView.vue");
 const SubmissionManagementView = () => import("../views/SubmissionManagementView.vue");
 const UserManagementView = () => import("../views/UserManagementView.vue");
 const AccessRecordsView = () => import("../views/AccessRecordsView.vue");
+const AboutView = () => import("../views/AboutView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,7 +19,13 @@ const router = createRouter({
       path: "/login",
       name: "Login",
       component: LoginView,
-      meta: { public: true, title: "登录" }
+      meta: { guestOnly: true, title: "登录" }
+    },
+    {
+      path: "/about",
+      name: "About",
+      component: AboutView,
+      meta: { public: true, title: "产品介绍" }
     },
     {
       path: "/",
@@ -69,9 +76,12 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore(pinia);
+  if (to.meta.public) {
+    return true;
+  }
   await auth.bootstrap();
 
-  if (to.meta.public) {
+  if (to.meta.guestOnly) {
     return auth.user ? "/home" : true;
   }
   if (!auth.user) {

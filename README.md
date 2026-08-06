@@ -32,7 +32,10 @@ and the backend `INITIAL_PASSWORD_SUFFIX` secret.
 npm install
 npm run dev
 npm run build
+npm test
 ```
+
+`npm test` 会执行 API 契约、登录状态和关键组件交互测试，并完成生产构建。
 
 ## Environment
 
