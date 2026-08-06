@@ -9,7 +9,9 @@ import {
   History,
   Mic2,
   MonitorSmartphone,
+  RefreshCw,
   ShieldCheck,
+  Volume2,
   UsersRound
 } from "@lucide/vue";
 import IcpRecord from "../components/IcpRecord.vue";
@@ -74,6 +76,7 @@ const steps = [
       <nav aria-label="介绍页导航">
         <a href="#workflow">使用流程</a>
         <a href="#features">核心功能</a>
+        <a href="#children">儿童端</a>
         <a class="about-nav-login" href="/login">家长端登录</a>
       </nav>
     </header>
@@ -128,33 +131,93 @@ const steps = [
               <p>{{ feature.description }}</p>
             </article>
           </div>
+
+          <div class="about-product-tour">
+            <figure class="about-screen about-screen--wide">
+              <img src="/screenshots/parent-dashboard.png" alt="星星芽AI助手家长端首页，展示今日任务、完成率、家庭成员和任务趋势" />
+              <figcaption>
+                <div><span>家长首页</span><h3>每天的进度，一眼看清</h3></div>
+                <p>按家庭成员查看今日任务、完成率和一周趋势，接下来该做什么不再靠翻聊天记录。</p>
+              </figcaption>
+            </figure>
+            <div class="about-screen-grid">
+              <figure class="about-screen">
+                <img src="/screenshots/task-management.png" alt="任务管理页面，展示日历、任务对象、提醒次数、附件和批改状态" />
+                <figcaption>
+                  <div><span>任务管理</span><h3>日期、对象、提醒与批改集中管理</h3></div>
+                </figcaption>
+              </figure>
+              <figure class="about-screen">
+                <img src="/screenshots/task-editor.png" alt="新建任务窗口，展示任务对象、执行日期、附件要求、语音和提醒次数设置" />
+                <figcaption>
+                  <div><span>新建任务</span><h3>把任务和提醒要求一次讲清楚</h3></div>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="children" class="about-child-experience">
+        <div class="about-shell">
+          <div class="about-section-heading">
+            <p>儿童小程序</p>
+            <h2>从领取任务，到提交成果</h2>
+            <span>孩子只看自己的任务。日历状态、领取、附件提交和批改结果都在同一条任务记录中。</span>
+          </div>
+          <div class="about-child-layout">
+            <figure class="about-phone-screen">
+              <img src="/screenshots/miniprogram-tasks.png" alt="儿童小程序任务列表，展示日历、任务时间、领取与批改状态" />
+              <figcaption><span>今日任务</span><strong>时间与状态清楚可见</strong><p>按日期查看任务，领取后进入执行流程，待批改和已完成状态一目了然。</p></figcaption>
+            </figure>
+            <figure class="about-phone-screen">
+              <img src="/screenshots/miniprogram-submit.png" alt="儿童小程序作业提交页，展示图片、录音和备注区域" />
+              <figcaption><span>附件提交</span><strong>照片或录音，任选一种</strong><p>录音由孩子点击后才开始，结束后可以试听、删除，再确认提交。</p></figcaption>
+            </figure>
+            <div class="about-child-points">
+              <div><ClipboardCheck :size="22" /><strong>领取与完成</strong><p>任务按成员分配，避免孩子看到不属于自己的安排。</p></div>
+              <div><Camera :size="22" /><strong>照片独立提交</strong><p>保留现有拍照和相册流程，与录音互不覆盖。</p></div>
+              <div><Mic2 :size="22" /><strong>最长 3 分钟录音</strong><p>不自动录音；退出录音页会先确认，停止后不保留未完成录音。</p></div>
+              <div><History :size="22" /><strong>多轮重新提交</strong><p>批改后可重新提交，每一轮照片、录音与评价都可追溯。</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-reminder-band">
+        <div class="about-shell about-reminder-layout">
+          <figure class="about-app-screen">
+            <img src="/screenshots/app-today-reminders.png" alt="桌面 App 今日任务页，展示自动同步、提醒次数和任务领取" />
+          </figure>
+          <div class="about-reminder-copy">
+            <p class="about-kicker">桌面 App 到点提醒</p>
+            <h2>不等孩子想起来，时间到了主动提醒</h2>
+            <p>App 登录儿童账号后自动同步今日任务，并在本地安排提醒。到点时系统通知、桌面窗口置顶与离线语音同时执行。</p>
+            <ul>
+              <li><RefreshCw :size="19" /><span><strong>实时同步</strong> 自动获取家长新增和修改的任务</span></li>
+              <li><BellRing :size="19" /><span><strong>准时弹出</strong> 系统通知与窗口置顶共同提醒</span></li>
+              <li><Volume2 :size="19" /><span><strong>离线语音</strong> 每项任务可设置 1 至 3 次播报</span></li>
+            </ul>
+          </div>
         </div>
       </section>
 
       <section class="about-submission-band">
         <div class="about-shell about-submission-layout">
           <div class="about-submission-copy">
-            <p class="about-kicker">提交不只有一种方式</p>
-            <h2>拍下来，或者说出来</h2>
-            <p>书面作业适合照片，阅读、背诵和口语练习适合录音。孩子任选一种附件即可提交，家长在网页端直接查看和评价。</p>
+            <p class="about-kicker">家长批改与反馈</p>
+            <h2>不只确认完成，还能认真听、具体评</h2>
+            <p>家长可以在网页端查看照片、完整试听录音，并针对内容、表达或完成情况给出评价；需要修改时直接发起重新提交。</p>
             <ul>
               <li><Camera :size="19" aria-hidden="true" />照片和录音互不覆盖</li>
               <li><Mic2 :size="19" aria-hidden="true" />录音结束后可试听、删除</li>
               <li><History :size="19" aria-hidden="true" />重新提交仍保留历史轮次</li>
             </ul>
           </div>
-          <div class="about-phone" aria-label="儿童端作业提交界面示意">
-            <div class="about-phone-bar"><span></span><strong>提交作业</strong><span>•••</span></div>
-            <div class="about-task-mini">
-              <i>读</i>
-              <div><strong>英语课文朗读</strong><span>提醒时间 19:30</span></div>
-            </div>
-            <p class="about-phone-hint">图片和录音至少提交一项，录音最多 3 分钟</p>
-            <div class="about-upload-mini"><Camera :size="22" /><span>拍照 / 相册</span></div>
-            <div class="about-record-mini"><Mic2 :size="21" /><span>点击开始录音</span><button aria-label="开始录音">开始</button></div>
-            <div class="about-note-mini">补充说明（选填）</div>
-            <div class="about-submit-mini">提交作业</div>
-          </div>
+          <figure class="about-review-screen">
+            <img src="/screenshots/audio-review.png" alt="家长端录音评价页面，可播放孩子提交的录音并填写评价" />
+            <figcaption><span>录音批改</span>试听孩子提交的语音，并留下针对内容、表达或完成情况的评价。</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -250,7 +313,7 @@ const steps = [
   max-height: 780px;
   align-items: center;
   overflow: hidden;
-  background: #123c2e url("/starbud-product-overview.png") center / cover no-repeat;
+  background: #123c2e url("/screenshots/task-management.png") center / cover no-repeat;
 }
 
 .about-hero-shade { position: absolute; inset: 0; background: rgba(4, 27, 20, .73); }
@@ -285,30 +348,54 @@ const steps = [
 .about-feature-grid h3 { margin-top: 25px; color: #1f382f; font-size: 17px; }
 .about-feature-grid p { margin-top: 10px; color: #6a7973; font-size: 14px; line-height: 1.75; }
 
+.about-product-tour { display: grid; margin-top: 70px; gap: 24px; }
+.about-screen { overflow: hidden; margin: 0; border: 1px solid #cad8d1; border-radius: 8px; background: #fff; box-shadow: 0 18px 50px rgba(22, 63, 46, .1); }
+.about-screen img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top center; }
+.about-screen figcaption { display: flex; min-height: 98px; padding: 20px 22px; align-items: center; justify-content: space-between; gap: 26px; border-top: 1px solid #dce6e1; }
+.about-screen figcaption div { min-width: 0; }
+.about-screen figcaption span, .about-review-screen figcaption span { display: block; color: #00985c; font-size: 11px; font-weight: 800; }
+.about-screen figcaption h3 { margin-top: 5px; color: #203a30; font-size: 17px; }
+.about-screen figcaption p { width: min(460px, 46%); color: #6b7b74; font-size: 13px; line-height: 1.65; }
+.about-screen-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.about-screen-grid .about-screen figcaption { min-height: 92px; }
+
+.about-child-experience { padding: 96px 0; background: #fff; }
+.about-child-layout { display: grid; margin-top: 48px; grid-template-columns: 280px 280px minmax(260px, 1fr); gap: 28px; align-items: start; }
+.about-phone-screen { overflow: hidden; margin: 0; border: 1px solid #d2ded8; border-radius: 8px; background: #f5f7f6; box-shadow: 0 20px 50px rgba(21, 61, 44, .12); }
+.about-phone-screen img { display: block; width: 100%; aspect-ratio: 390 / 844; object-fit: cover; object-position: top; }
+.about-phone-screen figcaption { min-height: 150px; padding: 18px; border-top: 1px solid #dce6e1; background: #fff; }
+.about-phone-screen figcaption span { display: block; color: #00985c; font-size: 11px; font-weight: 800; }
+.about-phone-screen figcaption strong { display: block; margin-top: 6px; color: #203a30; font-size: 16px; }
+.about-phone-screen figcaption p { margin-top: 9px; color: #6b7b74; font-size: 13px; line-height: 1.65; }
+.about-child-points { display: grid; gap: 1px; border-block: 1px solid #dce6e1; background: #dce6e1; }
+.about-child-points > div { min-height: 132px; padding: 22px 4px 22px 22px; background: #fff; }
+.about-child-points svg { float: left; margin-right: 13px; color: #009b5c; }
+.about-child-points strong { color: #203a30; font-size: 15px; }
+.about-child-points p { margin: 8px 0 0 35px; color: #6b7b74; font-size: 13px; line-height: 1.65; }
+
+.about-reminder-band { padding: 96px 0; background: #e8f1ed; }
+.about-reminder-layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); gap: 72px; align-items: center; }
+.about-app-screen { overflow: hidden; margin: 0; border: 1px solid #cbd9d2; border-radius: 8px; background: #f7f5ef; box-shadow: 0 24px 60px rgba(21, 61, 44, .16); }
+.about-app-screen img { display: block; width: 100%; aspect-ratio: 600 / 650; object-fit: cover; }
+.about-reminder-copy h2 { margin-top: 10px; color: #173128; font-size: 38px; line-height: 1.3; }
+.about-reminder-copy > p:not(.about-kicker) { margin-top: 20px; color: #62756d; font-size: 16px; line-height: 1.8; }
+.about-reminder-copy ul { display: grid; margin: 28px 0 0; padding: 0; gap: 18px; list-style: none; }
+.about-reminder-copy li { display: flex; align-items: flex-start; gap: 12px; color: #50675e; font-size: 14px; line-height: 1.6; }
+.about-reminder-copy li svg { flex: 0 0 auto; margin-top: 2px; color: #009b5c; }
+.about-reminder-copy li strong { display: block; color: #203a30; }
+
 .about-submission-band { padding: 96px 0; background: #103d31; color: #fff; }
-.about-submission-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 100px; align-items: center; }
+.about-submission-layout { display: grid; grid-template-columns: minmax(320px, .72fr) minmax(0, 1.28fr); gap: 70px; align-items: center; }
 .about-submission-copy h2, .about-platforms h2 { margin-top: 10px; font-size: 38px; line-height: 1.28; }
 .about-submission-copy > p:not(.about-kicker) { margin-top: 22px; color: #b7cdc4; font-size: 16px; line-height: 1.8; }
 .about-submission-copy ul { display: grid; margin: 28px 0 0; padding: 0; gap: 13px; list-style: none; }
 .about-submission-copy li { display: flex; align-items: center; gap: 10px; color: #dcebe5; font-size: 14px; }
 .about-submission-copy li svg { color: #56dea0; }
 
-.about-phone { padding: 14px 15px 18px; border: 8px solid #17241f; border-radius: 34px; background: #f4f7f5; color: #18332a; box-shadow: 0 28px 70px rgba(0, 0, 0, .28); }
-.about-phone-bar { display: grid; height: 42px; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 12px; }
-.about-phone-bar span:last-child { justify-self: end; letter-spacing: 2px; }
-.about-task-mini { display: flex; gap: 12px; padding: 17px; border-radius: 8px; background: #fff; }
-.about-task-mini i { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 8px; background: #05ad69; color: #fff; font-size: 13px; font-style: normal; font-weight: 800; }
-.about-task-mini div { display: grid; min-width: 0; gap: 5px; }
-.about-task-mini strong { font-size: 14px; }
-.about-task-mini span { color: #7d8984; font-size: 11px; }
-.about-phone-hint { margin: 14px 0 10px !important; color: #48675a; font-size: 11px; }
-.about-upload-mini { display: grid; width: 82px; height: 82px; place-items: center; border: 1px dashed #8da69b; border-radius: 8px; background: #fff; color: #07985d; font-size: 10px; }
-.about-upload-mini span { margin-top: -14px; }
-.about-record-mini { display: grid; height: 58px; margin-top: 12px; padding: 0 12px; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; border: 1px solid #d7e1dc; border-radius: 8px; background: #fff; color: #667770; font-size: 11px; }
-.about-record-mini svg { color: #05a865; }
-.about-record-mini button { height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: #08ab69; color: #fff; font-size: 11px; font-weight: 700; }
-.about-note-mini { height: 72px; margin-top: 12px; padding: 12px; border: 1px solid #d7e1dc; border-radius: 8px; background: #fff; color: #9aa49f; font-size: 11px; }
-.about-submit-mini { height: 40px; margin-top: 16px; border-radius: 7px; background: #06ae69; color: #fff; font-size: 13px; font-weight: 800; line-height: 40px; text-align: center; }
+.about-review-screen { overflow: hidden; margin: 0; border: 1px solid rgba(101, 213, 160, .38); border-radius: 8px; background: #182a24; box-shadow: 0 28px 70px rgba(0, 0, 0, .3); }
+.about-review-screen img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: center; }
+.about-review-screen figcaption { padding: 16px 18px; color: #bcd1c8; font-size: 12px; line-height: 1.65; }
+.about-review-screen figcaption span { margin-bottom: 4px; color: #5de2a5; }
 
 .about-platforms { padding: 86px 0; background: #fff; }
 .about-platform-layout { display: grid; grid-template-columns: .85fr 1.4fr; gap: 90px; align-items: center; }
@@ -343,6 +430,11 @@ const steps = [
 @media (max-width: 900px) {
   .about-hero h1 { font-size: 52px; }
   .about-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-screen figcaption { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .about-screen figcaption p { width: 100%; }
+  .about-child-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-child-points { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-reminder-layout { gap: 48px; }
   .about-submission-layout { gap: 54px; }
   .about-platform-layout { grid-template-columns: 1fr; gap: 34px; }
 }
@@ -363,17 +455,27 @@ const steps = [
   .about-hero-summary { margin-top: 18px !important; font-size: 16px; line-height: 1.7; }
   .about-actions { margin-top: 26px; }
   .about-button { min-height: 44px; padding: 0 16px; }
-  .about-workflow, .about-features, .about-platforms { padding: 64px 0; }
+  .about-workflow, .about-features, .about-child-experience, .about-reminder-band, .about-platforms { padding: 64px 0; }
   .about-section-heading h2, .about-cta h2 { font-size: 28px; }
   .about-steps { grid-template-columns: 1fr; gap: 28px; }
   .about-steps li { padding-right: 0; }
   .about-steps li::after { display: none; }
   .about-feature-grid { grid-template-columns: 1fr; }
   .about-feature-grid article { min-height: 0; }
+  .about-product-tour { margin-top: 48px; }
+  .about-screen-grid { grid-template-columns: 1fr; }
+  .about-screen figcaption { min-height: 0; padding: 16px; }
+  .about-screen figcaption h3 { font-size: 15px; }
+  .about-child-layout { grid-template-columns: 1fr; gap: 24px; }
+  .about-phone-screen { width: min(100%, 350px); margin: 0 auto; }
+  .about-child-points { grid-column: auto; grid-template-columns: 1fr; }
+  .about-child-points > div { min-height: 0; padding-right: 18px; }
+  .about-reminder-layout { grid-template-columns: 1fr; gap: 38px; }
+  .about-reminder-copy h2 { font-size: 30px; }
   .about-submission-band { padding: 68px 0; }
   .about-submission-layout { grid-template-columns: 1fr; gap: 44px; }
   .about-submission-copy h2, .about-platforms h2 { font-size: 30px; }
-  .about-phone { width: min(100%, 380px); margin: 0 auto; }
+  .about-review-screen { width: 100%; }
   .about-platform-list { grid-template-columns: 1fr; border-block: 0; }
   .about-platform-list > div { grid-template-columns: auto minmax(0, 1fr); align-items: center; border-right: 0; border-bottom: 1px solid #dbe5e0; }
   .about-platform-list > div:last-child { border-bottom: 0; }

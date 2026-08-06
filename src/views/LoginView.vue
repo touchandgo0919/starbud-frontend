@@ -2,6 +2,7 @@
 import { reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Hide, View } from "@element-plus/icons-vue";
+import { Info } from "@lucide/vue";
 import { useAuthStore } from "../store/auth";
 import IcpRecord from "../components/IcpRecord.vue";
 
@@ -129,6 +130,10 @@ function switchMode(nextMode: "login" | "register") {
       <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="auth.loading" :disabled="!agreementAccepted">
         {{ mode === "register" ? "注册并登录" : "登录" }}
       </el-button>
+      <RouterLink v-if="mode === 'register'" class="login-about-button" to="/about">
+        <Info :size="16" :stroke-width="1.8" aria-hidden="true" />
+        关于星星芽
+      </RouterLink>
       <p class="login-help">{{ mode === "register" ? "注册账号默认为家长权限" : "初始管理员：admin" }}</p>
     </form>
     <IcpRecord />
