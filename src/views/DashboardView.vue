@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ArrowRight, Check, Clock, House, List, Refresh } from "@element-plus/icons-vue";
-import { getChildren, getFamilies, getTasks, getTodayTasks, getUsers } from "../services/api";
+import { ArrowRight, Check, Clock, DataAnalysis, House, List, MagicStick, Refresh, Timer } from "@element-plus/icons-vue";
+import { getAiHomeOverview, getChildren, getFamilies, getTasks, getTodayTasks, getUsers } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import TaskTrendChart from "../components/TaskTrendChart.vue";
-import type { Child, Family, ManagedUser, Task } from "../types/task";
+import type { AiHomeOverview, AiOverviewInsight, Child, Family, ManagedUser, Task } from "../types/task";
 
 type TrendPeriod = "week" | "month";
 
@@ -27,6 +27,12 @@ const families = ref<Family[]>([]);
 const users = ref<ManagedUser[]>([]);
 const selectedChildId = ref("");
 const trendPeriod = ref<TrendPeriod>("week");
+const aiOverview = ref<AiHomeOverview | null>(null);
+const aiLoading = ref(false);
+const aiError = ref("");
+const aiPeriod = ref<7 | 28>(28);
+const evidenceInsight = ref<AiOverviewInsight | null>(null);
+const trialInsight = ref<AiOverviewInsight | null>(null);
 
 const todayDate = dateKey(new Date());
 const completed = computed(() => todayTasks.value.filter(isCompleted).length);
@@ -66,6 +72,9 @@ const trendTotal = computed(() => trendPoints.value.reduce((sum, item) => sum + 
 const trendCompleted = computed(() => trendPoints.value.reduce((sum, item) => sum + item.completed, 0));
 const trendUnfinished = computed(() => trendTotal.value - trendCompleted.value);
 const trendCompletionRate = computed(() => trendTotal.value ? Math.round((trendCompleted.value / trendTotal.value) * 100) : 0);
+const recentAiTrend = computed(() => aiOverview.value?.trend.slice(-7) || []);
+const maxAiTrendTotal = computed(() => Math.max(1, ...recentAiTrend.value.map((item) => item.total)));
+const confidenceLabel = computed(() => ({ high: "证据充分", medium: "证据一般", low: "数据较少" })[aiOverview.value?.confidence || "low"]);
 
 function isCompleted(task: Task) {
   // 已完成的任务再次补交照片，仍按已完成统计；本轮批改状态单独展示。
@@ -114,6 +123,37 @@ function getTrendRange(period: TrendPeriod) {
   return { from: dateKey(sunday), to: dateKey(saturday) };
 }
 
+function formatGeneratedAt(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value);
+  return match ? `${match[2]}月${match[3]}日 ${match[4]}:${match[5]}` : value;
+}
+
+function metricDisplay(value: number | null, suffix = "%") {
+  return value === null ? "--" : `${value}${suffix}`;
+}
+
+function deltaText(value: number | null) {
+  if (value === null) return "暂无上一周期数据";
+  if (value === 0) return "与上一周期持平";
+  return `较上一周期${value > 0 ? "提升" : "下降"} ${Math.abs(value)} 个百分点`;
+}
+
+async function loadAiOverview() {
+  if (auth.user?.role === "child") return;
+  aiLoading.value = true;
+  aiError.value = "";
+  try {
+    aiOverview.value = await getAiHomeOverview({
+      childId: selectedChildId.value || undefined,
+      days: aiPeriod.value
+    });
+  } catch (cause) {
+    aiError.value = cause instanceof Error ? cause.message : "成长观察加载失败。";
+  } finally {
+    aiLoading.value = false;
+  }
+}
+
 async function load(options: { preserveLoading?: boolean } = {}) {
   if (options.preserveLoading) refreshing.value = true;
   else loading.value = true;
@@ -134,6 +174,7 @@ async function load(options: { preserveLoading?: boolean } = {}) {
     children.value = loadedChildren;
     families.value = loadedFamilies;
     if (auth.user?.role === "admin") users.value = await getUsers();
+    await loadAiOverview();
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "总览加载失败。";
   } finally {
@@ -152,6 +193,12 @@ function selectChild(childId: string) {
   if (selectedChildId.value === childId) return;
   selectedChildId.value = childId;
   load({ preserveLoading: true });
+}
+
+function updateAiPeriod(period: 7 | 28) {
+  if (aiPeriod.value === period) return;
+  aiPeriod.value = period;
+  loadAiOverview();
 }
 
 onMounted(load);
@@ -214,6 +261,73 @@ onMounted(load);
       <div v-else class="empty-state">{{ periodLabel }}暂无任务数据。</div>
     </section>
 
+    <section v-if="auth.user?.role !== 'child'" class="content-panel ai-observation" aria-label="AI 成长观察" :aria-busy="aiLoading">
+      <div class="panel-heading ai-observation-heading">
+        <div class="ai-heading-copy">
+          <span class="ai-heading-icon"><el-icon><MagicStick /></el-icon></span>
+          <div><h2>AI 成长观察</h2><p>从任务领取、完成与批改记录中发现值得关注的变化</p></div>
+        </div>
+        <div class="ai-heading-actions">
+          <div class="trend-period-switch" aria-label="AI 分析周期">
+            <button :class="{ 'is-active': aiPeriod === 7 }" type="button" @click="updateAiPeriod(7)">近 7 天</button>
+            <button :class="{ 'is-active': aiPeriod === 28 }" type="button" @click="updateAiPeriod(28)">近 28 天</button>
+          </div>
+          <el-button plain :loading="aiLoading" aria-label="刷新成长观察" @click="loadAiOverview"><el-icon><Refresh /></el-icon>刷新</el-button>
+        </div>
+      </div>
+
+      <p v-if="aiError" class="form-error">{{ aiError }}</p>
+      <template v-else-if="aiOverview">
+        <div class="ai-summary-band" :class="{ 'is-insufficient': aiOverview.dataStatus === 'insufficient' }">
+          <div>
+            <div class="ai-summary-meta"><span>{{ aiOverview.scope.childName }}</span><span>{{ aiOverview.period.from }} 至 {{ aiOverview.period.to }}</span></div>
+            <h3>{{ aiOverview.summary.title }}</h3>
+            <p>{{ aiOverview.summary.description }}</p>
+          </div>
+          <div class="ai-confidence"><strong>{{ confidenceLabel }}</strong><span>更新于 {{ formatGeneratedAt(aiOverview.generatedAt) }}</span></div>
+        </div>
+
+        <div class="ai-metric-strip" aria-label="成长观察关键指标">
+          <div><span>周期任务</span><strong>{{ aiOverview.metrics.totalTasks }}</strong><small>实际计划任务</small></div>
+          <div><span>完成率</span><strong>{{ aiOverview.metrics.completionRate }}%</strong><small>{{ deltaText(aiOverview.metrics.completionRateDelta) }}</small></div>
+          <div><span>按时完成</span><strong>{{ metricDisplay(aiOverview.metrics.onTimeRate) }}</strong><small>计划时间后 15 分钟内</small></div>
+          <div><span>平均领取延迟</span><strong>{{ metricDisplay(aiOverview.metrics.averageClaimDelayMinutes, ' 分钟') }}</strong><small>仅统计已领取任务</small></div>
+        </div>
+
+        <div class="ai-observation-body">
+          <div class="ai-trend-block">
+            <div class="ai-subheading"><div><el-icon><DataAnalysis /></el-icon><strong>近 7 天执行节奏</strong></div><span>已完成 / 任务总数</span></div>
+            <div class="ai-mini-chart" role="img" aria-label="近 7 天任务完成趋势">
+              <div v-for="point in recentAiTrend" :key="point.date" class="ai-mini-column">
+                <div class="ai-mini-bar-track">
+                  <i class="ai-mini-bar-total" :style="{ height: `${Math.max(8, (point.total / maxAiTrendTotal) * 100)}%` }"></i>
+                  <i class="ai-mini-bar-complete" :style="{ height: `${point.total ? (point.completed / maxAiTrendTotal) * 100 : 0}%` }"></i>
+                </div>
+                <span>{{ point.date.slice(5).replace('-', '/') }}</span>
+                <small>{{ point.completed }}/{{ point.total }}</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-insight-block">
+            <div class="ai-subheading"><div><el-icon><Timer /></el-icon><strong>本期观察</strong></div><span>{{ aiOverview.insights.length }} 条</span></div>
+            <div v-if="aiOverview.insights.length" class="ai-insight-list">
+              <article v-for="insight in aiOverview.insights" :key="insight.id" class="ai-insight-row" :class="`is-${insight.tone}`">
+                <div><strong>{{ insight.title }}</strong><p>{{ insight.summary }}</p></div>
+                <div class="ai-insight-actions">
+                  <button v-if="insight.evidence.length" type="button" @click="evidenceInsight = insight">查看证据</button>
+                  <button v-if="insight.action" class="is-primary" type="button" @click="trialInsight = insight">查看 7 天试行草稿</button>
+                </div>
+              </article>
+            </div>
+            <div v-else class="ai-empty-observation">继续完成家庭任务，积累足够数据后会在这里生成观察。</div>
+          </div>
+        </div>
+
+        <p class="ai-disclaimer">成长观察用于辅助家庭安排，不评价儿童能力、态度或心理状态。第一版采用可复核的数据规则，后续模型分析仍引用同一份证据。</p>
+      </template>
+    </section>
+
     <section class="content-panel">
       <div class="panel-heading">
         <div><h2>今日任务情况</h2><p>按提醒时间查看当前任务进度</p></div>
@@ -232,5 +346,34 @@ onMounted(load);
       </div>
       <div v-else class="empty-state">今天暂无任务，前往任务管理创建第一项任务。</div>
     </section>
+
+    <el-dialog :model-value="Boolean(evidenceInsight)" width="min(560px, calc(100% - 28px))" title="观察证据" append-to-body @update:model-value="!$event && (evidenceInsight = null)">
+      <div v-if="evidenceInsight" class="ai-evidence-dialog">
+        <div class="ai-dialog-summary"><strong>{{ evidenceInsight.title }}</strong><p>{{ evidenceInsight.summary }}</p></div>
+        <div class="ai-evidence-list">
+          <div v-for="item in evidenceInsight.evidence" :key="`${item.taskId}-${item.occurrenceDate}`">
+            <time>{{ item.occurrenceDate }}</time>
+            <div><strong>{{ item.taskTitle }}</strong><span>{{ item.childName }}</span></div>
+            <p>{{ item.detail }}</p>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <el-dialog :model-value="Boolean(trialInsight)" width="min(520px, calc(100% - 28px))" title="7 天试行草稿" append-to-body @update:model-value="!$event && (trialInsight = null)">
+      <div v-if="trialInsight?.action" class="ai-trial-dialog">
+        <span class="ai-trial-badge">只改变一个变量</span>
+        <h3>{{ trialInsight.action.title }}</h3>
+        <p>{{ trialInsight.action.description }}</p>
+        <dl>
+          <div><dt>试行对象</dt><dd>{{ aiOverview?.scope.childName }}</dd></div>
+          <div><dt>试行周期</dt><dd>{{ trialInsight.action.trialDays }} 天</dd></div>
+          <div v-if="trialInsight.action.changeMinutes"><dt>提醒变化</dt><dd>提前 {{ Math.abs(trialInsight.action.changeMinutes) }} 分钟</dd></div>
+          <div><dt>验证指标</dt><dd>领取延迟、完成率</dd></div>
+        </dl>
+        <div class="ai-trial-note">当前只生成建议草稿，不会自动修改任何任务。请前往任务管理确认具体任务与时间。</div>
+      </div>
+      <template #footer><router-link to="/tasks"><el-button type="primary">前往任务管理</el-button></router-link></template>
+    </el-dialog>
   </div>
 </template>

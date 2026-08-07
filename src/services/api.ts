@@ -10,7 +10,8 @@ import type {
   Task,
   UpdateTaskPayload,
   User,
-  AccessEvent
+  AccessEvent,
+  AiHomeOverview
 } from "../types/task";
 
 const apiBaseUrls = {
@@ -212,6 +213,14 @@ export async function getTodayTasks(childId?: string) {
   const query = childId ? `?childId=${encodeURIComponent(childId)}` : "";
   const body = await request<{ tasks: Task[] }>(`/api/tasks/today${query}`);
   return body.tasks;
+}
+
+export async function getAiHomeOverview(options: { childId?: string; days?: 7 | 28 } = {}) {
+  const query = new URLSearchParams();
+  if (options.childId) query.set("childId", options.childId);
+  query.set("days", String(options.days || 28));
+  const body = await request<{ overview: AiHomeOverview }>(`/api/ai/home-overview?${query.toString()}`);
+  return body.overview;
 }
 
 export async function getTasks(filters: {

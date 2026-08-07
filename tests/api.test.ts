@@ -89,6 +89,29 @@ describe("web API client", () => {
     expect(new Headers(init?.headers).get("authorization")).toBe("Bearer reviewer-token");
   });
 
+  it("loads the homepage AI overview with member and period filters", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      overview: {
+        generatedAt: "2026-08-07 08:00:00",
+        analysisMode: "deterministic",
+        period: { days: 28, from: "2026-07-11", to: "2026-08-07" },
+        scope: { childId: "child-1", childName: "赵佑宁" },
+        dataStatus: "ready",
+        confidence: "high",
+        summary: { title: "执行稳定", description: "基于任务记录生成" },
+        metrics: { totalTasks: 12, completionRate: 80, completionRateDelta: 10, onTimeRate: 75, averageClaimDelayMinutes: 8, revisionRate: 20 },
+        trend: [],
+        insights: []
+      }
+    }));
+    const api = await import("../src/services/api");
+
+    const overview = await api.getAiHomeOverview({ childId: "child-1", days: 28 });
+
+    expect(overview.scope.childName).toBe("赵佑宁");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/ai/home-overview?childId=child-1&days=28");
+  });
+
   it("surfaces backend error messages and keeps analytics non-blocking", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ error: "账号无权限" }, 403))
