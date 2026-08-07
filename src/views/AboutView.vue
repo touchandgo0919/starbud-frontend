@@ -3,12 +3,15 @@ import { onBeforeUnmount, onMounted } from "vue";
 import {
   ArrowRight,
   BellRing,
+  BrainCircuit,
+  ChartNoAxesCombined,
   Camera,
   CheckCircle2,
   ClipboardCheck,
   History,
   Mic2,
   MonitorSmartphone,
+  Route,
   RefreshCw,
   ShieldCheck,
   Volume2,
@@ -85,6 +88,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
       <nav aria-label="介绍页导航">
         <a href="#workflow" @click="scrollToSection($event, 'workflow')">使用流程</a>
         <a href="#features" @click="scrollToSection($event, 'features')">核心功能</a>
+        <a class="about-nav-ai" href="#ai" @click="scrollToSection($event, 'ai')">AI 能力</a>
         <a href="#children" @click="scrollToSection($event, 'children')">儿童端</a>
         <a class="about-nav-login" href="/login">家长端登录</a>
       </nav>
@@ -97,7 +101,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
             <img class="about-hero-logo" src="/starbud-icon.png" alt="" />
             <p class="about-kicker">家庭任务与习惯协作</p>
             <h1 id="about-title">星星芽AI助手</h1>
-            <p class="about-hero-summary">让家长把任务讲清楚，让孩子在合适的时间收到提醒、完成并提交，让每一次反馈都有记录。</p>
+            <p class="about-hero-summary">让家长把任务讲清楚，让孩子在合适的时间收到提醒、完成并提交；AI 根据真实记录整理成长观察和下一步建议。</p>
             <div class="about-actions">
               <a class="about-button about-button--primary" href="/login">
                 进入家长端
@@ -172,24 +176,61 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
         </div>
       </section>
 
+      <section id="ai" class="about-ai-band">
+        <div class="about-shell about-ai-layout">
+          <div class="about-ai-copy">
+            <p class="about-kicker">AI 成长支持</p>
+            <h2>把数据变成下一步，不把孩子变成一个分数</h2>
+            <p>星星芽先由程序计算完成率、领取时间和批改记录，再让模型解释变化。每条观察都来自家庭自己的任务数据，建议只供家长判断，不会自动修改孩子的安排。</p>
+            <div class="about-ai-points">
+              <div><ChartNoAxesCombined :size="22" aria-hidden="true" /><span><strong>家长看懂变化</strong>查看近 7 天或 28 天趋势、依据和可执行建议。</span></div>
+              <div><Route :size="22" aria-hidden="true" /><span><strong>孩子知道下一步</strong>结合实时任务状态，只推荐当前最需要完成的一件事。</span></div>
+              <div><BrainCircuit :size="22" aria-hidden="true" /><span><strong>关键流程不依赖模型</strong>AI 暂不可用时，领取、提交、批改和规则建议仍能正常工作。</span></div>
+            </div>
+          </div>
+
+          <figure class="about-ai-preview" aria-label="家长端 AI 成长观察界面示意">
+            <div class="about-ai-preview__head">
+              <div><span>AI 成长观察</span><strong>赵佑宁 · 近 28 天</strong></div>
+              <small>每日更新</small>
+            </div>
+            <div class="about-ai-summary">
+              <span>本期观察</span>
+              <h3>近期任务执行整体稳定</h3>
+              <p>根据任务领取、完成和批改记录生成，所有结论均可查看原始依据。</p>
+            </div>
+            <div class="about-ai-metrics">
+              <div><span>周期任务</span><strong>18</strong></div>
+              <div><span>完成率</span><strong>78%</strong></div>
+              <div><span>领取延迟</span><strong>6 分钟</strong></div>
+            </div>
+            <div class="about-ai-insight">
+              <div><span>可执行建议</span><strong>部分任务可以提前 15 分钟提醒</strong><p>一次只调整一个变量，观察 7 天后再比较效果。</p></div>
+              <div class="about-ai-actions"><span>查看依据</span><span>查看试行草稿</span></div>
+            </div>
+            <figcaption>AI 只解释经过计算的数据，成长观察不评价儿童能力、态度或心理状态。</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section id="children" class="about-child-experience">
         <div class="about-shell">
           <div class="about-section-heading">
             <p>儿童小程序</p>
-            <h2>从领取任务，到提交成果</h2>
-            <span>孩子只看自己的任务。日历状态、领取、附件提交和批改结果都在同一条任务记录中。</span>
+            <h2>先看下一步，再完成和提交</h2>
+            <span>首页聚合今日进度、批改提醒和当前最重要的一件事，完整日历与任务列表保留在独立任务页。</span>
           </div>
           <div class="about-child-layout">
             <figure class="about-phone-screen">
-              <img src="/screenshots/miniprogram-tasks.png" alt="儿童小程序任务列表，展示日历、任务时间、领取与批改状态" />
-              <figcaption><span>今日任务</span><strong>时间与状态清楚可见</strong><p>按日期查看任务，领取后进入执行流程，待批改和已完成状态一目了然。</p></figcaption>
+              <img src="/screenshots/miniprogram-home.png" alt="儿童小程序首页，展示今日进度、AI 下一步建议和鼓励信息" />
+              <figcaption><span>儿童首页</span><strong>今天先做好一件事</strong><p>AI 结合实时任务状态解释下一步；模型不可用时，规则建议仍能正常工作。</p></figcaption>
             </figure>
             <figure class="about-phone-screen">
               <img src="/screenshots/miniprogram-submit.png" alt="儿童小程序作业提交页，展示图片、录音和备注区域" />
               <figcaption><span>附件提交</span><strong>照片或录音，任选一种</strong><p>录音由孩子点击后才开始，结束后可以试听、删除，再确认提交。</p></figcaption>
             </figure>
             <div class="about-child-points">
-              <div><ClipboardCheck :size="22" /><strong>领取与完成</strong><p>任务按成员分配，避免孩子看到不属于自己的安排。</p></div>
+              <div><ClipboardCheck :size="22" /><strong>首页与任务分工</strong><p>首页只推荐一个主行动，任务页负责日期、状态和完整列表，入口不重复。</p></div>
               <div><Camera :size="22" /><strong>照片独立提交</strong><p>保留现有拍照和相册流程，与录音互不覆盖。</p></div>
               <div><Mic2 :size="22" /><strong>最长 3 分钟录音</strong><p>不自动录音；退出录音页会先确认，停止后不保留未完成录音。</p></div>
               <div><History :size="22" /><strong>多轮重新提交</strong><p>批改后可重新提交，每一轮照片、录音与评价都可追溯。</p></div>
@@ -352,7 +393,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
 .about-hero-preview figcaption span { color: #00985c; font-size: 11px; font-weight: 800; }
 .about-hero-preview figcaption strong { color: #274138; font-size: 13px; text-align: right; }
 
-#workflow, #features, #children { scroll-margin-top: 72px; }
+#workflow, #features, #ai, #children { scroll-margin-top: 72px; }
 
 .about-workflow { padding: 74px 0 82px; background: #fff; }
 .about-section-heading > p { color: #00985c; font-size: 13px; font-weight: 800; }
@@ -383,6 +424,41 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
 .about-screen figcaption p { width: min(460px, 46%); color: #6b7b74; font-size: 13px; line-height: 1.65; }
 .about-screen-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .about-screen-grid .about-screen figcaption { min-height: 92px; }
+
+.about-ai-band { padding: 100px 0; border-block: 1px solid #d8e0e5; background: #f2f5f7; }
+.about-ai-layout { display: grid; grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr); gap: 68px; align-items: center; }
+.about-ai-copy { min-width: 0; }
+.about-ai-copy .about-kicker { color: #13735b; }
+.about-ai-copy h2 { margin-top: 10px; color: #173128; font-size: 38px; line-height: 1.3; }
+.about-ai-copy > p:not(.about-kicker) { margin-top: 20px; color: #61736c; font-size: 15px; line-height: 1.8; }
+.about-ai-points { margin-top: 30px; border-block: 1px solid #ccd8d3; }
+.about-ai-points > div { display: grid; min-width: 0; padding: 17px 0; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; border-bottom: 1px solid #dbe3df; }
+.about-ai-points > div:last-child { border-bottom: 0; }
+.about-ai-points svg { margin-top: 2px; color: #157b60; }
+.about-ai-points span { color: #61736c; font-size: 13px; line-height: 1.65; }
+.about-ai-points strong { display: block; margin-bottom: 2px; color: #213c33; font-size: 14px; }
+
+.about-ai-preview { overflow: hidden; min-width: 0; margin: 0; border: 1px solid #343a40; border-radius: 8px; background: #17191e; box-shadow: 0 28px 66px rgba(21, 35, 31, .22); color: #f7faf8; }
+.about-ai-preview__head { display: flex; min-height: 72px; padding: 17px 20px; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #363b42; background: #123f33; }
+.about-ai-preview__head div { display: grid; gap: 3px; }
+.about-ai-preview__head span { color: #68e1aa; font-size: 11px; font-weight: 800; }
+.about-ai-preview__head strong { font-size: 15px; }
+.about-ai-preview__head small { flex: 0 0 auto; color: #bdd1c8; font-size: 11px; }
+.about-ai-summary { margin: 20px; padding: 17px 18px; border-left: 4px solid #33ba79; background: #20282a; }
+.about-ai-summary > span, .about-ai-insight span { color: #6fd9aa; font-size: 10px; font-weight: 800; }
+.about-ai-summary h3 { margin-top: 6px; color: #fff; font-size: 18px; }
+.about-ai-summary p { margin-top: 7px; color: #b8c5c0; font-size: 12px; line-height: 1.65; }
+.about-ai-metrics { display: grid; margin: 0 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid #363b42; }
+.about-ai-metrics > div { min-width: 0; padding: 16px 14px; border-right: 1px solid #363b42; }
+.about-ai-metrics > div:last-child { border-right: 0; }
+.about-ai-metrics span { display: block; color: #8f9a96; font-size: 10px; }
+.about-ai-metrics strong { display: block; margin-top: 6px; color: #fff; font-size: 20px; }
+.about-ai-insight { margin: 20px; padding: 16px 18px; border-left: 4px solid #d59a35; background: #242329; }
+.about-ai-insight strong { display: block; margin-top: 5px; color: #fff; font-size: 14px; }
+.about-ai-insight p { margin-top: 6px; color: #b9b8be; font-size: 11px; line-height: 1.6; }
+.about-ai-actions { display: flex; flex-wrap: wrap; margin-top: 13px; gap: 8px; }
+.about-ai-actions span { display: inline-flex; min-height: 30px; padding: 0 10px; align-items: center; border: 1px solid #56565d; border-radius: 6px; background: #303037; color: #d8ddd9; font-size: 10px; }
+.about-ai-preview figcaption { padding: 13px 20px; border-top: 1px solid #343a40; color: #929e99; font-size: 10px; line-height: 1.6; }
 
 .about-child-experience { padding: 96px 0; background: #fff; }
 .about-child-layout { display: grid; margin-top: 48px; grid-template-columns: 280px 280px minmax(260px, 1fr); gap: 28px; align-items: start; }
@@ -456,6 +532,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-hero-content { grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); gap: 32px; }
   .about-hero h1 { font-size: 46px; }
   .about-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-ai-layout { grid-template-columns: 1fr; gap: 42px; }
   .about-screen figcaption { align-items: flex-start; flex-direction: column; gap: 8px; }
   .about-screen figcaption p { width: 100%; }
   .about-child-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -470,10 +547,11 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-nav { height: 104px; padding: 10px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
   .about-nav nav { width: 100%; justify-content: space-between; gap: 6px; }
   .about-nav nav a { font-size: 12px; white-space: nowrap; }
+  .about-nav .about-nav-ai { display: none; }
   .about-brand { font-size: 14px; }
   .about-brand img { width: 30px; height: 30px; }
   .about-nav .about-nav-login { padding: 6px 8px; font-size: 12px; }
-  #workflow, #features, #children { scroll-margin-top: 104px; }
+  #workflow, #features, #ai, #children { scroll-margin-top: 104px; }
   .about-hero { min-height: 0; padding-top: 104px; }
   .about-hero-content { padding: 42px 0 48px; grid-template-columns: 1fr; gap: 32px; }
   .about-hero-copy { text-align: left; }
@@ -484,7 +562,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-button { min-height: 44px; padding: 0 16px; }
   .about-hero-preview figcaption { min-height: 58px; padding: 12px 14px; }
   .about-hero-preview figcaption strong { max-width: 65%; font-size: 12px; }
-  .about-workflow, .about-features, .about-child-experience, .about-reminder-band, .about-platforms { padding: 64px 0; }
+  .about-workflow, .about-features, .about-ai-band, .about-child-experience, .about-reminder-band, .about-platforms { padding: 64px 0; }
   .about-section-heading h2, .about-cta h2 { font-size: 28px; }
   .about-steps { grid-template-columns: 1fr; gap: 28px; }
   .about-steps li { padding-right: 0; }
@@ -495,6 +573,13 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-screen-grid { grid-template-columns: 1fr; }
   .about-screen figcaption { min-height: 0; padding: 16px; }
   .about-screen figcaption h3 { font-size: 15px; }
+  .about-ai-copy h2 { font-size: 30px; }
+  .about-ai-preview__head { padding: 15px 16px; }
+  .about-ai-summary, .about-ai-insight { margin: 16px; }
+  .about-ai-metrics { margin: 0 16px; }
+  .about-ai-metrics > div { padding: 14px 9px; }
+  .about-ai-metrics strong { font-size: 17px; }
+  .about-ai-preview figcaption { padding: 12px 16px; }
   .about-child-layout { grid-template-columns: 1fr; gap: 24px; }
   .about-phone-screen { width: min(100%, 350px); margin: 0 auto; }
   .about-child-points { grid-column: auto; grid-template-columns: 1fr; }
