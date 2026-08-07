@@ -189,6 +189,18 @@ export interface AiHomeOverview {
   };
   trend: Array<{ date: string; completed: number; total: number }>;
   insights: AiOverviewInsight[];
+  modelAnalysis?: null | {
+    childId: string;
+    childName: string;
+    analysisDate: string;
+    periodDays: number;
+    model: string;
+    generatedAt: string;
+    result: {
+      parentSummary: { title: string; description: string };
+      childNextStep: { title: string; description: string };
+    };
+  };
 }
 
 export interface FamilyMember {

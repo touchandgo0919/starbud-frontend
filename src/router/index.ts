@@ -36,7 +36,7 @@ const router = createRouter({
           path: "home",
           name: "Home",
           component: DashboardView,
-          meta: { title: "首页", description: "查看今天的任务执行情况" }
+          meta: { title: "首页", description: "查看今日任务与成长观察" }
         },
         {
           path: "tasks",

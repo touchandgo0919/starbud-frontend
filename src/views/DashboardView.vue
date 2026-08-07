@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { ArrowRight, Check, Clock, DataAnalysis, House, List, MagicStick, Refresh, Timer } from "@element-plus/icons-vue";
+import { useRoute, useRouter } from "vue-router";
 import { getAiHomeOverview, getChildren, getFamilies, getTasks, getTodayTasks, getUsers } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import TaskTrendChart from "../components/TaskTrendChart.vue";
 import type { AiHomeOverview, AiOverviewInsight, Child, Family, ManagedUser, Task } from "../types/task";
 
 type TrendPeriod = "week" | "month";
+type DashboardSection = "today" | "insights";
 
 interface TrendPoint {
   date: string;
@@ -17,6 +19,8 @@ interface TrendPoint {
 }
 
 const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 const loading = ref(true);
 const refreshing = ref(false);
 const error = ref("");
@@ -75,6 +79,11 @@ const trendCompletionRate = computed(() => trendTotal.value ? Math.round((trendC
 const recentAiTrend = computed(() => aiOverview.value?.trend.slice(-7) || []);
 const maxAiTrendTotal = computed(() => Math.max(1, ...recentAiTrend.value.map((item) => item.total)));
 const confidenceLabel = computed(() => ({ high: "证据充分", medium: "证据一般", low: "数据较少" })[aiOverview.value?.confidence || "low"]);
+const displayedAiSummary = computed(() => aiOverview.value?.modelAnalysis?.result.parentSummary || aiOverview.value?.summary);
+const displayedAiGeneratedAt = computed(() => aiOverview.value?.modelAnalysis?.generatedAt || aiOverview.value?.generatedAt || "");
+const dashboardSection = computed<DashboardSection>(() =>
+  route.query.view === "insights" && auth.user?.role !== "child" ? "insights" : "today"
+);
 
 function isCompleted(task: Task) {
   // 已完成的任务再次补交照片，仍按已完成统计；本轮批改状态单独展示。
@@ -201,6 +210,13 @@ function updateAiPeriod(period: 7 | 28) {
   loadAiOverview();
 }
 
+function selectDashboardSection(section: DashboardSection) {
+  const query = { ...route.query };
+  if (section === "insights") query.view = "insights";
+  else delete query.view;
+  router.replace({ query });
+}
+
 onMounted(load);
 </script>
 
@@ -213,6 +229,12 @@ onMounted(load);
       <button v-for="child in children" :key="child.id" :class="{ 'is-active': selectedChildId === child.id }" type="button" @click="selectChild(child.id)">{{ child.name }}</button>
     </div>
 
+    <div v-if="auth.user?.role !== 'child'" class="dashboard-view-switch" role="tablist" aria-label="首页视图">
+      <button role="tab" :aria-selected="dashboardSection === 'today'" :class="{ 'is-active': dashboardSection === 'today' }" type="button" @click="selectDashboardSection('today')"><el-icon><List /></el-icon><span>今日概览</span></button>
+      <button role="tab" :aria-selected="dashboardSection === 'insights'" :class="{ 'is-active': dashboardSection === 'insights' }" type="button" @click="selectDashboardSection('insights')"><el-icon><MagicStick /></el-icon><span>成长观察</span></button>
+    </div>
+
+    <template v-if="dashboardSection === 'today'">
     <section class="metric-grid" aria-label="今日任务概览">
       <article class="metric-card metric-card--primary">
         <div class="metric-icon"><el-icon><List /></el-icon></div>
@@ -234,6 +256,18 @@ onMounted(load);
           <small>{{ auth.user?.role === "admin" ? `${users.filter((user) => user.active).length} 个账号启用` : `${families.length} 个家庭` }}</small>
         </div>
       </article>
+    </section>
+
+    <section v-if="auth.user?.role !== 'child'" class="ai-compact-summary" aria-label="成长观察摘要" :aria-busy="aiLoading">
+      <span class="ai-compact-icon"><el-icon><MagicStick /></el-icon></span>
+      <div class="ai-compact-copy">
+        <span>成长观察 · {{ aiOverview?.scope.childName || (selectedChildId ? childName(selectedChildId) : '全部家庭成员') }}</span>
+        <strong v-if="aiOverview">{{ displayedAiSummary?.title }}</strong>
+        <strong v-else-if="aiError">成长观察暂时无法加载</strong>
+        <strong v-else>正在整理近期任务数据</strong>
+        <p>{{ aiOverview?.modelAnalysis?.result.parentSummary.description || aiOverview?.insights[0]?.summary || aiOverview?.summary.description || aiError || '完成数据整理后将在这里显示最重要的一条观察。' }}</p>
+      </div>
+      <button type="button" class="ai-compact-action" @click="selectDashboardSection('insights')"><span>查看完整观察</span><el-icon><ArrowRight /></el-icon></button>
     </section>
 
     <section class="content-panel trend-panel" aria-label="任务变化趋势" :aria-busy="refreshing">
@@ -261,7 +295,27 @@ onMounted(load);
       <div v-else class="empty-state">{{ periodLabel }}暂无任务数据。</div>
     </section>
 
-    <section v-if="auth.user?.role !== 'child'" class="content-panel ai-observation" aria-label="AI 成长观察" :aria-busy="aiLoading">
+    <section class="content-panel">
+      <div class="panel-heading">
+        <div><h2>今日任务情况</h2><p>按提醒时间查看当前任务进度</p></div>
+        <router-link to="/tasks" class="panel-link">查看全部 <el-icon><ArrowRight /></el-icon></router-link>
+      </div>
+      <div class="progress-summary">
+        <div class="progress-copy"><strong>{{ completed }} / {{ todayTasks.length }}</strong><span>任务已完成</span></div>
+        <el-progress :percentage="completionRate" :stroke-width="10" :show-text="false" />
+      </div>
+      <div v-if="todayTasks.length" class="overview-list">
+        <div v-for="task in todayTasks.slice(0, 8)" :key="task.id" class="overview-row">
+          <time>{{ task.scheduleTime }}</time>
+          <div class="overview-copy"><strong>{{ task.title }}</strong><span>{{ childName(task.childId) }}</span></div>
+          <span class="status-dot" :class="`status-dot--${isCompleted(task) ? 'completed' : 'pending'}`">{{ isCompleted(task) ? "已完成" : "待完成" }}</span>
+        </div>
+      </div>
+      <div v-else class="empty-state">今天暂无任务，前往任务管理创建第一项任务。</div>
+    </section>
+    </template>
+
+    <section v-if="dashboardSection === 'insights' && auth.user?.role !== 'child'" class="content-panel ai-observation" aria-label="AI 成长观察" :aria-busy="aiLoading">
       <div class="panel-heading ai-observation-heading">
         <div class="ai-heading-copy">
           <span class="ai-heading-icon"><el-icon><MagicStick /></el-icon></span>
@@ -280,11 +334,11 @@ onMounted(load);
       <template v-else-if="aiOverview">
         <div class="ai-summary-band" :class="{ 'is-insufficient': aiOverview.dataStatus === 'insufficient' }">
           <div>
-            <div class="ai-summary-meta"><span>{{ aiOverview.scope.childName }}</span><span>{{ aiOverview.period.from }} 至 {{ aiOverview.period.to }}</span></div>
-            <h3>{{ aiOverview.summary.title }}</h3>
-            <p>{{ aiOverview.summary.description }}</p>
+            <div class="ai-summary-meta"><span>{{ aiOverview.scope.childName }}</span><span>{{ aiOverview.period.from }} 至 {{ aiOverview.period.to }}</span><span v-if="aiOverview.modelAnalysis">每日模型分析</span></div>
+            <h3>{{ displayedAiSummary?.title }}</h3>
+            <p>{{ displayedAiSummary?.description }}</p>
           </div>
-          <div class="ai-confidence"><strong>{{ confidenceLabel }}</strong><span>更新于 {{ formatGeneratedAt(aiOverview.generatedAt) }}</span></div>
+          <div class="ai-confidence"><strong>{{ confidenceLabel }}</strong><span>更新于 {{ formatGeneratedAt(displayedAiGeneratedAt) }}</span></div>
         </div>
 
         <div class="ai-metric-strip" aria-label="成长观察关键指标">
@@ -326,25 +380,6 @@ onMounted(load);
 
         <p class="ai-disclaimer">成长观察用于辅助家庭安排，不评价儿童能力、态度或心理状态。第一版采用可复核的数据规则，后续模型分析仍引用同一份证据。</p>
       </template>
-    </section>
-
-    <section class="content-panel">
-      <div class="panel-heading">
-        <div><h2>今日任务情况</h2><p>按提醒时间查看当前任务进度</p></div>
-        <router-link to="/tasks" class="panel-link">查看全部 <el-icon><ArrowRight /></el-icon></router-link>
-      </div>
-      <div class="progress-summary">
-        <div class="progress-copy"><strong>{{ completed }} / {{ todayTasks.length }}</strong><span>任务已完成</span></div>
-        <el-progress :percentage="completionRate" :stroke-width="10" :show-text="false" />
-      </div>
-      <div v-if="todayTasks.length" class="overview-list">
-        <div v-for="task in todayTasks.slice(0, 8)" :key="task.id" class="overview-row">
-          <time>{{ task.scheduleTime }}</time>
-          <div class="overview-copy"><strong>{{ task.title }}</strong><span>{{ childName(task.childId) }}</span></div>
-          <span class="status-dot" :class="`status-dot--${isCompleted(task) ? 'completed' : 'pending'}`">{{ isCompleted(task) ? "已完成" : "待完成" }}</span>
-        </div>
-      </div>
-      <div v-else class="empty-state">今天暂无任务，前往任务管理创建第一项任务。</div>
     </section>
 
     <el-dialog :model-value="Boolean(evidenceInsight)" width="min(560px, calc(100% - 28px))" title="观察证据" append-to-body @update:model-value="!$event && (evidenceInsight = null)">
