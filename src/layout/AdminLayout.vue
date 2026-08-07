@@ -1,17 +1,24 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { DocumentChecked, HomeFilled, House, List, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
+import { DocumentChecked, HomeFilled, House, List, MagicStick, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 import IcpRecord from "../components/IcpRecord.vue";
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const pageTitle = computed(() => String(route.meta.title || "星星芽AI助手"));
-const pageDescription = computed(() => String(route.meta.description || ""));
+const isGrowthObservation = computed(() => route.path === "/home" && route.query.view === "insights");
+const activeMenu = computed(() => isGrowthObservation.value ? "/home?view=insights" : route.path);
+const pageTitle = computed(() => route.path === "/home"
+  ? isGrowthObservation.value ? "成长观察" : "今日概览"
+  : String(route.meta.title || "星星芽AI助手"));
+const pageDescription = computed(() => route.path === "/home"
+  ? isGrowthObservation.value ? "查看近期任务数据与成长变化" : "查看今天的任务执行情况"
+  : String(route.meta.description || ""));
 const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
 const defaultOpeneds = computed(() => {
+  if (route.path === "/home" && auth.user?.role !== "child") return ["home-management"];
   if (["/tasks", "/submissions"].includes(route.path)) return ["task-management"];
   if (["/families", "/users", "/access-records"].includes(route.path)) return ["system-management"];
   return [];
@@ -34,14 +41,28 @@ async function logout() {
       <div class="menu-label">工作台</div>
       <el-menu
         router
-        :default-active="route.path"
+        :default-active="activeMenu"
         :default-openeds="defaultOpeneds"
         class="admin-menu"
       >
-        <el-menu-item index="/home">
+        <el-menu-item v-if="auth.user?.role === 'child'" index="/home">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
+        <el-sub-menu v-else index="home-management">
+          <template #title>
+            <el-icon><HomeFilled /></el-icon>
+            <span>首页</span>
+          </template>
+          <el-menu-item index="/home">
+            <el-icon><List /></el-icon>
+            <span>今日概览</span>
+          </el-menu-item>
+          <el-menu-item index="/home?view=insights">
+            <el-icon><MagicStick /></el-icon>
+            <span>成长观察</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="task-management">
           <template #title>
             <el-icon><List /></el-icon>

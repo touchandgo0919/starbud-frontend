@@ -229,11 +229,6 @@ onMounted(load);
       <button v-for="child in children" :key="child.id" :class="{ 'is-active': selectedChildId === child.id }" type="button" @click="selectChild(child.id)">{{ child.name }}</button>
     </div>
 
-    <div v-if="auth.user?.role !== 'child'" class="dashboard-view-switch" role="tablist" aria-label="首页视图">
-      <button role="tab" :aria-selected="dashboardSection === 'today'" :class="{ 'is-active': dashboardSection === 'today' }" type="button" @click="selectDashboardSection('today')"><el-icon><List /></el-icon><span>今日概览</span></button>
-      <button role="tab" :aria-selected="dashboardSection === 'insights'" :class="{ 'is-active': dashboardSection === 'insights' }" type="button" @click="selectDashboardSection('insights')"><el-icon><MagicStick /></el-icon><span>成长观察</span></button>
-    </div>
-
     <template v-if="dashboardSection === 'today'">
     <section class="metric-grid" aria-label="今日任务概览">
       <article class="metric-card metric-card--primary">
