@@ -389,7 +389,7 @@ onMounted(load);
                 <div><strong>{{ insight.title }}</strong><p>{{ insight.summary }}</p></div>
                 <div class="ai-insight-actions">
                   <button v-if="insight.evidence.length" type="button" @click="evidenceInsight = insight">查看证据</button>
-                  <button v-if="insight.action" class="is-primary" type="button" @click="trialInsight = insight">查看 7 天试行草稿</button>
+                  <button v-if="insight.action" type="button" @click="trialInsight = insight">查看 7 天试行草稿</button>
                 </div>
               </article>
             </div>

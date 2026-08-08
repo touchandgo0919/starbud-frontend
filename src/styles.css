@@ -250,8 +250,7 @@ h1, h2, h3, p { margin: 0; }
 .ai-insight-row > div:first-child > strong { color: #e8ecea; font-size: 13px; }
 .ai-insight-row p { margin-top: 5px; color: #929ba4; font-size: 11px; line-height: 1.55; }
 .ai-insight-actions { flex-wrap: wrap; gap: 8px; margin-top: 9px; }
-.ai-insight-actions button { min-height: 27px; padding: 0; border: 0; background: transparent; color: #7fdcaf; font-size: 10px; font-weight: 750; cursor: pointer; }
-.ai-insight-actions button.is-primary { padding: 0 9px; border: 1px solid rgba(0, 185, 107, .35); border-radius: 5px; background: rgba(0, 185, 107, .1); }
+.ai-insight-actions button { min-height: 27px; padding: 0 9px; border: 1px solid rgba(0, 185, 107, .35); border-radius: 5px; background: rgba(0, 185, 107, .1); color: #7fdcaf; font-size: 10px; font-weight: 750; cursor: pointer; }
 .ai-empty-observation { margin-top: 10px; padding: 26px 14px; border: 1px dashed #3a3f47; color: #747d86; font-size: 11px; text-align: center; }
 .learning-issue-observation { margin-top: 24px; padding-top: 20px; border-top: 1px solid #30343b; }
 .learning-issue-heading > span { max-width: 360px; text-align: right; }
