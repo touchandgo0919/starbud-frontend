@@ -171,6 +171,38 @@ export interface AiOverviewInsight {
   };
 }
 
+export interface LearningIssueOverview {
+  status: "ready" | "analyzing" | "empty";
+  analyzedReviews: number;
+  analyzingReviews: number;
+  issueCount: number;
+  summary: string;
+  recurring: Array<{
+    topic: string;
+    category: "concept" | "calculation" | "comprehension" | "method" | "expression" | "pronunciation" | "completeness" | "other";
+    count: number;
+    lastSeenAt: string;
+    childName: string;
+  }>;
+  recent: Array<{
+    topic: string;
+    category: "concept" | "calculation" | "comprehension" | "method" | "expression" | "pronunciation" | "completeness" | "other";
+    summary: string;
+    taskTitle: string;
+    taskDate: string;
+    childName: string;
+    reviewedAt: string;
+    resolved: boolean;
+  }>;
+  resolved: Array<{
+    topic: string;
+    taskTitle: string;
+    taskDate: string;
+    childName: string;
+    resolvedAt: string;
+  }>;
+}
+
 export interface AiHomeOverview {
   generatedAt: string;
   analysisMode: "deterministic";
@@ -189,6 +221,7 @@ export interface AiHomeOverview {
   };
   trend: Array<{ date: string; completed: number; total: number }>;
   insights: AiOverviewInsight[];
+  learningIssues: LearningIssueOverview;
   modelAnalysis?: null | {
     childId: string;
     childName: string;

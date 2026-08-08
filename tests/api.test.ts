@@ -101,7 +101,17 @@ describe("web API client", () => {
         summary: { title: "执行稳定", description: "基于任务记录生成" },
         metrics: { totalTasks: 12, completionRate: 80, completionRateDelta: 10, onTimeRate: 75, averageClaimDelayMinutes: 8, revisionRate: 20 },
         trend: [],
-        insights: []
+        insights: [],
+        learningIssues: {
+          status: "ready",
+          analyzedReviews: 3,
+          analyzingReviews: 0,
+          issueCount: 2,
+          summary: "进位加法在本期出现 2 次。",
+          recurring: [{ topic: "进位加法", category: "calculation", count: 2, lastSeenAt: "2026-08-07 08:00:00", childName: "赵佑宁" }],
+          recent: [],
+          resolved: []
+        }
       }
     }));
     const api = await import("../src/services/api");
@@ -109,6 +119,7 @@ describe("web API client", () => {
     const overview = await api.getAiHomeOverview({ childId: "child-1", days: 28 });
 
     expect(overview.scope.childName).toBe("赵佑宁");
+    expect(overview.learningIssues.recurring[0].topic).toBe("进位加法");
     expect(String(fetchMock.mock.calls[0][0])).toContain("/api/ai/home-overview?childId=child-1&days=28");
   });
 

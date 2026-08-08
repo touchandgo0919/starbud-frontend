@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ArrowRight, Check, Clock, DataAnalysis, House, List, MagicStick, Refresh, Timer } from "@element-plus/icons-vue";
+import { ArrowRight, Check, CircleCheck, Clock, Collection, DataAnalysis, House, List, MagicStick, Refresh, Timer } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { getAiHomeOverview, getChildren, getFamilies, getTasks, getTodayTasks, getUsers } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import TaskTrendChart from "../components/TaskTrendChart.vue";
-import type { AiHomeOverview, AiOverviewInsight, Child, Family, ManagedUser, Task } from "../types/task";
+import type { AiHomeOverview, AiOverviewInsight, Child, Family, LearningIssueOverview, ManagedUser, Task } from "../types/task";
 
 type TrendPeriod = "week" | "month";
 type DashboardSection = "today" | "insights";
@@ -81,6 +81,17 @@ const maxAiTrendTotal = computed(() => Math.max(1, ...recentAiTrend.value.map((i
 const confidenceLabel = computed(() => ({ high: "证据充分", medium: "证据一般", low: "数据较少" })[aiOverview.value?.confidence || "low"]);
 const displayedAiSummary = computed(() => aiOverview.value?.modelAnalysis?.result.parentSummary || aiOverview.value?.summary);
 const displayedAiGeneratedAt = computed(() => aiOverview.value?.modelAnalysis?.generatedAt || aiOverview.value?.generatedAt || "");
+const emptyLearningIssueOverview: LearningIssueOverview = {
+  status: "empty",
+  analyzedReviews: 0,
+  analyzingReviews: 0,
+  issueCount: 0,
+  summary: "本期批改记录中暂未发现可可靠归纳的问题。",
+  recurring: [],
+  recent: [],
+  resolved: []
+};
+const learningIssueOverview = computed(() => aiOverview.value?.learningIssues || emptyLearningIssueOverview);
 const dashboardSection = computed<DashboardSection>(() =>
   route.query.view === "insights" && auth.user?.role !== "child" ? "insights" : "today"
 );
@@ -145,6 +156,19 @@ function deltaText(value: number | null) {
   if (value === null) return "暂无上一周期数据";
   if (value === 0) return "与上一周期持平";
   return `较上一周期${value > 0 ? "提升" : "下降"} ${Math.abs(value)} 个百分点`;
+}
+
+function learningIssueCategoryLabel(value: string) {
+  return ({
+    concept: "概念理解",
+    calculation: "计算",
+    comprehension: "审题理解",
+    method: "方法",
+    expression: "表达",
+    pronunciation: "发音",
+    completeness: "完整度",
+    other: "其他"
+  } as Record<string, string>)[value] || "其他";
 }
 
 async function loadAiOverview() {
@@ -372,6 +396,55 @@ onMounted(load);
             <div v-else class="ai-empty-observation">继续完成家庭任务，积累足够数据后会在这里生成观察。</div>
           </div>
         </div>
+
+        <section class="learning-issue-observation" aria-label="历史问题总结">
+          <div class="ai-subheading learning-issue-heading">
+            <div><el-icon><Collection /></el-icon><strong>历史问题</strong></div>
+            <span>根据家长已完成的批改自动整理，无需额外记录</span>
+          </div>
+          <div class="learning-issue-summary">
+            <div>
+              <span>本期总结</span>
+              <p>{{ learningIssueOverview.summary }}</p>
+            </div>
+            <dl>
+              <div><dt>已分析批改</dt><dd>{{ learningIssueOverview.analyzedReviews }}</dd></div>
+              <div><dt>问题记录</dt><dd>{{ learningIssueOverview.issueCount }}</dd></div>
+            </dl>
+          </div>
+          <p v-if="learningIssueOverview.analyzingReviews" class="learning-issue-processing">
+            还有 {{ learningIssueOverview.analyzingReviews }} 次批改正在自动整理，完成后会更新到这里。
+          </p>
+
+          <div v-if="learningIssueOverview.status !== 'empty'" class="learning-issue-columns">
+            <div class="learning-issue-column">
+              <div class="learning-issue-column-title"><strong>反复出现</strong><span>{{ learningIssueOverview.recurring.length }} 项</span></div>
+              <div v-if="learningIssueOverview.recurring.length" class="learning-topic-list">
+                <article v-for="item in learningIssueOverview.recurring" :key="`${item.childName}-${item.topic}`">
+                  <div><strong>{{ item.topic }}</strong><span>{{ learningIssueCategoryLabel(item.category) }} · {{ item.childName }}</span></div>
+                  <b>{{ item.count }} 次</b>
+                </article>
+              </div>
+              <div v-else class="learning-issue-empty">本期没有重复出现两次以上的问题。</div>
+            </div>
+
+            <div class="learning-issue-column">
+              <div class="learning-issue-column-title"><strong>近期记录</strong><span>{{ learningIssueOverview.recent.length }} 条</span></div>
+              <div v-if="learningIssueOverview.recent.length" class="learning-history-list">
+                <article v-for="item in learningIssueOverview.recent" :key="`${item.reviewedAt}-${item.topic}`">
+                  <div class="learning-history-title"><strong>{{ item.topic }}</strong><span v-if="item.resolved"><el-icon><CircleCheck /></el-icon>已完成订正</span></div>
+                  <p>{{ item.summary }}</p>
+                  <small>{{ item.taskDate }} · {{ item.taskTitle }} · {{ item.childName }}</small>
+                </article>
+              </div>
+              <div v-else class="learning-issue-empty">本期暂无可靠的历史问题记录。</div>
+            </div>
+          </div>
+
+          <div v-else class="learning-issue-empty learning-issue-empty--wide">
+            家长完成图片批改或录音评价后，系统会自动整理可复核的历史问题。
+          </div>
+        </section>
 
         <p class="ai-disclaimer">成长观察用于辅助家庭安排，不评价儿童能力、态度或心理状态。第一版采用可复核的数据规则，后续模型分析仍引用同一份证据。</p>
       </template>
