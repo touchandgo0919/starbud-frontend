@@ -270,15 +270,15 @@ h1, h2, h3, p { margin: 0; }
 .learning-issue-column-title span { color: #737c85; font-size: 9px; }
 .learning-topic-list article { display: flex; min-height: 53px; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #30343b; }
 .learning-topic-list article > div { display: grid; min-width: 0; gap: 4px; }
-.learning-topic-list strong, .learning-history-title strong { overflow: hidden; color: #e8ecea; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.learning-topic-list span { color: #7f8891; font-size: 9px; }
+.learning-topic-list strong, .learning-history-title strong { overflow: hidden; color: #e8ecea; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.learning-topic-list span { color: #7f8891; font-size: 11px; }
 .learning-topic-list b { flex: 0 0 auto; color: #e3ad58; font-size: 11px; }
 .learning-history-list article { padding: 11px 0; border-bottom: 1px solid #30343b; }
 .learning-history-list article:last-child, .learning-topic-list article:last-child { border-bottom: 0; }
 .learning-history-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .learning-history-title > span { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; color: #64d8a5; font-size: 9px; }
-.learning-history-list p { margin-top: 5px; color: #979fa7; font-size: 10px; line-height: 1.5; }
-.learning-history-list small { display: block; margin-top: 5px; overflow: hidden; color: #68717a; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.learning-history-list p { margin-top: 5px; color: #979fa7; font-size: 11px; line-height: 1.5; }
+.learning-history-list small { display: block; margin-top: 5px; overflow: hidden; color: #68717a; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .learning-issue-empty { padding: 22px 10px; color: #747d86; font-size: 10px; text-align: center; }
 .learning-issue-empty--wide { margin-top: 14px; border: 1px dashed #3a3f47; }
 .ai-disclaimer { margin-top: 18px; padding-top: 13px; border-top: 1px solid #30343b; color: #6e7680; font-size: 10px; line-height: 1.55; }
