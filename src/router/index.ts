@@ -11,6 +11,7 @@ const SubmissionManagementView = () => import("../views/SubmissionManagementView
 const UserManagementView = () => import("../views/UserManagementView.vue");
 const AccessRecordsView = () => import("../views/AccessRecordsView.vue");
 const AboutView = () => import("../views/AboutView.vue");
+const AiDesignView = () => import("../views/AiDesignView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,6 +27,12 @@ const router = createRouter({
       name: "About",
       component: AboutView,
       meta: { public: true, title: "产品介绍" }
+    },
+    {
+      path: "/ai",
+      name: "AiDesign",
+      component: AiDesignView,
+      meta: { public: true, title: "AI 产品与系统设计" }
     },
     {
       path: "/",

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>星星芽 AI 助手产品与系统设计</title>
+  <style>
+    :root {
+      --ink: #19352c;
+      --muted: #66776f;
+      --green: #078d59;
+      --green-dark: #123f33;
+      --green-soft: #e7f4ed;
+      --blue: #376caa;
+      --blue-soft: #edf4fc;
+      --yellow: #d99b27;
+      --red: #c64c58;
+      --line: #d7e2dc;
+      --paper: #ffffff;
+      --canvas: #f4f7f5;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body { margin: 0; overflow-x: hidden; background: var(--canvas); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
+    img { max-width: 100%; }
+    h1, h2, h3, p { margin: 0; letter-spacing: 0; }
+    button { font: inherit; }
+    .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+
+    .topbar { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid rgba(255,255,255,.14); background: rgba(14, 55, 44, .96); color: #fff; }
+    .topbar-inner { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+    .brand img { width: 34px; height: 34px; border-radius: 8px; }
+    .topbar nav { display: flex; gap: 22px; }
+    .topbar a { color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; text-decoration: none; }
+    .topbar a:hover { color: #fff; }
+
+    .intro { padding: 62px 0 54px; border-bottom: 1px solid var(--line); background: #edf4f0; }
+    .intro-layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 70px; align-items: center; }
+    .eyebrow { color: var(--green); font-size: 13px; font-weight: 800; }
+    .intro h1 { margin-top: 10px; font-size: 44px; line-height: 1.18; }
+    .intro-copy { max-width: 720px; margin-top: 20px; color: var(--muted); font-size: 17px; line-height: 1.8; }
+    .principle-list { display: grid; border-block: 1px solid #bfd0c7; }
+    .principle-list div { display: grid; padding: 15px 2px; grid-template-columns: 86px 1fr; gap: 16px; border-bottom: 1px solid #d2dfd8; }
+    .principle-list div:last-child { border-bottom: 0; }
+    .principle-list strong { color: var(--green); font-size: 12px; }
+    .principle-list span { color: #456158; font-size: 13px; line-height: 1.55; }
+
+    .section { padding: 72px 0; }
+    .section--white { background: #fff; }
+    .section--dark { background: #153d33; color: #fff; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 40px; }
+    .section-head h2 { margin-top: 8px; font-size: 30px; }
+    .section-head > p { max-width: 540px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .section--dark .section-head > p { color: #bbcec6; }
+
+    .scope-grid { display: grid; margin-top: 38px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .scope-item { min-height: 180px; padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .scope-item b { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 7px; background: var(--green-soft); color: var(--green); font-size: 13px; }
+    .scope-item h3 { margin-top: 20px; font-size: 17px; }
+    .scope-item p { margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+    .benchmark-grid { display: grid; margin-top: 34px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .benchmark { padding: 20px; border-top: 4px solid var(--green); background: #fff; }
+    .benchmark:nth-child(2) { border-color: var(--blue); }
+    .benchmark:nth-child(3) { border-color: var(--yellow); }
+    .benchmark:nth-child(4) { border-color: #8a6bb1; }
+    .benchmark small { color: var(--muted); font-size: 10px; font-weight: 800; }
+    .benchmark h3 { margin-top: 7px; font-size: 15px; }
+    .benchmark p { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .innovation-rule { margin-top: 18px; padding: 14px 16px; border-left: 4px solid var(--yellow); background: #fff7e8; color: #5f675f; font-size: 13px; line-height: 1.7; }
+    .subsection-head { margin-top: 52px; }
+    .subsection-head h3 { font-size: 22px; }
+    .subsection-head p { margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .touchpoint-grid { display: grid; margin-top: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .touchpoint { display: grid; min-height: 158px; padding: 20px; grid-template-columns: 74px minmax(0, 1fr); gap: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .touchpoint-label { display: flex; height: 28px; align-items: center; justify-content: center; border-radius: 5px; background: var(--green-soft); color: var(--green); font-size: 10px; font-weight: 850; }
+    .touchpoint-label--p1 { background: var(--blue-soft); color: var(--blue); }
+    .touchpoint-label--p2 { background: #fff1d7; color: #9a6710; }
+    .touchpoint h3 { font-size: 16px; }
+    .touchpoint p { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .touchpoint strong { display: block; margin-top: 9px; color: var(--green); font-size: 11px; }
+
+    .design-tabs { display: flex; margin-top: 38px; gap: 8px; }
+    .design-tab { min-height: 40px; padding: 0 16px; border: 1px solid #b9cbc2; border-radius: 7px; background: #fff; color: #456158; cursor: pointer; font-weight: 750; }
+    .design-tab[aria-selected="true"] { border-color: var(--green); background: var(--green); color: #fff; }
+    .tab-panel { display: none; margin-top: 22px; }
+    .tab-panel.is-active { display: block; }
+
+    .web-frame { overflow: hidden; border: 1px solid #bfcfc7; border-radius: 8px; background: #eef2f0; box-shadow: 0 24px 60px rgba(20, 60, 45, .14); }
+    .browser-bar { display: flex; height: 42px; padding: 0 14px; align-items: center; gap: 7px; border-bottom: 1px solid #d6dfda; background: #fff; }
+    .browser-bar i { width: 8px; height: 8px; border-radius: 50%; background: #cbd4cf; }
+    .browser-bar span { margin-left: 9px; color: #7a8982; font-size: 11px; }
+    .web-app { display: grid; min-height: 610px; grid-template-columns: 190px minmax(0, 1fr); }
+    .web-sidebar { padding: 22px 14px; background: #123f33; color: #fff; }
+    .web-sidebar .mini-brand { display: flex; align-items: center; gap: 8px; padding: 0 8px 18px; font-size: 13px; font-weight: 800; }
+    .web-sidebar img { width: 28px; height: 28px; border-radius: 6px; }
+    .web-nav { display: grid; gap: 5px; }
+    .web-nav span { padding: 10px 12px; border-radius: 6px; color: #b7cdc4; font-size: 12px; }
+    .web-nav .active { background: #fff; color: #16513f; font-weight: 800; }
+    .web-main { padding: 24px; background: #f6f8f7; }
+    .web-title { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .web-title h3 { font-size: 22px; }
+    .select-like { padding: 9px 12px; border: 1px solid #cfdbd5; border-radius: 6px; background: #fff; color: #40564d; font-size: 12px; }
+    .ai-home-head { display: flex; margin-top: 20px; padding-top: 18px; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid #d9e3de; }
+    .ai-home-head strong { display: block; font-size: 15px; }
+    .ai-home-head p { margin-top: 4px; color: #74827c; font-size: 10px; }
+    .summary-band { display: grid; margin-top: 18px; padding: 18px; grid-template-columns: 1fr auto; gap: 20px; border-left: 4px solid var(--green); background: #e5f3ec; }
+    .summary-band strong { font-size: 16px; }
+    .summary-band p { margin-top: 6px; color: #587067; font-size: 12px; line-height: 1.6; }
+    .confidence { align-self: start; padding: 5px 8px; border-radius: 5px; background: #fff; color: var(--green); font-size: 11px; font-weight: 800; }
+    .metric-row { display: grid; margin-top: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .metric { padding: 14px; border: 1px solid #d9e2dd; border-radius: 7px; background: #fff; }
+    .metric span { color: #718079; font-size: 11px; }
+    .metric strong { display: block; margin-top: 7px; font-size: 22px; }
+    .metric small { color: var(--green); font-size: 10px; }
+    .web-grid { display: grid; margin-top: 14px; grid-template-columns: minmax(0, 1.2fr) minmax(250px, .8fr); gap: 14px; }
+    .panel { padding: 16px; border: 1px solid #d9e2dd; border-radius: 7px; background: #fff; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; }
+    .panel-head strong { font-size: 14px; }
+    .panel-head span { color: #829089; font-size: 10px; }
+    .chart { display: flex; height: 160px; margin-top: 18px; padding: 12px 8px 4px; align-items: end; justify-content: space-around; border-bottom: 1px solid #dce4e0; }
+    .bar { width: 22px; border-radius: 4px 4px 0 0; background: #5c9c83; }
+    .bar:nth-child(2), .bar:nth-child(6) { background: #e0a440; }
+    .insight-list { display: grid; margin-top: 12px; gap: 9px; }
+    .insight { padding: 11px; border-left: 3px solid var(--blue); background: var(--blue-soft); }
+    .insight--action { border-left-color: var(--yellow); background: #fff7e8; }
+    .insight strong { font-size: 12px; }
+    .insight p { margin-top: 5px; color: #60716a; font-size: 11px; line-height: 1.55; }
+    .action-row { display: flex; margin-top: 8px; gap: 7px; }
+    .tiny-button { min-height: 28px; padding: 0 9px; border: 1px solid #b9c9c1; border-radius: 5px; background: #fff; color: #356052; font-size: 10px; font-weight: 750; }
+    .ask-panel { display: grid; margin-top: 14px; padding: 14px 16px; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center; border: 1px solid #cbdad2; border-radius: 7px; background: #fff; }
+    .ask-panel strong { font-size: 13px; }
+    .ask-panel p { margin-top: 5px; color: #74827c; font-size: 10px; line-height: 1.5; }
+    .ask-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .ask-row span { overflow: hidden; min-height: 34px; padding: 0 11px; border: 1px solid #d5dfda; border-radius: 6px; color: #697a72; font-size: 11px; line-height: 32px; white-space: nowrap; text-overflow: ellipsis; }
+    .ask-row button { min-width: 54px; border: 0; border-radius: 6px; background: var(--green); color: #fff; font-size: 11px; font-weight: 800; }
+
+    .mobile-showcase { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 60px; align-items: center; }
+    .phone { overflow: hidden; width: 340px; min-height: 680px; border: 8px solid #202723; border-radius: 30px; background: #f5f7f6; box-shadow: 0 26px 70px rgba(0,0,0,.25); }
+    .phone-head { padding: 26px 18px 18px; background: #123f33; color: #fff; }
+    .phone-head small { color: #a8c2b7; }
+    .phone-head h3 { margin-top: 7px; font-size: 22px; }
+    .phone-body { padding: 14px; }
+    .coach-message { padding: 14px; border-left: 4px solid #e3a337; background: #fff7e8; color: #4e5b56; font-size: 12px; line-height: 1.65; }
+    .next-task { margin-top: 14px; padding: 16px; border: 1px solid #d5e0da; border-radius: 8px; background: #fff; }
+    .next-task .time { color: var(--green); font-size: 12px; font-weight: 800; }
+    .next-task h4 { margin: 8px 0 0; font-size: 18px; }
+    .next-task p { margin-top: 8px; color: #74827c; font-size: 12px; line-height: 1.55; }
+    .primary { width: 100%; min-height: 40px; margin-top: 14px; border: 0; border-radius: 7px; background: var(--green); color: #fff; font-weight: 800; }
+    .mini-section-title { margin: 20px 0 9px; font-size: 13px; }
+    .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .quick-actions button { min-height: 52px; padding: 8px; border: 1px solid #d5e0da; border-radius: 7px; background: #fff; color: #40564d; font-size: 11px; font-weight: 700; }
+    .week-recap { margin-top: 16px; padding: 14px; border-radius: 8px; background: #e4f2eb; }
+    .week-recap strong { font-size: 13px; }
+    .week-recap p { margin-top: 6px; color: #5e7169; font-size: 11px; line-height: 1.6; }
+    .home-progress { display: flex; margin: 12px 0 0; align-items: center; justify-content: space-between; gap: 12px; }
+    .home-progress span { color: #c0d4cb; font-size: 11px; }
+    .home-progress strong { color: #fff; font-size: 12px; }
+    .assistant-entry { margin-top: 14px; padding: 14px; border: 1px solid #cbdcd3; border-radius: 8px; background: #fff; }
+    .assistant-entry__head { display: flex; align-items: center; justify-content: space-between; }
+    .assistant-entry__head strong { font-size: 13px; }
+    .assistant-entry__head span { color: var(--green); font-size: 10px; font-weight: 800; }
+    .assistant-entry p { margin-top: 5px; color: #718079; font-size: 10px; line-height: 1.55; }
+    .mini-tabbar { display: grid; margin: 16px -14px -14px; padding: 10px 8px 9px; grid-template-columns: repeat(4, 1fr); border-top: 1px solid #dce5e0; background: #fff; }
+    .mini-tabbar span { color: #89948f; font-size: 10px; text-align: center; }
+    .mini-tabbar .active { color: var(--green); font-weight: 800; }
+    .mobile-notes { display: grid; gap: 1px; border-block: 1px solid #496d62; background: #496d62; }
+    .mobile-notes div { padding: 20px 4px; background: #153d33; }
+    .mobile-notes strong { color: #5de1a5; font-size: 13px; }
+    .mobile-notes p { margin-top: 7px; color: #bfd1ca; font-size: 13px; line-height: 1.7; }
+    .home-blueprint { margin-top: 42px; }
+    .home-module-grid { display: grid; margin-top: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .home-module { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .home-module b { color: var(--green); font-size: 10px; }
+    .home-module h4 { margin: 7px 0 0; font-size: 14px; }
+    .home-module p { margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .home-rule { margin-top: 18px; padding: 15px 17px; border-left: 4px solid var(--blue); background: var(--blue-soft); color: #516779; font-size: 12px; line-height: 1.7; }
+
+    .metric-table { width: 100%; margin-top: 34px; border-collapse: collapse; background: #fff; font-size: 13px; }
+    .metric-table th, .metric-table td { padding: 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .metric-table th { background: #eaf2ee; color: #315247; font-size: 12px; }
+    .metric-table td { color: #5f7069; line-height: 1.55; }
+    .metric-table td:first-child { color: var(--ink); font-weight: 750; }
+
+    .architecture { display: grid; margin-top: 36px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+    .arch-node { position: relative; padding: 18px 14px; border: 1px solid #51736a; border-radius: 7px; background: #1d4a3e; }
+    .arch-node:not(:last-child)::after { position: absolute; top: 50%; right: -13px; color: #78a394; content: "→"; transform: translateY(-50%); }
+    .arch-node b { color: #63e0a7; font-size: 11px; }
+    .arch-node strong { display: block; margin-top: 8px; font-size: 14px; }
+    .arch-node p { margin-top: 7px; color: #bad0c7; font-size: 11px; line-height: 1.55; }
+
+    .flow { display: grid; margin-top: 28px; gap: 0; counter-reset: flow; }
+    .flow li { display: grid; min-height: 66px; padding: 14px 0; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; border-bottom: 1px solid var(--line); list-style: none; }
+    .flow li::before { counter-increment: flow; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--green-soft); color: var(--green); content: counter(flow); font-size: 12px; font-weight: 800; }
+    .flow strong { font-size: 14px; }
+    .flow p { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+    .schema-grid { display: grid; margin-top: 34px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .schema { padding: 18px; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+    .schema h3 { font-size: 15px; }
+    .schema code { display: block; margin-top: 10px; color: #53665e; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.75; white-space: pre-wrap; }
+
+    .guardrails { display: grid; margin-top: 34px; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .guardrail { padding: 22px; border-radius: 8px; }
+    .guardrail--allow { border: 1px solid #abd0bc; background: #eaf6ef; }
+    .guardrail--deny { border: 1px solid #e1bbc0; background: #fff0f2; }
+    .guardrail h3 { font-size: 16px; }
+    .guardrail ul { margin: 14px 0 0; padding-left: 20px; }
+    .guardrail li { margin: 8px 0; color: #586a62; font-size: 13px; line-height: 1.55; }
+
+    .roadmap { display: grid; margin-top: 34px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .phase { padding: 22px; border-top: 4px solid var(--green); background: #fff; }
+    .phase:nth-child(2) { border-color: var(--blue); }
+    .phase:nth-child(3) { border-color: var(--yellow); }
+    .phase small { color: var(--muted); font-weight: 800; }
+    .phase h3 { margin-top: 8px; font-size: 17px; }
+    .phase p { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .phase strong { display: block; margin-top: 14px; color: var(--green); font-size: 12px; }
+
+    .sources { padding: 30px 0 44px; border-top: 1px solid var(--line); background: #fff; }
+    .sources p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .sources a { color: var(--green); }
+
+    @media (max-width: 900px) {
+      .intro-layout, .mobile-showcase { grid-template-columns: 1fr; gap: 38px; }
+      .scope-grid, .roadmap, .benchmark-grid, .home-module-grid { grid-template-columns: 1fr 1fr; }
+      .architecture { grid-template-columns: 1fr; }
+      .arch-node:not(:last-child)::after { top: auto; right: 50%; bottom: -17px; transform: translateX(50%) rotate(90deg); }
+      .phone { margin: 0 auto; }
+      .web-app { grid-template-columns: 150px minmax(0, 1fr); }
+      .metric-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      html { scroll-padding-top: 108px; }
+      .shell { width: min(100% - 28px, 560px); }
+      .topbar-inner { min-height: 104px; padding: 10px 0 8px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
+      .topbar nav { width: 100%; padding-bottom: 2px; overflow-x: auto; justify-content: flex-start; gap: 18px; scrollbar-width: none; }
+      .topbar nav::-webkit-scrollbar { display: none; }
+      .topbar a { flex: 0 0 auto; font-size: 11px; }
+      .intro { padding: 46px 0; }
+      .intro h1 { font-size: 34px; overflow-wrap: anywhere; }
+      .intro-layout { grid-template-columns: 1fr; }
+      .section { padding: 58px 0; }
+      .section-head { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .section-head h2 { font-size: 26px; }
+      .scope-grid, .roadmap, .benchmark-grid, .touchpoint-grid, .schema-grid, .guardrails, .home-module-grid { grid-template-columns: 1fr; }
+      .touchpoint { grid-template-columns: 66px minmax(0, 1fr); }
+      .design-tabs { overflow-x: auto; padding-bottom: 4px; }
+      .design-tab { flex: 0 0 auto; }
+      .web-frame { overflow-x: auto; }
+      .web-app { width: 860px; }
+      .mobile-showcase { grid-template-columns: 1fr; }
+      .phone { width: min(340px, 100%); }
+      .metric-table { display: block; overflow-x: auto; white-space: nowrap; }
+      .sources a { overflow-wrap: anywhere; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand"><img src="/starbud-icon.png" alt="" /><span>星星芽 AI 助手设计</span></div>
+      <nav aria-label="文档导航"><a href="#innovation">创新</a><a href="#experience">界面</a><a href="#metrics">指标</a><a href="#architecture">架构</a><a href="#safety">安全</a><a href="#roadmap">阶段</a></nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="shell intro-layout">
+        <div>
+          <p class="eyebrow">AI Assistant Product Design v1.1</p>
+          <h1>用数据解释变化，<br />把决定留给家长</h1>
+          <p class="intro-copy">AI 助手根据儿童的任务领取、完成、提交、提醒和批改记录生成趋势、周报与可执行建议。它不替代家长判断，不给儿童贴标签，也不把访问次数当作学习能力。</p>
+        </div>
+        <div class="principle-list">
+          <div><strong>确定性优先</strong><span>完成率、延迟等指标由代码计算，模型只负责解释。</span></div>
+          <div><strong>证据可追溯</strong><span>每条洞察必须引用日期范围、任务数和具体指标。</span></div>
+          <div><strong>家长确认</strong><span>AI 只能生成任务草稿，不能直接修改孩子安排。</span></div>
+          <div><strong>儿童友好</strong><span>儿童端只给下一步和鼓励，不展示风险、排名和预测。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--white">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">V1 功能范围</p><h2>先解决三个真实问题</h2></div><p>第一版不分析 R2 中的照片和录音内容，先使用现有结构化数据建立可验证、成本可控的分析闭环。</p></div>
+        <div class="scope-grid">
+          <article class="scope-item"><b>01</b><h3>家长看懂趋势</h3><p>用近 7、28、90 天的任务数据解释完成规律、提醒效果和需要调整的时间段。</p></article>
+          <article class="scope-item"><b>02</b><h3>孩子知道下一步</h3><p>小程序给出今天最合适先做的任务、简短说明和完成后的积极回顾。</p></article>
+          <article class="scope-item"><b>03</b><h3>建议能被执行</h3><p>AI 根据证据生成任务时间、提醒次数或任务拆分草稿，由家长检查后保存。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="innovation" class="section">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">市场参考与创新</p><h2>学习助手正在从回答问题，转向组织学习过程</h2></div><p>参考主流学习产品的有效模式，但不复制它们的通用聊天入口。星星芽的优势是已经连接家长安排、儿童执行、附件提交和真实批改。</p></div>
+        <div class="benchmark-grid">
+          <article class="benchmark"><small>KHANMIGO / CHATGPT STUDY</small><h3>苏格拉底式引导</h3><p>先问孩子卡在哪里，再逐步给提示、检查理解，不把最终答案作为第一响应。</p></article>
+          <article class="benchmark"><small>DUOLINGO MAX</small><h3>场景练习后反馈</h3><p>AI 被放进具体练习场景，完成后评价准确性、复杂度并提出下一次建议。</p></article>
+          <article class="benchmark"><small>NOTEBOOKLM</small><h3>基于材料生成复习</h3><p>测验、卡片和回答来自用户选择的资料，减少通用模型偏离学习内容。</p></article>
+          <article class="benchmark"><small>GEMINI STUDY NOTEBOOKS</small><h3>动态推荐下一步</h3><p>根据诊断和练习结果推荐短课、测验与优先内容，持续更新学习路径。</p></article>
+        </div>
+        <div class="innovation-rule"><strong>星星芽的创新方向：</strong>AI 不成为第四个任务系统，而是作为一层能力嵌入任务创建、执行、提交、批改和家庭复盘；每次建议都能被验证、被否定、被撤回。</div>
+
+        <div class="subsection-head"><h3>八个 AI 能力触点</h3><p>P0 可以只使用现有结构化数据；P1 需要增加学科、学习目标或材料；P2 涉及照片和录音内容，必须单独授权。</p></div>
+        <div class="touchpoint-grid">
+          <article class="touchpoint"><span class="touchpoint-label">P0 · 创建前</span><div><h3>任务表达助手</h3><p>家长输入一句自然语言，AI 补全儿童可理解的任务说明、预计时长、完成标准和语音提醒文案。</p><strong>只填充表单，不自动保存</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label">P0 · 首页</span><div><h3>7 天家庭小实验</h3><p>一次只建议改变一个变量，例如把英语提醒提前 15 分钟；试行一周后比较领取延迟和完成情况。</p><strong>用家庭自己的数据验证建议</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label">P0 · 执行中</span><div><h3>提示阶梯</h3><p>儿童点击“我卡住了”后依次获得澄清问题、小提示、相似例子和分步解释，默认不直接给完整答案。</p><strong>把“问答案”改成“继续思考”</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label">P0 · 批改时</span><div><h3>家长评价草稿</h3><p>根据任务说明、提交轮次和家长勾选的观察点，生成具体、积极的评价草稿，家长编辑后提交。</p><strong>减少批改负担，保留家长声音</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label touchpoint-label--p1">P1 · 复习</span><div><h3>错题变微练习</h3><p>同一任务多次重新提交时，基于家长提供的学习材料生成 3 分钟复习卡或 3 道小测。</p><strong>内容必须可追溯到家庭材料</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label touchpoint-label--p1">P1 · 复盘</span><div><h3>亲子对话卡</h3><p>每周从真实完成记录生成一个值得肯定的事实、一个开放问题和一个下周共同约定。</p><strong>把数据转成沟通，不转成排名</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label touchpoint-label--p2">P2 · 录音</span><div><h3>朗读与口语教练</h3><p>在家长授权后分析转写、停顿和任务要求，给孩子一个可执行的练习建议，并把原始录音保留策略交给家长。</p><strong>不推断情绪、性格或心理状态</strong></div></article>
+          <article class="touchpoint"><span class="touchpoint-label touchpoint-label--p2">P2 · 图片</span><div><h3>过程型作业提示</h3><p>识别作业步骤并指出可能需要检查的位置，只给提示和验证方法，不替孩子完成整份作业。</p><strong>低置信度必须明确提示家长复核</strong></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="experience" class="section">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">产品界面</p><h2>网页版与小程序分工明确</h2></div><p>家长网页把 AI 洞察嵌入现有首页，不增加独立菜单；儿童端足够简单，只呈现当下行动和正向反馈。</p></div>
+        <div class="design-tabs" role="tablist" aria-label="界面设计切换">
+          <button class="design-tab" role="tab" aria-selected="true" data-panel="parent-panel">家长网页版</button>
+          <button class="design-tab" role="tab" aria-selected="false" data-panel="child-panel">儿童小程序</button>
+        </div>
+
+        <div id="parent-panel" class="tab-panel is-active" role="tabpanel">
+          <div class="web-frame">
+            <div class="browser-bar"><i></i><i></i><i></i><span>starbud.zhaoyouning.com/home</span></div>
+            <div class="web-app">
+              <aside class="web-sidebar">
+                <div class="mini-brand"><img src="/starbud-icon.png" alt="" />星星芽</div>
+                <div class="web-nav"><span class="active">首页</span><span>任务管理</span><span>提交记录</span><span>家庭管理</span></div>
+              </aside>
+              <div class="web-main">
+                <div class="web-title"><div><p class="eyebrow">家庭任务概览</p><h3>家庭首页</h3></div><div class="select-like">赵佑宁　⌄</div></div>
+                <div class="metric-row">
+                  <div class="metric"><span>今日任务</span><strong>4</strong><small>2 项待完成</small></div>
+                  <div class="metric"><span>今日已完成</span><strong>2</strong><small>完成率 50%</small></div>
+                  <div class="metric"><span>待批改</span><strong>1</strong><small>英语朗读</small></div>
+                  <div class="metric"><span>本周完成</span><strong>12</strong><small>较上周 +2</small></div>
+                </div>
+                <div class="ai-home-head"><div><strong>AI 成长观察</strong><p>基于任务、提醒、提交和批改记录 · 更新于今天 07:00</p></div><div class="select-like">近 28 天　⌄</div></div>
+                <div class="summary-band"><div><strong>晚间任务完成更稳定，英语朗读需要更早开始</strong><p>依据 18 项任务、7 次语音提醒和 4 轮批改生成。建议只作为家庭安排参考。</p></div><span class="confidence">证据充分</span></div>
+                <div class="metric-row">
+                  <div class="metric"><span>按时完成</span><strong>78%</strong><small>较前 28 天 +9%</small></div>
+                  <div class="metric"><span>平均领取延迟</span><strong>6 分钟</strong><small>减少 3 分钟</small></div>
+                  <div class="metric"><span>一次通过</span><strong>71%</strong><small>共批改 7 项</small></div>
+                  <div class="metric"><span>提醒后领取</span><strong>5 / 7</strong><small>提醒有效</small></div>
+                </div>
+                <div class="web-grid">
+                  <section class="panel"><div class="panel-head"><strong>近 7 天完成节奏</strong><span>按任务计划时间统计</span></div><div class="chart"><i class="bar" style="height:62%"></i><i class="bar" style="height:45%"></i><i class="bar" style="height:76%"></i><i class="bar" style="height:90%"></i><i class="bar" style="height:72%"></i><i class="bar" style="height:54%"></i><i class="bar" style="height:84%"></i></div></section>
+                  <section class="panel"><div class="panel-head"><strong>本期洞察</strong><span>3 条</span></div><div class="insight-list"><div class="insight"><strong>英语任务启动偏晚</strong><p>3 次朗读任务平均晚于计划 14 分钟领取。</p></div><div class="insight insight--action"><strong>建议提前 15 分钟提醒</strong><p>一次只改变提醒时间，试行后比较效果。</p><div class="action-row"><button class="tiny-button">查看证据</button><button class="tiny-button">生成 7 天试行草稿</button></div></div></div></section>
+                </div>
+                <div class="ask-panel"><div><strong>问问 AI 助手</strong><p>回答只使用当前家庭数据，并附上指标来源。</p></div><div class="ask-row"><span>为什么建议把英语朗读提前？</span><button>发送</button></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="child-panel" class="tab-panel" role="tabpanel">
+          <div class="mobile-showcase">
+            <div class="phone">
+              <header class="phone-head">
+                <small>8 月 7 日 · 星期五</small>
+                <h3>下午好，佑宁</h3>
+                <div class="home-progress"><span>今天 4 项任务</span><strong>已完成 2 项</strong></div>
+              </header>
+              <div class="phone-body">
+                <article class="next-task"><span class="time">家长刚完成批改 · 需要修改</span><h4>英语朗读</h4><p>先听一遍上一轮录音，再按照家长评价重新录制。</p><button class="primary">去修改</button></article>
+                <div class="assistant-entry">
+                  <div class="assistant-entry__head"><strong>做任务时卡住了？</strong><span>星星芽提示</span></div>
+                  <p>进入已领取任务后，可以先看一个小提示，或把任务拆成更小步骤。</p>
+                  <div class="quick-actions"><button>先给我一个提示</button><button>帮我拆成小步骤</button></div>
+                </div>
+                <div class="week-recap"><strong>本周小进步</strong><p>这周 5 次阅读任务中，有 4 次在提醒后 15 分钟内开始。今天继续保持。</p></div>
+                <div class="mini-tabbar"><span class="active">首页</span><span>任务</span><span>提交</span><span>我的</span></div>
+              </div>
+            </div>
+            <div class="mobile-notes">
+              <div><strong>首页回答“现在做什么”</strong><p>新增独立首页 Tab；任务页继续负责日历、完整列表与历史日期，不把两种信息混在一起。</p></div>
+              <div><strong>一个任务只保留一个入口</strong><p>批改通知与下一步指向同一任务时合并展示；只有其他任务收到新批改时，才出现额外提醒。</p></div>
+              <div><strong>帮助只在任务上下文出现</strong><p>不设置开放聊天框。儿童领取任务后，才能获得澄清、小提示和步骤拆分。</p></div>
+              <div><strong>鼓励必须有数据依据</strong><p>只引用完成数量、领取时机和真实连续记录，不展示排名、风险、能力或家长内部判断。</p></div>
+            </div>
+          </div>
+
+          <div class="home-blueprint">
+            <div class="subsection-head"><h3>儿童首页内容结构</h3><p>首屏只保留一个主动作，其他内容按紧急程度和认知负担排序。页面打开不实时调用模型，优先读取 D1 中每日分析快照，再与实时任务状态合并。</p></div>
+            <div class="home-module-grid">
+              <article class="home-module"><b>01 · 今日状态</b><h4>问候与轻量进度</h4><p>显示日期、今日任务数和已完成数。只做事实反馈，不展示完成率排名或综合评分。</p></article>
+              <article class="home-module"><b>02 · 必须处理</b><h4>状态合并与额外提醒</h4><p>待修改任务直接成为下一步，不再重复显示通知；只有另一项任务收到新批改时才增加轻量提醒。</p></article>
+              <article class="home-module"><b>03 · 核心动作</b><h4>唯一“下一步”</h4><p>按待修改、已领取、未领取、待批改顺序选择一项任务，显示原因和明确按钮。</p></article>
+              <article class="home-module"><b>04 · AI 支持</b><h4>受控提示入口</h4><p>仅对已领取且未完成任务开放“小提示”和“拆成步骤”，后续接入真正的提示阶梯接口。</p></article>
+              <article class="home-module"><b>05 · 正向回顾</b><h4>一个真实进步</h4><p>从近 7 天数据选择一条可验证事实；数据不足时显示普通鼓励，不伪造连续天数。</p></article>
+              <article class="home-module"><b>06 · 固定导航</b><h4>首页 / 任务 / 提交 / 我的</h4><p>首页负责行动建议，任务负责完整计划，提交负责作业记录，我的负责账号与协议。</p></article>
+            </div>
+            <div class="home-rule"><strong>降级原则：</strong>AI 快照缺失、过期或调用失败时，首页仍由任务状态规则完整工作；离线时显示最近一次同步时间，不把旧建议标记为实时建议。</div>
+
+            <div class="subsection-head"><h3>首页状态与接口建议</h3><p>推荐新增一个聚合接口，避免小程序分别请求任务、通知、分析和提交状态后再自行拼装优先级。</p></div>
+            <table class="metric-table">
+              <thead><tr><th>场景</th><th>首页主内容</th><th>AI 参与方式</th><th>主按钮</th></tr></thead>
+              <tbody>
+                <tr><td>存在待修改</td><td>待修改任务直接作为下一步，并合并“家长刚完成批改”状态</td><td>不决定优先级，只把修改要求改写为儿童可执行步骤</td><td>去修改</td></tr>
+                <tr><td>其他任务有新批改</td><td>在下一步上方增加一条轻量提醒，不抢占主按钮</td><td>不参与排序，只展示确定性通知摘要</td><td>查看批改</td></tr>
+                <tr><td>存在已领取任务</td><td>继续当前任务，显示附件要求和下一小步</td><td>可提供受控提示与步骤拆分</td><td>继续任务</td></tr>
+                <tr><td>只有未领取任务</td><td>选择提醒时间最近的一项</td><td>每日快照可优化推荐理由，任务选择仍受规则校验</td><td>去领取</td></tr>
+                <tr><td>全部待批改</td><td>说明已经提交，可先休息或查看提交记录</td><td>不生成催促性建议</td><td>查看提交</td></tr>
+                <tr><td>今日全部完成</td><td>显示完成回顾和一条真实进步</td><td>根据结构化数据生成简短正向总结</td><td>查看记录</td></tr>
+                <tr><td>无任务或数据不足</td><td>显示轻量空状态与最近一次同步时间</td><td>不强行生成成长结论</td><td>查看任务</td></tr>
+              </tbody>
+            </table>
+            <div class="schema-grid">
+              <article class="schema"><h3>GET /api/child/home</h3><code>date, greeting
+progress { total, completed }
+attention[]
+next_step
+encouragement
+synced_at</code></article>
+              <article class="schema"><h3>首页更新策略</h3><code>任务领取/提交后立即刷新
+onShow 时静默刷新
+AI 快照每天生成一次
+任务规则实时计算
+失败时使用规则降级</code></article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="metrics" class="section section--white">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">分析指标</p><h2>模型看到什么，不看到什么</h2></div><p>所有数值先由 Worker 通过 SQL 和 TypeScript 计算。模型接收聚合指标和匿名事件，不接收密码、用户名或家庭成员真实姓名。</p></div>
+        <table class="metric-table">
+          <thead><tr><th>指标</th><th>计算方式</th><th>可用于</th><th>限制</th></tr></thead>
+          <tbody>
+            <tr><td>任务完成率</td><td>完成任务数 / 到期任务数</td><td>观察整体执行趋势</td><td>至少 7 项到期任务才生成结论</td></tr>
+            <tr><td>按时完成率</td><td>完成时间不晚于计划时间 + 容差</td><td>调整任务时间段</td><td>一次性任务与重复任务分开统计</td></tr>
+            <tr><td>领取延迟</td><td>claimed_at - 计划提醒时间</td><td>判断启动困难和提醒效果</td><td>不等同于拖延或态度</td></tr>
+            <tr><td>提交与批改轮次</td><td>submission_review_rounds 数量</td><td>识别需要拆分说明的任务</td><td>不能直接推断学习能力</td></tr>
+            <tr><td>提醒有效性</td><td>提醒后 15 分钟内领取的比例</td><td>优化提醒时间与次数</td><td>提醒上限仍为 3 次</td></tr>
+            <tr><td>家长反馈时延</td><td>reviewed_at - submitted_at</td><td>提示家庭协作阻塞</td><td>作为流程指标，不归因于儿童</td></tr>
+            <tr><td>访问事件</td><td>关键业务事件序列</td><td>发现页面和流程问题</td><td><strong>禁止用于儿童表现评分</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="architecture" class="section section--dark">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">Cloudflare 架构</p><h2>异步分析，结果版本化</h2></div><p>请求与页面接口保持轻量，AI 分析由队列异步执行。模型失败不会影响任务、提交和提醒主流程。</p></div>
+        <div class="architecture">
+          <div class="arch-node"><b>SOURCE</b><strong>D1 业务数据</strong><p>任务、领取、提交、批改、提醒。</p></div>
+          <div class="arch-node"><b>COMPUTE</b><strong>Worker 聚合器</strong><p>计算指标、匿名化、生成 input hash。</p></div>
+          <div class="arch-node"><b>ASYNC</b><strong>Cloudflare Queue</strong><p>削峰、重试，不阻塞用户请求。</p></div>
+          <div class="arch-node"><b>MODEL</b><strong>OpenAI Responses API</strong><p>统一使用 gpt-5.5，严格 JSON 输出，不存储响应。</p></div>
+          <div class="arch-node"><b>STORE</b><strong>D1 分析结果</strong><p>保存证据、模型和提示词版本。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--white">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">处理流程</p><h2>让模型不参与算数</h2></div><p>指标与结论分开，既便于测试，也能在更换模型后保持历史数据口径一致。</p></div>
+        <ol class="flow">
+          <li><div><strong>触发分析</strong><p>每天凌晨生成增量分析；家长也可以手动刷新，每个儿童每小时最多一次。</p></div></li>
+          <li><div><strong>确定性聚合</strong><p>Worker 查询 D1，生成 metric_id、数值、样本数、日期范围和对比周期。</p></div></li>
+          <li><div><strong>隐私最小化</strong><p>用 child_ref 替代姓名；默认排除 R2 照片、音频、备注全文和访问日志正文。</p></div></li>
+          <li><div><strong>模型生成结构化结论</strong><p>每条 observation 必须引用 metric_id；无足够样本时输出 insufficient_data。</p></div></li>
+          <li><div><strong>规则校验</strong><p>JSON Schema、敏感词、诊断性语言、比较排名和直接执行动作全部在 Worker 中拦截。</p></div></li>
+          <li><div><strong>家长确认</strong><p>建议可转换为任务草稿，家长编辑并保存后才进入原有任务系统。</p></div></li>
+        </ol>
+
+        <div class="schema-grid">
+          <article class="schema"><h3>ai_analysis_runs</h3><code>id, family_id, child_id
+period_start, period_end
+input_hash, model_id
+prompt_version, status
+created_at, completed_at</code></article>
+          <article class="schema"><h3>ai_insights</h3><code>id, analysis_run_id
+type, title, summary
+evidence_json, confidence
+action_draft_json
+parent_feedback, created_at</code></article>
+          <article class="schema"><h3>ai_preferences</h3><code>family_id PRIMARY KEY
+weekly_report_enabled
+child_assistant_enabled
+allow_media_analysis DEFAULT 0
+retention_days DEFAULT 90</code></article>
+          <article class="schema"><h3>ai_conversations</h3><code>id, family_id, user_id
+scope, child_id, created_at
+
+ai_messages:
+role, content, source_json
+model_id, created_at</code></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">API 设计</p><h2>所有 AI 能力仍归 backend 管理</h2></div><p>前端和小程序不直接持有模型密钥，也不能绕过家庭权限读取其他儿童的分析。</p></div>
+        <table class="metric-table">
+          <thead><tr><th>接口</th><th>调用方</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>GET /api/children/:id/ai-overview?range=28d</td><td>家长网页</td><td>获取已完成分析、指标、洞察和证据。</td></tr>
+            <tr><td>POST /api/children/:id/ai-analysis-runs</td><td>家长网页</td><td>异步创建分析任务，返回 run_id。</td></tr>
+            <tr><td>POST /api/ai/task-expression</td><td>家长网页</td><td>补全任务说明、时长、完成标准和提醒文案，只返回表单草稿。</td></tr>
+            <tr><td>POST /api/ai/insights/:id/experiment-draft</td><td>家长网页</td><td>生成只改变一个变量的 7 天试行草稿与对照指标。</td></tr>
+            <tr><td>POST /api/submissions/:id/review-draft</td><td>家长网页</td><td>根据家长选择的观察点生成可编辑评价，不自动发布。</td></tr>
+            <tr><td>POST /api/ai/insights/:id/feedback</td><td>家长网页</td><td>记录有用、无用或不准确，用于质量评估。</td></tr>
+            <tr><td>POST /api/ai/chat</td><td>家长网页</td><td>限定在当前家庭数据范围内回答，并返回证据引用。</td></tr>
+            <tr><td>GET /api/child/ai/today</td><td>儿童小程序</td><td>返回下一项任务、任务步骤和事实型鼓励文案。</td></tr>
+            <tr><td>POST /api/child/ai/task-help</td><td>儿童小程序</td><td>按提示等级返回澄清、小提示、相似例子或分步解释。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="safety" class="section section--white">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">儿童数据安全</p><h2>明确允许与禁止</h2></div><p>AI Gateway 只保留调用元数据，敏感分析请求关闭 prompt 和 response 正文日志；个性化结果不使用共享缓存。</p></div>
+        <div class="guardrails">
+          <article class="guardrail guardrail--allow"><h3>允许</h3><ul><li>总结任务趋势并引用样本数和日期。</li><li>建议调整任务时间、提醒次数或拆分步骤。</li><li>说明数据不足并拒绝生成确定结论。</li><li>为家长生成可编辑、未保存的任务草稿。</li><li>为儿童提供当前任务说明和积极事实反馈。</li></ul></article>
+          <article class="guardrail guardrail--deny"><h3>禁止</h3><ul><li>诊断 ADHD、焦虑、智力、人格或心理问题。</li><li>给儿童打综合分、排名或与兄弟姐妹比较。</li><li>仅根据访问频次判断学习态度或能力。</li><li>未经家长确认自动新增、删除或调整任务。</li><li>默认把照片、录音和备注全文发送给模型。</li></ul></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section">
+      <div class="shell">
+        <div class="section-head"><div><p class="eyebrow">实施阶段</p><h2>从可验证周报开始</h2></div><p>先证明指标和建议确实有用，再扩大模型输入范围。不要第一版就做开放式 Agent。</p></div>
+        <div class="roadmap">
+          <article class="phase"><small>Phase 1 · P0</small><h3>首页洞察与小实验</h3><p>先上线可追溯周报、任务表达助手、7 天家庭小实验和批改评价草稿，全部嵌入现有页面。</p><strong>验收：建议可验证，操作需确认</strong></article>
+          <article class="phase"><small>Phase 2 · P1</small><h3>学习过程支持</h3><p>小程序增加提示阶梯、材料内微练习；家长首页增加每周亲子对话卡。</p><strong>验收：默认不给完整答案，不做排名</strong></article>
+          <article class="phase"><small>Phase 3 · P2</small><h3>可选多模态教练</h3><p>在单独授权、脱敏和保留期限控制后，再增加朗读录音与作业图片的过程型反馈。</p><strong>验收：默认关闭，可随时删除</strong></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="sources">
+    <div class="shell"><p>产品参考：<a href="https://help.openai.com/en/articles/11780217-using-study-mode-in-chatgpt">ChatGPT Study Mode</a>、<a href="https://www.khanacademy.org/khan-for-parents/k4p-us/x47d2dcef03b6d5f6%3Awelcome-to-khan-academy/x47d2dcef03b6d5f6%3Ameet-khanmigo/v/khan-academy-for-parents-what-is-khanmigo">Khanmigo</a>、<a href="https://blog.duolingo.com/duolingo-max/">Duolingo Max</a>、<a href="https://blog.google/innovation-and-ai/models-and-research/google-labs/notebooklm-app-quizzes-flashcards/">NotebookLM</a> 与 <a href="https://blog.google/innovation-and-ai/products/gemini-app/gemini-study-notebooks/">Gemini Study Notebooks</a>。架构依据：<a href="https://developers.openai.com/api/docs/models/gpt-5.5">OpenAI gpt-5.5</a>、Cloudflare <a href="https://developers.cloudflare.com/queues/">Queues</a>、<a href="https://developers.cloudflare.com/ai-gateway/observability/logging/">AI Gateway 日志控制</a>与 <a href="https://developers.cloudflare.com/d1/reference/data-security/">D1 数据安全</a>。</p></div>
+  </footer>
+
+  <script>
+    const tabs = document.querySelectorAll(".design-tab");
+    const panels = document.querySelectorAll(".tab-panel");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((item) => item.setAttribute("aria-selected", "false"));
+        panels.forEach((panel) => panel.classList.remove("is-active"));
+        tab.setAttribute("aria-selected", "true");
+        document.getElementById(tab.dataset.panel)?.classList.add("is-active");
+      });
+    });
+  </script>
+</body>
+</html>
