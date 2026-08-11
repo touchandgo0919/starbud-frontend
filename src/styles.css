@@ -383,6 +383,7 @@ h1, h2, h3, p { margin: 0; }
 .task-options-row > .el-form-item { width: 100%; margin-bottom: 10px; }
 .task-options-row .el-checkbox { white-space: nowrap; }
 .task-options-row .el-input-number { width: 100%; }
+.delete-scope-options { display: grid; gap: 14px; padding: 10px 0; }
 .task-option-label { display: inline-flex; align-items: center; gap: 5px; }
 .task-option-help { color: #89939f; font-size: 14px; cursor: help; }
 .task-detail-descriptions .el-descriptions__label { width: 108px; color: #aeb3bd !important; font-weight: 700 !important; }

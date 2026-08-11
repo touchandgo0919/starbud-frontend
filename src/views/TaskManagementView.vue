@@ -26,6 +26,9 @@ const children = ref<Child[]>([]);
 const loading = ref(false);
 const calendarLoading = ref(false);
 const dialogVisible = ref(false);
+const deleteDialogVisible = ref(false);
+const deleteTaskTarget = ref<Task | null>(null);
+const deleteScope = ref<"all" | "future" | "single">("all");
 const detailVisible = ref(false);
 const detailTask = ref<Task | null>(null);
 const detailColumnCount = ref(window.innerWidth <= 620 ? 1 : 2);
@@ -104,7 +107,7 @@ const saving = ref(false);
 const filters = reactive({ childId: "" });
 const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
-const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, endDate: null, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 type CalendarDotStatus = "revision" | "review" | "pending" | "completed";
 
@@ -291,6 +294,7 @@ function openCreate() {
     childIds: children.value.map((child) => child.id),
     title: "",
     startDate: selectedDate.value,
+    endDate: null,
     scheduleTime: currentTime(),
     repeatType: "daily",
     requiresPhotoUpload: true,
@@ -309,6 +313,7 @@ function openEdit(task: Task) {
     childIds: [task.childId],
     title: task.title,
     startDate: task.startDate || task.occurrenceDate || selectedDate.value,
+    endDate: task.endDate,
     scheduleTime: task.scheduleTime,
     repeatType: task.repeatType,
     requiresPhotoUpload: task.requiresPhotoUpload,
@@ -1438,13 +1443,21 @@ async function sendReminder(task: Task) {
 }
 
 async function removeTask(task: Task) {
+  deleteTaskTarget.value = task;
+  deleteScope.value = task.repeatType === "once" ? "all" : "future";
+  deleteDialogVisible.value = true;
+}
+
+async function confirmDeleteTask() {
+  const task = deleteTaskTarget.value;
+  if (!task) return;
   try {
-    await ElMessageBox.confirm(`删除“${task.title}”后，儿童端将不再显示该任务。`, "删除任务", { type: "warning", confirmButtonText: "确认删除", cancelButtonText: "取消" });
-    await deleteTask(task.id);
+    await deleteTask(task.id, deleteScope.value, task.occurrenceDate);
     ElMessage.success("任务已删除");
     await refreshTaskData();
+    deleteDialogVisible.value = false;
   } catch (cause) {
-    if (cause !== "cancel" && cause !== "close") ElMessage.error(cause instanceof Error ? cause.message : "任务删除失败。");
+    ElMessage.error(cause instanceof Error ? cause.message : "任务删除失败。");
   }
 }
 
@@ -1541,6 +1554,9 @@ onBeforeUnmount(() => {
           <el-form-item label="提醒时间" required><el-time-picker v-model="form.scheduleTime" format="HH:mm" value-format="HH:mm" :clearable="false" /></el-form-item>
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
+        <el-form-item v-if="form.repeatType !== 'once'" label="任务截止日期">
+          <el-date-picker v-model="form.endDate" type="date" format="YYYY-MM-DD" value-format="YYYY-MM-DD" clearable placeholder="长期重复（不设截止）" :disabled-date="(date: Date) => date.getTime() < new Date(`${form.startDate}T00:00:00`).getTime()" />
+        </el-form-item>
         <div class="task-options-row">
           <el-form-item>
             <template #label>
@@ -1607,6 +1623,16 @@ onBeforeUnmount(() => {
         </el-form-item>
       </el-form>
       <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitTask">{{ editingTaskId ? "保存修改" : "保存任务" }}</el-button></template>
+    </el-dialog>
+
+    <el-dialog v-model="deleteDialogVisible" title="删除任务" width="420px" class="form-dialog">
+      <p class="dialog-hint">提交、照片、录音和批改记录会保留，不会被物理删除。</p>
+      <el-radio-group v-model="deleteScope" class="delete-scope-options">
+        <el-radio value="all">全部任务</el-radio>
+        <el-radio v-if="deleteTaskTarget?.repeatType !== 'once'" value="future">今天及以后未开始的任务</el-radio>
+        <el-radio v-if="deleteTaskTarget?.repeatType !== 'once'" value="single">仅删除本次（{{ deleteTaskTarget?.occurrenceDate }}）</el-radio>
+      </el-radio-group>
+      <template #footer><el-button @click="deleteDialogVisible = false">取消</el-button><el-button type="danger" @click="confirmDeleteTask">确认删除</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="detailVisible" title="任务详情" width="640px" class="form-dialog">

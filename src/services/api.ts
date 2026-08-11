@@ -280,9 +280,10 @@ export async function updateTask(taskId: string, payload: UpdateTaskPayload) {
   return body.task;
 }
 
-export async function deleteTask(taskId: string) {
+export async function deleteTask(taskId: string, scope: "all" | "future" | "single" = "all", date?: string | null) {
   await request<{ deleted: true }>(`/api/tasks/${taskId}`, {
-    method: "DELETE"
+    method: "DELETE",
+    body: JSON.stringify({ scope, date: date || undefined })
   });
 }
 
