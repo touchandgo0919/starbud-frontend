@@ -104,7 +104,7 @@ const saving = ref(false);
 const filters = reactive({ childId: "" });
 const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
-const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
+const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
 type CalendarDotStatus = "revision" | "review" | "pending" | "completed";
 
@@ -296,6 +296,7 @@ function openCreate() {
     requiresPhotoUpload: true,
     voiceEnabled: true,
     claimReminderEnabled: false,
+    revisionReminderEnabled: false,
     voiceContent: "",
     voiceReminderCount: 1
   });
@@ -313,6 +314,7 @@ function openEdit(task: Task) {
     requiresPhotoUpload: task.requiresPhotoUpload,
     voiceEnabled: task.voiceEnabled,
     claimReminderEnabled: task.claimReminderEnabled,
+    revisionReminderEnabled: task.revisionReminderEnabled,
     voiceContent: task.voiceContent === task.title ? "" : task.voiceContent,
     voiceReminderCount: task.voiceReminderCount
   });
@@ -1540,43 +1542,57 @@ onBeforeUnmount(() => {
           <el-form-item label="重复方式"><el-select v-model="form.repeatType"><el-option v-for="(label, value) in repeatLabels" :key="value" :label="label" :value="value" /></el-select></el-form-item>
         </div>
         <div class="task-options-row">
-          <div class="task-checkbox-options">
-            <el-form-item>
-              <template #label>
-                <span class="task-option-label">附件
-                  <el-tooltip placement="top" :show-after="200">
-                    <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是附件任务：儿童领取后必须提交照片或录音，家长才能批改或关闭。</template>
-                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </span>
-              </template>
-              <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
-            </el-form-item>
-            <el-form-item>
-              <template #label>
-                <span class="task-option-label">语音
-                  <el-tooltip placement="top" :show-after="200">
-                    <template #content>请让小朋友在设备上安装并登录星星芽 AI 助手 App，才能正常收到语音提醒。</template>
-                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </span>
-              </template>
-              <el-checkbox v-model="form.voiceEnabled">开启</el-checkbox>
-            </el-form-item>
-            <el-form-item>
-              <template #label>
-                <span class="task-option-label">催领
-                  <el-tooltip placement="top" :show-after="200">
-                    <template #content>默认关闭。开启后，最后一次语音提醒播放结束 5 分钟仍未领取时，服务端每隔 5 分钟催领一次，最多 3 次（15 分钟）；领取后自动停止。</template>
-                    <el-icon class="task-option-help"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                </span>
-              </template>
-              <el-checkbox v-model="form.claimReminderEnabled" :disabled="!form.voiceEnabled">开启</el-checkbox>
-            </el-form-item>
-          </div>
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">附件
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>不勾选是领取型任务：儿童领取后，家长可直接关闭。<br>勾选后是附件任务：儿童领取后必须提交照片或录音，家长才能批改或关闭。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.requiresPhotoUpload">必须</el-checkbox>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">语音
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>请让小朋友在设备上安装并登录星星芽 AI 助手 App，才能正常收到语音提醒。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.voiceEnabled">开启</el-checkbox>
+          </el-form-item>
           <el-form-item label="提醒次数">
             <el-input-number v-model="form.voiceReminderCount" :disabled="!form.voiceEnabled" :min="1" :max="3" :step="1" :precision="0" controls-position="right" />
+          </el-form-item>
+        </div>
+        <div class="task-options-row">
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">催领
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>默认关闭。开启后，最后一次语音提醒播放结束 5 分钟仍未领取时，服务端每隔 5 分钟催领一次，最多 3 次（15 分钟）；领取后自动停止。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.claimReminderEnabled" :disabled="!form.voiceEnabled">开启</el-checkbox>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="task-option-label">催改
+                <el-tooltip placement="top" :show-after="200">
+                  <template #content>默认关闭。开启后，作业批改完成但儿童未修改并重新提交时，服务端每隔 2 小时催改一次，最多 3 次；重新提交或任务关闭后自动停止。</template>
+                  <el-icon class="task-option-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <el-checkbox v-model="form.revisionReminderEnabled" :disabled="!form.requiresPhotoUpload">开启</el-checkbox>
+          </el-form-item>
+          <el-form-item label="催促次数">
+            <el-input-number :model-value="3" disabled controls-position="right" />
           </el-form-item>
         </div>
         <el-form-item v-if="form.voiceEnabled" label="提醒语音内容">

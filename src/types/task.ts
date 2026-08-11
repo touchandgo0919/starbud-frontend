@@ -13,6 +13,7 @@ export interface Task {
   voiceContent: string;
   voiceReminderCount: number;
   claimReminderEnabled: boolean;
+  revisionReminderEnabled: boolean;
   requiresPhotoUpload: boolean;
   status: TaskStatus;
   occurrenceDate: string | null;
@@ -38,6 +39,7 @@ export interface CreateTaskPayload {
   voiceContent: string;
   voiceReminderCount: number;
   claimReminderEnabled: boolean;
+  revisionReminderEnabled: boolean;
   requiresPhotoUpload: boolean;
   startDate: string;
 }
