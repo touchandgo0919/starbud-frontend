@@ -103,6 +103,8 @@ const statusRepairTask = ref<Task | null>(null);
 const statusRepairValue = ref<"unclaimed" | "claimed" | "completed">("unclaimed");
 const statusRepairing = ref(false);
 const editingTaskId = ref("");
+const editingTaskDate = ref("");
+const editScope = ref<"single" | "future">("future");
 const saving = ref(false);
 const filters = reactive({ childId: "" });
 const selectedDate = ref(dateKey(new Date()));
@@ -290,6 +292,7 @@ function selectQuickMember(childId: string) {
 
 function openCreate() {
   editingTaskId.value = "";
+  editingTaskDate.value = "";
   Object.assign(form, {
     childIds: children.value.map((child) => child.id),
     title: "",
@@ -308,11 +311,18 @@ function openCreate() {
 }
 
 function openEdit(task: Task) {
+  const occurrenceDate = task.occurrenceDate || selectedDate.value;
+  if (occurrenceDate < dateKey(new Date())) {
+    ElMessage.warning("历史任务已锁定，不能编辑。请选择今天或未来任务。");
+    return;
+  }
   editingTaskId.value = task.id;
+  editingTaskDate.value = occurrenceDate;
+  editScope.value = task.repeatType === "once" ? "single" : "future";
   Object.assign(form, {
     childIds: [task.childId],
     title: task.title,
-    startDate: task.startDate || task.occurrenceDate || selectedDate.value,
+    startDate: occurrenceDate,
     endDate: task.endDate,
     scheduleTime: task.scheduleTime,
     repeatType: task.repeatType,
@@ -1359,10 +1369,15 @@ async function submitTask() {
   try {
     const { childIds, ...taskPayload } = form;
     if (editingTaskId.value) {
-      await updateTask(editingTaskId.value, { ...taskPayload, title });
+      await updateTask(editingTaskId.value, {
+        ...taskPayload,
+        title,
+        editScope: editScope.value,
+        effectiveDate: editingTaskDate.value
+      });
       await refreshTaskData();
       dialogVisible.value = false;
-      ElMessage.success("任务已更新");
+      ElMessage.success(editScope.value === "single" ? "已更新本次任务" : `已更新 ${editingTaskDate.value} 起的任务`);
       return;
     }
 
@@ -1541,6 +1556,13 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" class="form-dialog">
       <el-form label-position="top">
+        <el-form-item v-if="editingTaskId" label="修改范围">
+          <el-radio-group v-model="editScope">
+            <el-radio value="single">仅本次（{{ editingTaskDate }}）</el-radio>
+            <el-radio v-if="form.repeatType !== 'once'" value="future">从 {{ editingTaskDate }} 起及以后</el-radio>
+          </el-radio-group>
+          <p class="dialog-hint">历史任务会保留原内容；本次修改不会影响已完成、已提交或过去日期的任务。</p>
+        </el-form-item>
         <el-form-item label="任务名称" required><el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：完成数学作业" /></el-form-item>
         <div class="dialog-form-row">
           <el-form-item label="任务对象" required>

@@ -46,7 +46,10 @@ export interface CreateTaskPayload {
   endDate: string | null;
 }
 
-export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId">;
+export type UpdateTaskPayload = Omit<CreateTaskPayload, "childId"> & {
+  editScope: "single" | "future";
+  effectiveDate: string;
+};
 
 export interface SubmissionPhoto {
   id: string;
