@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "v
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, ArrowRight, Delete, FullScreen, Loading, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
 import { ArrowUpRight, Pencil, Play, Smile, Square, Type, Undo2, ZoomIn, ZoomOut } from "@lucide/vue";
-import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionAudioReview, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
+import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskCalendar, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionAudioReview, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionAudio, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import TaskCalendar from "../components/TaskCalendar.vue";
@@ -21,7 +21,6 @@ type ReviewSelectionHandle = { x: number; y: number; handle: ReviewResizeHandle 
 const auth = useAuthStore();
 const tasks = ref<Task[]>([]);
 const allTasksForSelectedDate = ref<Task[]>([]);
-const calendarTasks = ref<Task[]>([]);
 const children = ref<Child[]>([]);
 const loading = ref(false);
 const calendarLoading = ref(false);
@@ -40,8 +39,6 @@ const submissionNote = ref("");
 const submissionReviewImageUrl = ref<string | null>(null);
 const submissionReviewRounds = ref<SubmissionReviewRound[]>([]);
 const orderedSubmissionReviewRounds = computed(() => [...submissionReviewRounds.value].sort((left, right) => left.sequence - right.sequence));
-const taskPhotoPreviews = ref<Record<string, SubmissionPhoto[]>>({});
-const taskAudioPreviews = ref<Record<string, boolean>>({});
 const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
@@ -111,29 +108,8 @@ const selectedDate = ref(dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, endDate: null, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
-type CalendarDotStatus = "revision" | "review" | "pending" | "completed";
-
-const calendarDotPriority: Record<CalendarDotStatus, number> = {
-  revision: 5,
-  review: 4,
-  pending: 2,
-  completed: 1
-};
-
-function calendarDotStatus(task: Task): CalendarDotStatus {
-  if (task.reviewStatus === "needs_revision") return "revision";
-  if (task.reviewStatus === "pending_review") return "review";
-  if (task.status === "completed" || task.reviewStatus === "completed") return "completed";
-  return "pending";
-}
-
-const calendarTaskDates = computed(() => calendarTasks.value.reduce<Record<string, CalendarDotStatus>>((dates, task) => {
-  if (!task.occurrenceDate) return dates;
-  const status = calendarDotStatus(task);
-  const current = dates[task.occurrenceDate];
-  if (!current || calendarDotPriority[status] > calendarDotPriority[current]) dates[task.occurrenceDate] = status;
-  return dates;
-}, {}));
+type CalendarDotStatus = "revision" | "review" | "active" | "pending" | "completed";
+const calendarTaskDates = ref<Record<string, CalendarDotStatus>>({});
 const dialogTitle = computed(() => editingTaskId.value ? "编辑任务" : "新建任务");
 const quickMemberOptions = computed(() => {
   const toProgress = (completed: number, total: number) => ({
@@ -222,32 +198,13 @@ function canReReviewSubmission(task: Task | null) {
 
 async function loadTasks() {
   loading.value = true;
-  taskPhotoPreviews.value = {};
-  taskAudioPreviews.value = {};
   try {
-    const allTasksRequest = getTasks({ date: selectedDate.value });
-    const filteredTasksRequest = filters.childId
-      ? getTasks({ childId: filters.childId, date: selectedDate.value })
-      : allTasksRequest;
-    const [allTasks, visibleTasks] = await Promise.all([allTasksRequest, filteredTasksRequest]);
+    const allTasks = await getTasks({ date: selectedDate.value, includeAttachments: true });
+    const visibleTasks = filters.childId
+      ? allTasks.filter((task) => task.childId === filters.childId)
+      : allTasks;
     allTasksForSelectedDate.value = allTasks;
     tasks.value = visibleTasks;
-    const previews = await Promise.all(tasks.value.map(async (task) => {
-      if (!hasSubmission(task)) return [taskRowKey(task), { photos: [] as SubmissionPhoto[], hasAudio: false }] as const;
-      try {
-        const submission = await getTaskSubmission(task.id, task.occurrenceDate || selectedDate.value);
-        // 当前提交的照片与已进入批改记录的照片可能是同一批，按照片 ID 去重。
-        // 因此这里既能累计多轮提交的所有作业照片，也不会把同一轮重复计算两次。
-        const photoById = new Map<string, SubmissionPhoto>();
-        [...submission.reviewRounds.flatMap((round) => round.photos), ...submission.photos]
-          .forEach((photo) => photoById.set(photo.id, photo));
-        const previewPhotos = [...photoById.values()];
-        const hasAudio = Boolean(submission.audio || submission.reviewRounds.some((round) => round.audios.length));
-        return [taskRowKey(task), { photos: previewPhotos, hasAudio }] as const;
-      } catch { return [taskRowKey(task), { photos: [] as SubmissionPhoto[], hasAudio: false }] as const; }
-    }));
-    taskPhotoPreviews.value = Object.fromEntries(previews.map(([key, preview]) => [key, preview.photos]));
-    taskAudioPreviews.value = Object.fromEntries(previews.map(([key, preview]) => [key, preview.hasAudio]));
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务加载失败。");
   } finally {
@@ -258,11 +215,7 @@ async function loadTasks() {
 async function loadCalendar() {
   calendarLoading.value = true;
   try {
-    calendarTasks.value = await getTasks({
-      childId: filters.childId,
-      dateFrom: calendarRange.from,
-      dateTo: calendarRange.to
-    });
+    calendarTaskDates.value = await getTaskCalendar(calendarRange.from, calendarRange.to, filters.childId || undefined);
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务日历加载失败。");
   } finally {
@@ -1482,7 +1435,10 @@ onMounted(async () => {
   window.addEventListener("pointerdown", closeReviewTextEditorOutsideImage, true);
   try {
     children.value = await getChildren();
-    await refreshTaskData();
+    // TaskCalendar emits the initial visible range on mount, so only load the
+    // selected day's rows here. Calling refreshTaskData would duplicate the
+    // first calendar request.
+    await loadTasks();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务数据加载失败。");
   }
@@ -1537,7 +1493,7 @@ onBeforeUnmount(() => {
         <el-table-column label="重复" width="72"><template #default="scope">{{ repeatLabels[scope.row.repeatType as RepeatType] }}</template></el-table-column>
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot task-state" :class="taskStateClass(scope.row)">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
-        <el-table-column label="附件" width="78"><template #default="scope"><span v-if="loading" class="task-attachment-loading" aria-label="正在加载附件"><el-icon class="is-loading"><Loading /></el-icon></span><button v-else-if="taskPhotoPreviews[taskRowKey(scope.row)]?.length" type="button" class="task-photo-preview" :title="`已上传 ${taskPhotoPreviews[taskRowKey(scope.row)].length} 张照片`" @click="openDetail(scope.row)"><img :src="taskPhotoPreviews[taskRowKey(scope.row)][0].url" alt="作业缩略图" /><span>{{ taskPhotoPreviews[taskRowKey(scope.row)].length }}</span></button><button v-else-if="taskAudioPreviews[taskRowKey(scope.row)]" type="button" class="task-photo-preview task-audio-preview" title="播放录音附件" aria-label="播放录音附件" @click="openDetail(scope.row)"><Play :size="19" fill="currentColor" aria-hidden="true" /></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column label="附件" width="78"><template #default="scope"><span v-if="loading" class="task-attachment-loading" aria-label="正在加载附件"><el-icon class="is-loading"><Loading /></el-icon></span><button v-else-if="scope.row.attachmentPhotoCount" type="button" class="task-photo-preview" :title="`已上传 ${scope.row.attachmentPhotoCount} 张照片`" @click="openDetail(scope.row)"><img :src="scope.row.attachmentPreviewUrl" alt="作业缩略图" /><span>{{ scope.row.attachmentPhotoCount }}</span></button><button v-else-if="scope.row.hasAudioAttachment" type="button" class="task-photo-preview task-audio-preview" title="播放录音附件" aria-label="播放录音附件" @click="openDetail(scope.row)"><Play :size="19" fill="currentColor" aria-hidden="true" /></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="scope.row.reviewStatus === 'not_required'" class="task-photo-empty">—</span><span v-else-if="scope.row.reviewStatus === 'completed'" class="task-photo-empty">已完成</span><span v-else-if="scope.row.reviewStatus === 'needs_revision'" class="task-photo-empty">待修改</span><el-button v-else-if="scope.row.reviewStatus === 'pending_review'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="scope.row.reviewStatus === 'submitting'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>

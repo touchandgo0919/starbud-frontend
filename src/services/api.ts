@@ -231,14 +231,27 @@ export async function getTasks(filters: {
   date?: string;
   dateFrom?: string;
   dateTo?: string;
+  includeAttachments?: boolean;
 } = {}) {
   const query = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) query.set(key, value);
+    if (value) query.set(key, String(value));
   });
   const suffix = query.size ? `?${query.toString()}` : "";
   const body = await request<{ tasks: Task[] }>(`/api/tasks${suffix}`);
-  return body.tasks;
+  return body.tasks.map((task) => ({
+    ...task,
+    attachmentPreviewUrl: task.attachmentPreviewUrl ? apiUrl(task.attachmentPreviewUrl) : null
+  }));
+}
+
+export async function getTaskCalendar(dateFrom: string, dateTo: string, childId?: string) {
+  const query = new URLSearchParams({ dateFrom, dateTo });
+  if (childId) query.set("childId", childId);
+  const body = await request<{ dates: Record<string, "revision" | "review" | "active" | "pending" | "completed"> }>(
+    `/api/tasks/calendar?${query.toString()}`
+  );
+  return body.dates;
 }
 
 export async function createTask(payload: CreateTaskPayload) {

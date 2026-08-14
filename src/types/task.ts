@@ -26,6 +26,9 @@ export interface Task {
   needsRevision: boolean;
   reviewStatus: TaskReviewStatus;
   submissionPhotoCount: number;
+  attachmentPhotoCount?: number;
+  attachmentPreviewUrl?: string | null;
+  hasAudioAttachment?: boolean;
   startDate: string;
   endDate: string | null;
   createdAt: string;
