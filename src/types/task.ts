@@ -125,6 +125,28 @@ export interface AccessEvent {
   user: { id: string; username: string; displayName: string } | null;
 }
 
+export interface ReminderRecord {
+  id: string;
+  notificationId: string | null;
+  taskId: string | null;
+  taskDate: string | null;
+  submissionId: string | null;
+  recipient: { id: string; username: string; displayName: string };
+  reminderType: string;
+  source: string;
+  title: string;
+  content: string;
+  pushStatus: string;
+  pushConnectionCount: number;
+  pushedAt: string | null;
+  pushError: string | null;
+  receivedAt: string | null;
+  reminderStatus: string;
+  remindedAt: string | null;
+  reminderError: string | null;
+  createdAt: string;
+}
+
 export interface ManagedUser extends User {
   active: boolean;
   createdAt: string;

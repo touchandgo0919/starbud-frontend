@@ -1403,7 +1403,8 @@ async function saveStatusRepair() {
 
 async function sendReminder(task: Task) {
   try {
-    await remindTask(task.id);
+    const reminderType = task.needsRevision ? "revision" : task.claimedAt ? "complete" : "claim";
+    await remindTask(task.id, task.occurrenceDate, reminderType);
     ElMessage.success(`已向${childName(task.childId)}发起一次语音提醒`);
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "提醒发送失败。");

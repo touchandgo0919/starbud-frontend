@@ -11,6 +11,7 @@ import type {
   UpdateTaskPayload,
   User,
   AccessEvent,
+  ReminderRecord,
   AiHomeOverview
 } from "../types/task";
 
@@ -105,6 +106,26 @@ export async function getAccessEvents(filters: { eventName?: string; clientType?
   });
   const suffix = query.size ? `?${query.toString()}` : "";
   return request<{ events: AccessEvent[]; total: number }>(`/api/access-events${suffix}`);
+}
+
+export async function getReminderRecords(filters: {
+  childId?: string;
+  reminderType?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+} = {}) {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) query.set(key, String(value));
+  });
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return request<{
+    records: ReminderRecord[];
+    pagination: { page: number; pageSize: number; total: number; hasMore: boolean };
+  }>(`/api/reminder-records${suffix}`);
 }
 
 export async function login(username: string, password: string) {
@@ -279,8 +300,11 @@ export async function repairTaskStatus(taskId: string, taskDate: string | null, 
   return body.task;
 }
 
-export async function remindTask(taskId: string) {
-  const body = await request<{ task: Task }>(`/api/tasks/${taskId}/remind`, { method: "POST" });
+export async function remindTask(taskId: string, taskDate?: string | null, reminderType?: "claim" | "complete" | "revision") {
+  const body = await request<{ task: Task }>(`/api/tasks/${taskId}/remind`, {
+    method: "POST",
+    body: JSON.stringify({ taskDate: taskDate || undefined, reminderType })
+  });
   return body.task;
 }
 

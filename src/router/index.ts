@@ -10,6 +10,7 @@ const TaskManagementView = () => import("../views/TaskManagementView.vue");
 const SubmissionManagementView = () => import("../views/SubmissionManagementView.vue");
 const UserManagementView = () => import("../views/UserManagementView.vue");
 const AccessRecordsView = () => import("../views/AccessRecordsView.vue");
+const ReminderRecordsView = () => import("../views/ReminderRecordsView.vue");
 const AboutView = () => import("../views/AboutView.vue");
 const AiDesignView = () => import("../views/AiDesignView.vue");
 
@@ -56,6 +57,12 @@ const router = createRouter({
           name: "Submissions",
           component: SubmissionManagementView,
           meta: { title: "提交管理", description: "查看并清理孩子提交的作业", familyOnly: true }
+        },
+        {
+          path: "reminder-records",
+          name: "ReminderRecords",
+          component: ReminderRecordsView,
+          meta: { title: "提醒记录", description: "监控提醒推送、接收与播放结果", familyOnly: true }
         },
         {
           path: "families",

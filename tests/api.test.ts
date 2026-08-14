@@ -123,6 +123,17 @@ describe("web API client", () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain("/api/ai/home-overview?childId=child-1&days=28");
   });
 
+  it("sends the occurrence and reminder type for an immediate child reminder", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ task: { id: "task-1" } }));
+    const api = await import("../src/services/api");
+
+    await api.remindTask("task-1", "2026-08-14", "revision");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/api\/tasks\/task-1\/remind$/);
+    expect(JSON.parse(String(init?.body))).toEqual({ taskDate: "2026-08-14", reminderType: "revision" });
+  });
+
   it("surfaces backend error messages and keeps analytics non-blocking", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ error: "账号无权限" }, 403))

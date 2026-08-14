@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { DocumentChecked, HomeFilled, House, List, MagicStick, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
+import { Bell, DocumentChecked, HomeFilled, House, List, MagicStick, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 import IcpRecord from "../components/IcpRecord.vue";
 
@@ -19,7 +19,7 @@ const pageDescription = computed(() => route.path === "/home"
 const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", child: "儿童" })[auth.user?.role || "parent"]);
 const defaultOpeneds = computed(() => {
   if (route.path === "/home" && auth.user?.role !== "child") return ["home-management"];
-  if (["/tasks", "/submissions"].includes(route.path)) return ["task-management"];
+  if (["/tasks", "/submissions", "/reminder-records"].includes(route.path)) return ["task-management"];
   if (["/families", "/users", "/access-records"].includes(route.path)) return ["system-management"];
   return [];
 });
@@ -71,6 +71,10 @@ async function logout() {
           <el-menu-item index="/tasks">
             <el-icon><List /></el-icon>
             <span>任务列表</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.user?.role !== 'child'" index="/reminder-records">
+            <el-icon><Bell /></el-icon>
+            <span>提醒记录</span>
           </el-menu-item>
           <el-menu-item v-if="auth.user?.role !== 'child'" index="/submissions">
             <el-icon><DocumentChecked /></el-icon>

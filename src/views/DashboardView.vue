@@ -192,7 +192,8 @@ async function load(options: { preserveLoading?: boolean } = {}) {
   else loading.value = true;
   error.value = "";
   try {
-    const [loadedTodayTasks, loadedTrendTasks, loadedChildren, loadedFamilies] = await Promise.all([
+    const aiOverviewRequest = loadAiOverview();
+    const [loadedTodayTasks, loadedTrendTasks, loadedChildren, loadedFamilies, loadedUsers] = await Promise.all([
       getTodayTasks(selectedChildId.value || undefined),
       getTasks({
         childId: selectedChildId.value || undefined,
@@ -200,14 +201,15 @@ async function load(options: { preserveLoading?: boolean } = {}) {
         dateTo: trendRange.value.to
       }),
       getChildren(),
-      auth.user?.role === "child" ? Promise.resolve([]) : getFamilies()
+      auth.user?.role === "child" ? Promise.resolve([]) : getFamilies(),
+      auth.user?.role === "admin" ? getUsers() : Promise.resolve([])
     ]);
     todayTasks.value = loadedTodayTasks;
     trendTasks.value = loadedTrendTasks;
     children.value = loadedChildren;
     families.value = loadedFamilies;
-    if (auth.user?.role === "admin") users.value = await getUsers();
-    await loadAiOverview();
+    users.value = loadedUsers;
+    await aiOverviewRequest;
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "总览加载失败。";
   } finally {
