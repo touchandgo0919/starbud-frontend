@@ -80,10 +80,10 @@ onMounted(async () => {
   <div class="page-stack">
     <section class="content-panel filter-panel">
       <form class="filter-grid reminder-filter-grid" @submit.prevent="loadRecords(1)">
-        <label class="field"><span>提醒对象</span><el-select v-model="filters.childId" clearable placeholder="全部儿童"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select></label>
-        <label class="field"><span>提醒类型</span><el-select v-model="filters.reminderType" clearable placeholder="全部类型"><el-option v-for="(label, value) in typeLabels" :key="value" :label="label" :value="value" /></el-select></label>
-        <label class="field"><span>执行状态</span><el-select v-model="filters.status" clearable placeholder="全部状态"><el-option label="提醒成功" value="success" /><el-option label="提醒失败" value="failed" /><el-option label="设备离线" value="offline" /><el-option label="等待处理" value="pending" /></el-select></label>
-        <label class="field"><span>时间范围</span><el-date-picker v-model="filters.timeRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" /></label>
+        <el-select v-model="filters.childId" clearable placeholder="全部儿童" aria-label="筛选提醒对象"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select>
+        <el-select v-model="filters.reminderType" clearable placeholder="全部类型" aria-label="筛选提醒类型"><el-option v-for="(label, value) in typeLabels" :key="value" :label="label" :value="value" /></el-select>
+        <el-select v-model="filters.status" clearable placeholder="全部状态" aria-label="筛选执行状态"><el-option label="提醒成功" value="success" /><el-option label="提醒失败" value="failed" /><el-option label="设备离线" value="offline" /><el-option label="等待处理" value="pending" /></el-select>
+        <el-date-picker v-model="filters.timeRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" aria-label="筛选提醒时间范围" />
         <div class="filter-actions"><el-button :icon="Refresh" @click="resetFilters">重置</el-button><el-button type="primary" :icon="Search" native-type="submit">查询</el-button></div>
       </form>
     </section>

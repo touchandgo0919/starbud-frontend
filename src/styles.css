@@ -342,7 +342,8 @@ h1, h2, h3, p { margin: 0; }
 .task-quick-switch-progress i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
 .filter-grid { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(130px, 1fr)) auto; gap: 14px; align-items: end; }
 .submission-filter-grid { grid-template-columns: minmax(240px, 1.4fr) auto; }
-.reminder-filter-grid { grid-template-columns: repeat(3, minmax(130px, .75fr)) minmax(310px, 1.5fr) auto; }
+.reminder-filter-grid { grid-template-columns: repeat(3, minmax(130px, .75fr)) minmax(310px, 1.5fr) auto; align-items: center; }
+.reminder-filter-grid .el-select, .reminder-filter-grid .el-date-editor { width: 100%; }
 .reminder-content { display: grid; gap: 4px; }
 .reminder-content strong { color: var(--text); font-size: 13px; }
 .reminder-content span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
