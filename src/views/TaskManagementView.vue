@@ -51,6 +51,10 @@ const canViewPreviousReviewedPhoto = computed(() => selectedReviewPhotoIndex.val
 const canViewNextReviewedPhoto = computed(() => selectedReviewPhotoIndex.value < selectedReviewPhotos.value.length - 1);
 const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
+const originalPreviewPhotos = ref<SubmissionPhoto[]>([]);
+const originalPreviewPhotoIndex = ref(0);
+const canViewPreviousOriginalPhoto = computed(() => originalPreviewPhotoIndex.value > 0);
+const canViewNextOriginalPhoto = computed(() => originalPreviewPhotoIndex.value < originalPreviewPhotos.value.length - 1);
 const reviewVisible = ref(false);
 const audioReviewVisible = ref(false);
 const audioReviewFeedback = ref("");
@@ -330,6 +334,9 @@ async function openDetail(task: Task) {
   selectedReviewPhotos.value = [];
   selectedReviewPhotoIndex.value = 0;
   reviewReplacementImageIds.value = [];
+  originalPreviewUrl.value = null;
+  originalPreviewPhotos.value = [];
+  originalPreviewPhotoIndex.value = 0;
   submissionReviewRounds.value = [];
   detailVisible.value = true;
   trackTaskDetail(task);
@@ -437,12 +444,23 @@ async function restartReview() {
 
 async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo]) {
   if (!canReviewSubmission(detailTask.value)) {
+    const photoIndex = photos.findIndex((item) => item.id === photo.id);
+    originalPreviewPhotos.value = photos;
+    originalPreviewPhotoIndex.value = photoIndex >= 0 ? photoIndex : 0;
     originalPreviewUrl.value = photo.url;
     originalPreviewVisible.value = true;
     return;
   }
   reviewReplacementImageIds.value = [];
   await openReview(photo, photos);
+}
+
+function switchOriginalPreviewPhoto(offset: number) {
+  const nextIndex = originalPreviewPhotoIndex.value + offset;
+  const photo = originalPreviewPhotos.value[nextIndex];
+  if (!photo) return;
+  originalPreviewPhotoIndex.value = nextIndex;
+  originalPreviewUrl.value = photo.url;
 }
 
 function selectReviewedPhoto(image: SubmissionPhoto, images: SubmissionPhoto[]) {
@@ -1742,9 +1760,15 @@ onBeforeUnmount(() => {
       <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button v-if="canReReviewSubmission(detailTask)" type="success" @click="restartReview">重新批改</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="originalPreviewVisible" title="原图" width="min(860px, 92vw)" class="form-dialog">
-      <img v-if="originalPreviewUrl" class="review-result-image" :src="originalPreviewUrl" alt="作业原图" />
-      <template #footer><el-button type="primary" @click="originalPreviewVisible = false">关闭</el-button></template>
+    <el-dialog v-model="originalPreviewVisible" title="查看原图" fullscreen class="review-dialog original-preview-dialog">
+      <div class="review-canvas-shell original-preview-shell">
+        <img v-if="originalPreviewUrl" class="original-preview-image" :src="originalPreviewUrl" alt="作业原图" />
+      </div>
+      <div v-if="originalPreviewPhotos.length > 1" class="review-photo-navigation">
+        <el-button class="review-page-button" :disabled="!canViewPreviousOriginalPhoto" @click="switchOriginalPreviewPhoto(-1)"><el-icon><ArrowLeft /></el-icon>上一张</el-button>
+        <span class="review-photo-position">{{ originalPreviewPhotoIndex + 1 }} / {{ originalPreviewPhotos.length }}</span>
+        <el-button class="review-page-button" :disabled="!canViewNextOriginalPhoto" @click="switchOriginalPreviewPhoto(1)">下一张<el-icon><ArrowRight /></el-icon></el-button>
+      </div>
     </el-dialog>
 
     <el-dialog v-model="reviewVisible" title="图片批改" fullscreen class="review-dialog" @opened="loadReviewCanvas" @closed="stopReviewDrawing">

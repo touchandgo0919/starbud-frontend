@@ -501,6 +501,8 @@ h1, h2, h3, p { margin: 0; }
 .review-dialog.is-fullscreen { display: flex; flex-direction: column; }
 .review-dialog.is-fullscreen .el-dialog__body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 .review-canvas-shell { display: grid; flex: 1; min-height: 0; overflow: auto; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #101216; }
+.original-preview-shell { padding: 16px; }
+.original-preview-image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .review-stage { position: relative; flex: none; touch-action: none; }
 .review-stage.is-panning, .review-stage.is-panning * { cursor: grabbing !important; }
 .review-canvas { display: block; cursor: crosshair; }
