@@ -44,7 +44,11 @@ const submissionPhotosLoading = ref(false);
 const reviewResultVisible = ref(false);
 const selectedReviewImageUrl = ref<string | null>(null);
 const selectedReviewPhoto = ref<SubmissionPhoto | null>(null);
-const reviewReplacementImageId = ref<string | null>(null);
+const selectedReviewPhotos = ref<SubmissionPhoto[]>([]);
+const selectedReviewPhotoIndex = ref(0);
+const reviewReplacementImageIds = ref<string[]>([]);
+const canViewPreviousReviewedPhoto = computed(() => selectedReviewPhotoIndex.value > 0);
+const canViewNextReviewedPhoto = computed(() => selectedReviewPhotoIndex.value < selectedReviewPhotos.value.length - 1);
 const originalPreviewVisible = ref(false);
 const originalPreviewUrl = ref<string | null>(null);
 const reviewVisible = ref(false);
@@ -323,7 +327,9 @@ async function openDetail(task: Task) {
   submissionReviewImageUrl.value = null;
   selectedReviewImageUrl.value = null;
   selectedReviewPhoto.value = null;
-  reviewReplacementImageId.value = null;
+  selectedReviewPhotos.value = [];
+  selectedReviewPhotoIndex.value = 0;
+  reviewReplacementImageIds.value = [];
   submissionReviewRounds.value = [];
   detailVisible.value = true;
   trackTaskDetail(task);
@@ -419,10 +425,11 @@ async function restartReview() {
   reviewResultVisible.value = false;
   selectedReviewImageUrl.value = null;
   const reviewedPhoto = selectedReviewPhoto.value;
+  const reviewedPhotos = selectedReviewPhotos.value.length ? selectedReviewPhotos.value : reviewedPhoto ? [reviewedPhoto] : [];
   selectedReviewPhoto.value = null;
   if (reviewedPhoto) {
-    reviewReplacementImageId.value = reviewedPhoto.id;
-    await openReview(reviewedPhoto);
+    reviewReplacementImageIds.value = reviewedPhotos.map((photo) => photo.id);
+    await openReview(reviewedPhoto, reviewedPhotos);
     return;
   }
   if (task) await openTaskReview(task);
@@ -434,26 +441,42 @@ async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPho
     originalPreviewVisible.value = true;
     return;
   }
-  reviewReplacementImageId.value = null;
+  reviewReplacementImageIds.value = [];
   await openReview(photo, photos);
 }
 
-function viewRoundReview(image: SubmissionPhoto) {
+function selectReviewedPhoto(image: SubmissionPhoto, images: SubmissionPhoto[]) {
+  const imageIndex = images.findIndex((item) => item.id === image.id);
+  selectedReviewPhotos.value = images;
+  selectedReviewPhotoIndex.value = imageIndex >= 0 ? imageIndex : 0;
   selectedReviewPhoto.value = image;
   selectedReviewImageUrl.value = image.url;
+}
+
+function viewRoundReview(image: SubmissionPhoto, images: SubmissionPhoto[] = [image]) {
+  selectReviewedPhoto(image, images);
   reviewResultVisible.value = true;
 }
 
-async function reReviewImage(image: SubmissionPhoto) {
+function switchReviewedPhoto(offset: number) {
+  const nextIndex = selectedReviewPhotoIndex.value + offset;
+  const image = selectedReviewPhotos.value[nextIndex];
+  if (!image) return;
+  selectedReviewPhotoIndex.value = nextIndex;
+  selectedReviewPhoto.value = image;
+  selectedReviewImageUrl.value = image.url;
+}
+
+async function reReviewImage(image: SubmissionPhoto, images: SubmissionPhoto[] = [image]) {
   if (!canReReviewSubmission(detailTask.value)) {
-    viewRoundReview(image);
+    viewRoundReview(image, images);
     return;
   }
-  selectedReviewPhoto.value = image;
+  selectReviewedPhoto(image, images);
   selectedReviewImageUrl.value = null;
-  reviewReplacementImageId.value = image.id;
+  reviewReplacementImageIds.value = images.map((item) => item.id);
   reviewResultVisible.value = false;
-  await openReview(image);
+  await openReview(image, images);
 }
 
 async function finalizeCurrentReview() {
@@ -1289,20 +1312,26 @@ async function submitReviewedImage() {
   reviewSubmitting.value = true;
   try {
     await stashCurrentReviewedImage();
-    const images = reviewPhotos.value
-      .map((photo) => reviewedPhotoBlobs.value[photo.id])
-      .filter((image): image is Blob => Boolean(image));
-    if (!images.length) throw new Error("请至少批改一张图片。");
-    const replacementImageId = reviewReplacementImageId.value;
-    const submission = await submitSubmissionReview(selectedSubmissionId.value, images, replacementImageId);
+    const reviewedEntries = reviewPhotos.value
+      .map((photo) => ({ photo, image: reviewedPhotoBlobs.value[photo.id] }))
+      .filter((entry): entry is { photo: SubmissionPhoto; image: Blob } => Boolean(entry.image));
+    if (!reviewedEntries.length) throw new Error("请至少批改一张图片。");
+    const replacementIds = reviewReplacementImageIds.value.length
+      ? reviewedEntries.map((entry) => entry.photo.id)
+      : [];
+    const submission = await submitSubmissionReview(
+      selectedSubmissionId.value,
+      reviewedEntries.map((entry) => entry.image),
+      replacementIds
+    );
     submissionPhotos.value = submission.photos;
     submissionSubmittedAt.value = submission.submittedAt;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
     submissionReviewRounds.value = submission.reviewRounds;
-    reviewReplacementImageId.value = null;
+    reviewReplacementImageIds.value = [];
     reviewVisible.value = false;
-    ElMessage.success(replacementImageId ? "已更新这张批改图片，已通知小朋友。" : `已提交 ${images.length} 张批改图片，已通知小朋友。`);
+    ElMessage.success(replacementIds.length ? `已更新 ${replacementIds.length} 张批改图片，已通知小朋友。` : `已提交 ${reviewedEntries.length} 张批改图片，已通知小朋友。`);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
   } finally {
@@ -1656,7 +1685,7 @@ onBeforeUnmount(() => {
             </div>
             <div v-if="round.reviewImages.length" class="review-round-row">
               <strong>批改后图片</strong>
-              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
+              <div class="round-images"><button v-for="image in round.reviewImages" :key="image.id" type="button" class="round-image-action" :title="canReReviewSubmission(detailTask) ? '重新批改这张' : '查看批改'" @click="reReviewImage(image, round.reviewImages)"><small class="round-image-time">{{ formatDateTime(image.createdAt) }}</small><img class="round-reviewed-image" :src="image.url" alt="批改后图片" /><span>{{ canReReviewSubmission(detailTask) ? '重新批改' : '查看批改' }}</span></button></div>
             </div>
             <div v-if="round.feedback" class="review-round-note"><strong>录音评价</strong><p>{{ round.feedback }}</p></div>
             <div class="review-round-note"><strong>提交备注</strong><p>{{ round.note || "未填写" }}</p></div>
@@ -1705,6 +1734,11 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="reviewResultVisible" title="批改后照片" width="min(860px, 92vw)" class="form-dialog">
       <img v-if="selectedReviewImageUrl || submissionReviewImageUrl" class="review-result-image" :src="selectedReviewImageUrl || submissionReviewImageUrl || ''" alt="批改后照片" />
+      <div v-if="selectedReviewPhotos.length > 1" class="review-photo-navigation">
+        <el-button class="review-page-button" :disabled="!canViewPreviousReviewedPhoto" @click="switchReviewedPhoto(-1)"><el-icon><ArrowLeft /></el-icon>上一张</el-button>
+        <span class="review-photo-position">{{ selectedReviewPhotoIndex + 1 }} / {{ selectedReviewPhotos.length }}</span>
+        <el-button class="review-page-button" :disabled="!canViewNextReviewedPhoto" @click="switchReviewedPhoto(1)">下一张<el-icon><ArrowRight /></el-icon></el-button>
+      </div>
       <template #footer><el-button @click="reviewResultVisible = false">关闭</el-button><el-button v-if="canReReviewSubmission(detailTask)" type="success" @click="restartReview">重新批改</el-button></template>
     </el-dialog>
 
