@@ -6,6 +6,7 @@ import { ArrowUpRight, Pencil, Play, Smile, Square, Type, Undo2, ZoomIn, ZoomOut
 import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChildren, getTaskCalendar, getTaskSubmission, getTasks, remindTask, repairTaskStatus, submitSubmissionAudioReview, submitSubmissionReview, trackAccessEvent, updateTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionAudio, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
+import { nextEditableOccurrence } from "../utils/task-edit";
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
@@ -101,6 +102,7 @@ const statusRepairValue = ref<"unclaimed" | "claimed" | "completed">("unclaimed"
 const statusRepairing = ref(false);
 const editingTaskId = ref("");
 const editingTaskDate = ref("");
+const editingHistoricalTask = ref(false);
 const editScope = ref<"single" | "future">("future");
 const saving = ref(false);
 const filters = reactive({ childId: "" });
@@ -246,6 +248,7 @@ function selectQuickMember(childId: string) {
 function openCreate() {
   editingTaskId.value = "";
   editingTaskDate.value = "";
+  editingHistoricalTask.value = false;
   Object.assign(form, {
     childIds: children.value.map((child) => child.id),
     title: "",
@@ -265,17 +268,21 @@ function openCreate() {
 
 function openEdit(task: Task) {
   const occurrenceDate = task.occurrenceDate || selectedDate.value;
-  if (occurrenceDate < dateKey(new Date())) {
-    ElMessage.warning("历史任务已锁定，不能编辑。请选择今天或未来任务。");
+  const today = dateKey(new Date());
+  const isHistorical = occurrenceDate < today;
+  const effectiveDate = isHistorical ? nextEditableOccurrence(task, today) : occurrenceDate;
+  if (!effectiveDate) {
+    ElMessage.warning("该历史任务已经结束，没有可编辑的后续任务。");
     return;
   }
   editingTaskId.value = task.id;
-  editingTaskDate.value = occurrenceDate;
-  editScope.value = task.repeatType === "once" ? "single" : "future";
+  editingTaskDate.value = effectiveDate;
+  editingHistoricalTask.value = isHistorical;
+  editScope.value = isHistorical || task.repeatType !== "once" ? "future" : "single";
   Object.assign(form, {
     childIds: [task.childId],
     title: task.title,
-    startDate: occurrenceDate,
+    startDate: effectiveDate,
     endDate: task.endDate,
     scheduleTime: task.scheduleTime,
     repeatType: task.repeatType,
@@ -1515,10 +1522,10 @@ onBeforeUnmount(() => {
       <el-form label-position="top">
         <el-form-item v-if="editingTaskId" label="修改范围">
           <el-radio-group v-model="editScope">
-            <el-radio value="single">仅本次（{{ editingTaskDate }}）</el-radio>
+            <el-radio v-if="!editingHistoricalTask" value="single">仅本次（{{ editingTaskDate }}）</el-radio>
             <el-radio v-if="form.repeatType !== 'once'" value="future">从 {{ editingTaskDate }} 起及以后</el-radio>
           </el-radio-group>
-          <p class="dialog-hint">历史任务会保留原内容；本次修改不会影响已完成、已提交或过去日期的任务。</p>
+          <p class="dialog-hint">{{ editingHistoricalTask ? `当前查看的是历史记录，修改将从 ${editingTaskDate} 起生效；过去任务继续保留原内容。` : "历史任务会保留原内容；本次修改不会影响已完成、已提交或过去日期的任务。" }}</p>
         </el-form-item>
         <el-form-item label="任务名称" required><el-input v-model="form.title" maxlength="40" show-word-limit placeholder="例如：完成数学作业" /></el-form-item>
         <el-form-item label="任务对象" required>
