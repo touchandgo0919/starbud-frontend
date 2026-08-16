@@ -111,13 +111,16 @@ h1, h2, h3, p { margin: 0; }
 .admin-menu > .el-menu-item, .admin-menu > .el-sub-menu > .el-sub-menu__title { padding-left: 20px !important; }
 .admin-menu .el-sub-menu__title { padding-right: 34px !important; }
 .admin-menu .el-sub-menu__icon-arrow {
-  top: 0;
+  top: 50% !important;
   right: 14px;
-  bottom: 0;
-  height: auto;
-  margin-top: 0;
+  bottom: auto;
+  /* The shared sidebar icon rule makes this icon 18px high. Center it using
+   * half of that height instead of Element Plus' default 12px offset. */
+  height: 18px !important;
+  margin-top: -9px !important;
   display: flex;
   align-items: center;
+  line-height: 1;
 }
 .admin-menu .el-sub-menu__title:hover { background: #24272d; }
 .admin-menu .el-sub-menu.is-opened > .el-sub-menu__title { color: #d9dee5; }
