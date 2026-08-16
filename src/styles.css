@@ -110,7 +110,15 @@ h1, h2, h3, p { margin: 0; }
 .admin-menu .el-menu-item, .admin-menu .el-sub-menu__title { width: calc(100% - 24px); height: 46px; margin: 4px 12px; border-radius: 8px; font-size: 14px; }
 .admin-menu > .el-menu-item, .admin-menu > .el-sub-menu > .el-sub-menu__title { padding-left: 20px !important; }
 .admin-menu .el-sub-menu__title { padding-right: 34px !important; }
-.admin-menu .el-sub-menu__icon-arrow { right: 14px; }
+.admin-menu .el-sub-menu__icon-arrow {
+  top: 0;
+  right: 14px;
+  bottom: 0;
+  height: auto;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+}
 .admin-menu .el-sub-menu__title:hover { background: #24272d; }
 .admin-menu .el-sub-menu.is-opened > .el-sub-menu__title { color: #d9dee5; }
 .admin-menu .el-menu-item > .el-icon, .admin-menu .el-sub-menu__title > .el-icon { width: 18px; height: 18px; flex: 0 0 18px; margin-right: 9px; font-size: 16px; }
