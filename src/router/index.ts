@@ -13,6 +13,7 @@ const AccessRecordsView = () => import("../views/AccessRecordsView.vue");
 const ReminderRecordsView = () => import("../views/ReminderRecordsView.vue");
 const AboutView = () => import("../views/AboutView.vue");
 const AiDesignView = () => import("../views/AiDesignView.vue");
+const RewardManagementView = () => import("../views/RewardManagementView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -69,6 +70,12 @@ const router = createRouter({
           name: "Families",
           component: FamilyManagementView,
           meta: { title: "家庭管理", description: "配置家庭及家庭成员关系", familyOnly: true }
+        },
+        {
+          path: "rewards/:tab(settings|records)?",
+          name: "Rewards",
+          component: RewardManagementView,
+          meta: { title: "积分兑换", description: "设置奖励并确认儿童的兑换申请", familyOnly: true }
         },
         {
           path: "users",

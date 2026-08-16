@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bell, DocumentChecked, HomeFilled, House, List, MagicStick, Setting, SwitchButton, UserFilled, View } from "@element-plus/icons-vue";
+import { Bell, DocumentChecked, HomeFilled, House, List, MagicStick, Setting, SwitchButton, UserFilled, View, Present } from "@element-plus/icons-vue";
 import { useAuthStore } from "../store/auth";
 import IcpRecord from "../components/IcpRecord.vue";
 
@@ -20,6 +20,7 @@ const roleLabel = computed(() => ({ admin: "系统管理员", parent: "家长", 
 const defaultOpeneds = computed(() => {
   if (route.path === "/home" && auth.user?.role !== "child") return ["home-management"];
   if (["/tasks", "/submissions", "/reminder-records"].includes(route.path)) return ["task-management"];
+  if (route.path.startsWith("/rewards")) return ["reward-management"];
   if (["/families", "/users", "/access-records"].includes(route.path)) return ["system-management"];
   return [];
 });
@@ -80,6 +81,11 @@ async function logout() {
             <el-icon><DocumentChecked /></el-icon>
             <span>提交记录</span>
           </el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu v-if="auth.user?.role !== 'child'" index="reward-management">
+          <template #title><el-icon><Present /></el-icon><span>积分兑换</span></template>
+          <el-menu-item index="/rewards/settings"><span>奖励设置</span></el-menu-item>
+          <el-menu-item index="/rewards/records"><span>兑换记录</span></el-menu-item>
         </el-sub-menu>
         <el-sub-menu v-if="auth.user?.role !== 'child'" index="system-management">
           <template #title>

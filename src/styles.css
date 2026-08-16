@@ -241,6 +241,10 @@ h1, h2, h3, p { margin: 0; }
 .weekly-growth-next li { position: relative; padding-left: 14px; color: #b7c1bd; font-size: 12px; line-height: 1.55; }
 .weekly-growth-next li::before { position: absolute; left: 0; color: #4bdb9f; content: "•"; }
 .reward-panel { margin-top: 18px; }
+.reward-management { min-height: 520px; }
+.reward-tabs { display: flex; gap: 20px; margin: 4px 0 20px; border-bottom: 1px solid #353a42; }.reward-tabs button { padding: 10px 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #9aa3ad; cursor: pointer; font-size: 14px; }.reward-tabs button.active { border-color: #10bd77; color: #54e0a3; font-weight: 700; }
+.reward-selects { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }.reward-selects .el-select { width: 170px; }.reward-selects .reward-balance { margin-left: auto; padding: 8px 14px; }
+.redemption-records { min-height: 280px; }.redemption-status { align-self: center; font-size: 12px; }.redemption-status.approved { color: #4fdb9f; }.redemption-status.rejected { color: #e27982; }
 .reward-child-select { width: 180px; margin-bottom: 14px; }
 .reward-settings { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
 .reward-settings .el-form-item { margin: 0; }

@@ -8,21 +8,15 @@ import {
   createFamily,
   deleteFamily,
   getFamilies,
-  getChildren,
-  getRewardCenter,
   removeFamilyMember,
   updateFamily,
-  updateFamilyMember,
-  updateRewardSettings,
-  createFamilyReward,
-  confirmRewardRedemption
+  updateFamilyMember
 } from "../services/api";
 import { useAuthStore } from "../store/auth";
-import type { Child, Family, FamilyMember, RewardCenter } from "../types/task";
+import type { Family, FamilyMember } from "../types/task";
 
 const auth = useAuthStore();
 const families = ref<Family[]>([]);
-const children = ref<Child[]>([]);
 const loading = ref(false);
 const createVisible = ref(false);
 const memberVisible = ref(false);
@@ -31,54 +25,16 @@ const activeFamily = ref<Family | null>(null);
 const familyForm = reactive({ name: "" });
 const memberForm = reactive({ username: "", relationship: "" });
 const childForm = reactive({ username: "", displayName: "", password: "", relationship: "孩子" });
-const rewardCenter = ref<RewardCenter | null>(null);
-const rewardFamilyId = ref("");
-const rewardChildId = ref("");
-const rewardForm = reactive({ title: "", pointCost: 10, description: "" });
-const rewardSettings = reactive({ taskPoints: 1, streakDays: 3, streakBonusPoints: 2 });
 
 async function loadFamilies() {
   loading.value = true;
   try {
-    const [familyData, childData] = await Promise.all([getFamilies(), getChildren()]);
-    families.value = familyData;
-    children.value = childData;
-    const family = families.value.find((item) => item.canManage);
-    const childMember = family?.members.find((member) => member.role === "child");
-    const child = children.value.find((item) => item.name === childMember?.displayName);
-    if (family && child) {
-      rewardFamilyId.value = family.id;
-      rewardChildId.value = child.id;
-      await loadRewards();
-    }
+    families.value = await getFamilies();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "家庭数据加载失败。");
   } finally {
     loading.value = false;
   }
-}
-
-async function loadRewards() {
-  if (!rewardChildId.value) return;
-  try {
-    rewardCenter.value = await getRewardCenter(rewardChildId.value);
-    Object.assign(rewardSettings, rewardCenter.value.settings);
-  } catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "奖励数据加载失败。"); }
-}
-
-async function saveRewardSettings() {
-  try { await updateRewardSettings(rewardFamilyId.value, rewardSettings); ElMessage.success("积分规则已保存"); await loadRewards(); }
-  catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "保存失败。"); }
-}
-
-async function addReward() {
-  try { await createFamilyReward(rewardFamilyId.value, rewardForm); Object.assign(rewardForm, { title: "", pointCost: 10, description: "" }); ElMessage.success("兑换奖励已添加"); await loadRewards(); }
-  catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "添加失败。"); }
-}
-
-async function handleRedemption(id: string, approved: boolean) {
-  try { await confirmRewardRedemption(id, approved); ElMessage.success(approved ? "已确认兑换，积分已扣除" : "已拒绝兑换申请"); await loadRewards(); }
-  catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "处理失败。"); }
 }
 
 async function submitFamily() {
@@ -217,32 +173,6 @@ onMounted(loadFamilies);
           </div>
         </article>
         <div v-if="!families.length && !loading" class="empty-state">暂无家庭，点击右上角创建第一个家庭。</div>
-      </div>
-    </section>
-
-    <section v-if="families.some((family) => family.canManage)" class="content-panel reward-panel">
-      <div class="panel-heading"><div><h2>星芽奖励</h2><p>任务完成自动积累积分；连续完成额外奖励，兑换由家长确认。</p></div></div>
-      <el-select v-if="children.length > 1" v-model="rewardChildId" class="reward-child-select" @change="loadRewards">
-        <el-option v-for="child in children" :key="child.id" :label="`${child.name} 的积分`" :value="child.id" />
-      </el-select>
-      <el-form class="reward-settings" label-position="top" inline>
-        <el-form-item label="完成任务积分"><el-input-number v-model="rewardSettings.taskPoints" :min="1" :max="100" /></el-form-item>
-        <el-form-item label="连续完成天数"><el-input-number v-model="rewardSettings.streakDays" :min="2" :max="30" /></el-form-item>
-        <el-form-item label="连续奖励积分"><el-input-number v-model="rewardSettings.streakBonusPoints" :min="1" :max="500" /></el-form-item>
-        <el-button type="primary" @click="saveRewardSettings">保存规则</el-button>
-      </el-form>
-      <div class="reward-grid">
-        <div class="reward-box">
-          <h3>添加可兑换奖励</h3>
-          <el-input v-model="rewardForm.title" placeholder="例如：周末电影" maxlength="40" />
-          <div class="reward-form-line"><el-input-number v-model="rewardForm.pointCost" :min="1" /><el-input v-model="rewardForm.description" placeholder="例如：周六晚一起看电影" maxlength="120" /></div>
-          <el-button type="primary" @click="addReward">添加奖励</el-button>
-          <div class="reward-list"><div v-for="reward in rewardCenter?.rewards" :key="reward.id"><div><strong>{{ reward.title }}</strong><small>{{ reward.description || "家长自定义奖励" }}</small></div><span>{{ reward.pointCost }} 星芽积分</span></div><span v-if="!rewardCenter?.rewards.length" class="muted">还没有设置兑换奖励。</span></div>
-        </div>
-        <div class="reward-box">
-          <h3>孩子积分与兑换申请</h3><div class="reward-balance"><strong>{{ rewardCenter?.balance || 0 }}</strong><span>当前星芽积分</span></div>
-          <div class="redemption-list"><div v-for="item in rewardCenter?.redemptions" :key="item.id"><div><strong>{{ item.childName }} · {{ item.title }}</strong><span>{{ item.pointCost }} 分 · {{ item.status === "pending" ? "等待家长确认" : item.status === "approved" ? "已确认兑换" : "已拒绝" }}</span></div><div v-if="item.status === 'pending'" class="row-actions"><el-button type="primary" size="small" @click="handleRedemption(item.id, true)">确认兑换</el-button><el-button size="small" @click="handleRedemption(item.id, false)">拒绝</el-button></div></div><span v-if="!rewardCenter?.redemptions.length" class="muted">暂无兑换申请。</span></div>
-        </div>
       </div>
     </section>
 
