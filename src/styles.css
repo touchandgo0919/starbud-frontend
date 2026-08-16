@@ -265,7 +265,7 @@ h1, h2, h3, p { margin: 0; }
 .reward-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .reward-box { padding: 18px; border: 1px solid #353a42; border-radius: 10px; background: #22262c; }
 .reward-box h3 { margin: 0 0 14px; font-size: 15px; }
-.reward-form-line { display: flex; gap: 8px; margin: 8px 0; }.reward-form-line .el-input { flex: 1; }
+.reward-form-line { display: flex; gap: 8px; margin: 8px 0; }.reward-form-line .el-input { flex: 1; }.reward-form-actions, .reward-item-actions { display: flex; align-items: center; gap: 8px; }.reward-item-actions { flex: 0 0 auto; }.reward-list .reward-item-actions > span { color: #54e0a3; font-size: 18px; font-weight: 800; white-space: nowrap; }.reward-list-action { padding: 0; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 700; line-height: 1.4; cursor: pointer; }.reward-list-action--edit { color: #22c985; }.reward-list-action--delete { color: #ee6670; }.reward-list-action:hover { filter: brightness(1.16); text-decoration: underline; text-underline-offset: 3px; }
 .reward-list, .redemption-list { display: grid; gap: 8px; margin-top: 14px; }
 .reward-list > div, .redemption-list > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px; border-radius: 7px; background: #17191d; }
 .reward-list strong, .redemption-list strong { display: block; }.reward-list span, .redemption-list span, .reward-list small { display: block; color: #929aa5; font-size: 12px; }

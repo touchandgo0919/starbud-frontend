@@ -249,6 +249,14 @@ export async function createFamilyReward(familyId: string, input: { title: strin
   await request("/api/rewards/catalog", { method: "POST", body: JSON.stringify({ familyId, ...input }) });
 }
 
+export async function updateFamilyReward(id: string, familyId: string, input: { title: string; pointCost: number; description: string }) {
+  await request(`/api/rewards/catalog/${id}`, { method: "PATCH", body: JSON.stringify({ familyId, ...input }) });
+}
+
+export async function deleteFamilyReward(id: string, familyId: string) {
+  await request(`/api/rewards/catalog/${id}?familyId=${encodeURIComponent(familyId)}`, { method: "DELETE" });
+}
+
 export async function confirmRewardRedemption(id: string, approved: boolean) {
   await request(`/api/rewards/redemptions/${id}/confirm`, { method: "POST", body: JSON.stringify({ approved }) });
 }
