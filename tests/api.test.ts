@@ -134,6 +134,28 @@ describe("web API client", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ taskDate: "2026-08-14", reminderType: "revision" });
   });
 
+  it("saves the family same-day completion reward rule", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ updated: true }));
+    const api = await import("../src/services/api");
+
+    await api.updateRewardSettings("family-1", {
+      taskPoints: 2,
+      streakDays: 3,
+      streakBonusPoints: 5,
+      sameDayCompletionRequired: true
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/api\/rewards\/settings$/);
+    expect(JSON.parse(String(init?.body))).toEqual({
+      familyId: "family-1",
+      taskPoints: 2,
+      streakDays: 3,
+      streakBonusPoints: 5,
+      sameDayCompletionRequired: true
+    });
+  });
+
   it("surfaces backend error messages and keeps analytics non-blocking", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ error: "账号无权限" }, 403))

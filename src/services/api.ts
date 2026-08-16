@@ -241,7 +241,7 @@ export async function getRewardBalances() {
   return (await request<{ balances: Array<{ childId: string; balance: number }> }>("/api/rewards/balances")).balances;
 }
 
-export async function updateRewardSettings(familyId: string, input: { taskPoints: number; streakDays: number; streakBonusPoints: number }) {
+export async function updateRewardSettings(familyId: string, input: { taskPoints: number; streakDays: number; streakBonusPoints: number; sameDayCompletionRequired: boolean }) {
   await request("/api/rewards/settings", { method: "PUT", body: JSON.stringify({ familyId, ...input }) });
 }
 
