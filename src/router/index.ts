@@ -14,6 +14,7 @@ const ReminderRecordsView = () => import("../views/ReminderRecordsView.vue");
 const AboutView = () => import("../views/AboutView.vue");
 const AiDesignView = () => import("../views/AiDesignView.vue");
 const RewardManagementView = () => import("../views/RewardManagementView.vue");
+const RubiksView = () => import("../views/RubiksView.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -35,6 +36,12 @@ const router = createRouter({
       name: "AiDesign",
       component: AiDesignView,
       meta: { public: true, title: "AI 产品与系统设计" }
+    },
+    {
+      path: "/rubiks",
+      name: "Rubiks",
+      component: RubiksView,
+      meta: { public: true, title: "二阶魔方万能公式" }
     },
     {
       path: "/",
