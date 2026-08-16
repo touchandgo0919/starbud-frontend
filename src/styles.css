@@ -393,6 +393,12 @@ h1, h2, h3, p { margin: 0; }
 .task-quick-switch-progress { grid-column: 1 / -1; display: block; width: 100%; height: 6px; overflow: hidden; border-radius: 999px; background: #3a3a3a; }
 .task-quick-switch-progress i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
 .filter-grid { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(130px, 1fr)) auto; gap: 14px; align-items: end; }
+
+/* Member filter counts stay neutral when a member is selected; only the pill itself is active. */
+.task-quick-switch-item b,
+.reward-child-switch-item b { user-select: none; }
+.task-quick-switch-item.is-active b,
+.reward-child-switch-item.is-active b { background: transparent; color: #aeb5be; }
 .submission-filter-grid { grid-template-columns: minmax(240px, 1.4fr) auto; }
 .reminder-filter-grid { grid-template-columns: repeat(3, minmax(130px, .75fr)) minmax(310px, 1.5fr) auto; align-items: center; }
 .reminder-filter-grid .el-select, .reminder-filter-grid .el-date-editor { width: 100%; }
