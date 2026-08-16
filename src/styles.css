@@ -115,6 +115,10 @@ h1, h2, h3, p { margin: 0; }
 .admin-menu .el-sub-menu.is-opened > .el-sub-menu__title { color: #d9dee5; }
 .admin-menu .el-menu-item > .el-icon, .admin-menu .el-sub-menu__title > .el-icon { width: 18px; height: 18px; flex: 0 0 18px; margin-right: 9px; font-size: 16px; }
 .admin-menu .el-sub-menu > .el-menu { width: 100%; }
+/* Keep sibling menu groups stationary when a sub-menu is toggled. */
+.admin-menu .collapse-transition,
+.admin-menu .el-collapse-transition-enter-active,
+.admin-menu .el-collapse-transition-leave-active { transition: none !important; }
 .admin-menu .el-sub-menu .el-menu-item { min-width: 0; margin-block: 2px; padding-right: 14px !important; padding-left: 32px !important; }
 .admin-menu .el-menu-item > span, .admin-menu .el-sub-menu__title > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .admin-menu .el-menu-item.is-active { background: rgba(0, 185, 107, .15); }
