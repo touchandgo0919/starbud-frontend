@@ -399,6 +399,13 @@ h1, h2, h3, p { margin: 0; }
 .reward-child-switch-item b { user-select: none; }
 .task-quick-switch-item.is-active b,
 .reward-child-switch-item.is-active b { background: transparent; color: #aeb5be; }
+
+/* Keep task-list text as legible as the point-earning records. */
+.table-panel .data-table td.el-table__cell { font-size: 14px; }
+.table-panel .data-table .task-title-link { font-size: 15px; }
+.table-panel .data-table .status-dot { font-size: 13px; }
+.table-panel .mobile-card-head h3 { font-size: 15px; }
+.table-panel .mobile-data-card > p { font-size: 13px; }
 .submission-filter-grid { grid-template-columns: minmax(240px, 1.4fr) auto; }
 .reminder-filter-grid { grid-template-columns: repeat(3, minmax(130px, .75fr)) minmax(310px, 1.5fr) auto; align-items: center; }
 .reminder-filter-grid .el-select, .reminder-filter-grid .el-date-editor { width: 100%; }
