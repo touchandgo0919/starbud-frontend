@@ -111,7 +111,7 @@ h1, h2, h3, p { margin: 0; }
 .admin-menu > .el-menu-item, .admin-menu > .el-sub-menu > .el-sub-menu__title { padding-left: 20px !important; }
 .admin-menu .el-sub-menu__title { padding-right: 34px !important; }
 .admin-menu .el-sub-menu__icon-arrow {
-  top: 50% !important;
+  top: calc(50% - 1px) !important;
   right: 14px;
   bottom: auto;
   /* The shared sidebar icon rule makes this icon 18px high. Center it using
