@@ -19,15 +19,15 @@ const editingRewardId = ref("");
 const activeTab = computed(() => route.path.endsWith("/records") ? "records" : "settings");
 const recordTab = ref<"earned" | "redemptions">("earned");
 const rulesSaved = ref(false);
-const recordFilters = reactive({ keyword: "", timeRange: [] as string[] });
-const appliedRecordFilters = reactive({ keyword: "", timeRange: [] as string[] });
+const recordFilters = reactive({ timeRange: [] as string[] });
+const appliedRecordFilters = reactive({ timeRange: [] as string[] });
 const rewardPage = ref(1);
 const earnedPage = ref(1);
 const redemptionPage = ref(1);
 const rewardPageSize = 10;
 const currentFamilyName = computed(() => families.value.find((family) => family.id === selectedFamilyId.value)?.name || "当前家庭");
-const earnedEntries = computed(() => (center.value?.entries || []).filter((entry) => entry.points > 0 && recordMatches(entry.description, entry.createdAt)));
-const visibleRedemptions = computed(() => (center.value?.redemptions || []).filter((item) => recordMatches(`${item.title} ${item.note} ${item.childName}`, item.requestedAt)));
+const earnedEntries = computed(() => (center.value?.entries || []).filter((entry) => entry.points > 0 && recordMatches(entry.createdAt)));
+const visibleRedemptions = computed(() => (center.value?.redemptions || []).filter((item) => recordMatches(item.requestedAt)));
 const pagedRewards = computed(() => (center.value?.rewards || []).slice((rewardPage.value - 1) * rewardPageSize, rewardPage.value * rewardPageSize));
 const pagedEarnedEntries = computed(() => earnedEntries.value.slice((earnedPage.value - 1) * rewardPageSize, earnedPage.value * rewardPageSize));
 const pagedRedemptions = computed(() => visibleRedemptions.value.slice((redemptionPage.value - 1) * rewardPageSize, redemptionPage.value * rewardPageSize));
@@ -112,15 +112,14 @@ async function confirm(id: string, approved: boolean) {
   catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "处理失败。"); }
 }
 
-function recordMatches(text: string, dateTime: string) {
-  const keyword = appliedRecordFilters.keyword.trim().toLocaleLowerCase();
+function recordMatches(dateTime: string) {
   const date = dateTime.slice(0, 10);
   const [from, to] = appliedRecordFilters.timeRange;
-  return (!keyword || text.toLocaleLowerCase().includes(keyword)) && (!from || date >= from) && (!to || date <= to);
+  return (!from || date >= from) && (!to || date <= to);
 }
 
-function applyRecordFilters() { Object.assign(appliedRecordFilters, { keyword: recordFilters.keyword, timeRange: [...recordFilters.timeRange] }); earnedPage.value = 1; redemptionPage.value = 1; }
-function resetRecordFilters() { Object.assign(recordFilters, { keyword: "", timeRange: [] }); Object.assign(appliedRecordFilters, { keyword: "", timeRange: [] }); earnedPage.value = 1; redemptionPage.value = 1; }
+function applyRecordFilters() { Object.assign(appliedRecordFilters, { timeRange: [...recordFilters.timeRange] }); earnedPage.value = 1; redemptionPage.value = 1; }
+function resetRecordFilters() { Object.assign(recordFilters, { timeRange: [] }); Object.assign(appliedRecordFilters, { timeRange: [] }); earnedPage.value = 1; redemptionPage.value = 1; }
 
 watch(selectedChildId, (childId, previousChildId) => {
   earnedPage.value = 1;
@@ -150,7 +149,7 @@ onMounted(load);
         <div class="reward-record-controls"><div class="reward-child-selector"><div class="reward-child-switch-list" role="list" aria-label="选择儿童">
           <button v-for="child in children" :key="child.id" type="button" class="reward-child-switch-item" :class="{ 'is-active': selectedChildId === child.id }" role="listitem" @click="selectedChildId = child.id"><span class="reward-child-switch-name">{{ child.name }}</span><b>{{ childBalances[child.id] ?? 0 }} 分</b><span class="reward-child-switch-progress"><i :style="{ width: `${Math.min(100, ((childBalances[child.id] || 0) % 20) * 5 || 12)}%` }" /></span></button>
         </div></div>
-        <form class="record-filter-form reward-record-filter" @submit.prevent="applyRecordFilters"><el-input v-model="recordFilters.keyword" clearable placeholder="搜索积分来源或兑换奖励" aria-label="搜索积分记录" /><el-date-picker v-model="recordFilters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选积分记录时间范围" /><el-button type="primary" native-type="submit">查询</el-button><el-button @click="resetRecordFilters">重置</el-button></form></div>
+        <form class="record-filter-form reward-record-filter" @submit.prevent="applyRecordFilters"><el-date-picker v-model="recordFilters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选积分记录时间范围" /><el-button type="primary" native-type="submit">查询</el-button><el-button @click="resetRecordFilters">重置</el-button></form></div>
       </section>
       <section class="content-panel reward-management reward-record-list-card">
         <div class="record-tabs"><button :class="{ active: recordTab === 'earned' }" @click="recordTab = 'earned'">获取记录</button><button :class="{ active: recordTab === 'redemptions' }" @click="recordTab = 'redemptions'">兑换记录</button></div>

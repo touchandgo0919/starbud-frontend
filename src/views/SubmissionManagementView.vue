@@ -8,7 +8,7 @@ import type { Child, Submission } from "../types/task";
 const submissions = ref<Submission[]>([]);
 const children = ref<Child[]>([]);
 const loading = ref(false);
-const filters = reactive({ keyword: "", childId: "", timeRange: [] as string[] });
+const filters = reactive({ childId: "", timeRange: [] as string[] });
 const currentPage = ref(1);
 const pageSize = 10;
 const total = ref(0);
@@ -39,7 +39,6 @@ async function loadSubmissions(page = currentPage.value) {
     const result = await getSubmissions({
       page,
       pageSize,
-      keyword: filters.keyword.trim(),
       childId: filters.childId,
       dateFrom: filters.timeRange[0],
       dateTo: filters.timeRange[1]
@@ -68,7 +67,7 @@ function applyFilters() {
 }
 
 function resetFilters() {
-  Object.assign(filters, { keyword: "", childId: "", timeRange: [] });
+  Object.assign(filters, { childId: "", timeRange: [] });
   currentPage.value = 1;
   void loadSubmissions(1);
 }
@@ -104,7 +103,6 @@ onMounted(() => {
     <section class="content-panel filter-panel record-filter-panel">
       <form class="record-filter-form" @submit.prevent="applyFilters">
         <div class="record-child-switch-list" role="list" aria-label="选择儿童"><button type="button" class="record-child-switch-item" :class="{ 'is-active': !filters.childId }" @click="filters.childId = ''">全部</button><button v-for="child in children" :key="child.id" type="button" class="record-child-switch-item" :class="{ 'is-active': filters.childId === child.id }" @click="filters.childId = child.id">{{ child.name }}</button></div>
-        <el-input v-model="filters.keyword" clearable placeholder="搜索任务名称或提交备注" aria-label="搜索提交" />
         <el-date-picker v-model="filters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选提交时间范围" />
         <el-button type="primary" :icon="Search" native-type="submit">查询</el-button>
         <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
