@@ -302,4 +302,5 @@ export interface RewardCenter {
   settings: { taskPoints: number; streakDays: number; streakBonusPoints: number };
   rewards: Array<{ id: string; title: string; pointCost: number; description: string; active: boolean }>;
   redemptions: Array<{ id: string; title: string; pointCost: number; status: "pending" | "approved" | "rejected"; requestedAt: string; confirmedAt: string | null; note: string; childName: string }>;
+  entries: Array<{ type: "task_completed" | "streak_bonus" | "redemption"; points: number; description: string; createdAt: string }>;
 }

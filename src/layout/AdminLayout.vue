@@ -84,8 +84,8 @@ async function logout() {
         </el-sub-menu>
         <el-sub-menu v-if="auth.user?.role !== 'child'" index="reward-management">
           <template #title><el-icon><Present /></el-icon><span>积分兑换</span></template>
-          <el-menu-item index="/rewards/settings"><span>奖励设置</span></el-menu-item>
-          <el-menu-item index="/rewards/records"><span>兑换记录</span></el-menu-item>
+          <el-menu-item index="/rewards/settings"><el-icon><Present /></el-icon><span>奖励设置</span></el-menu-item>
+          <el-menu-item index="/rewards/records"><el-icon><DocumentChecked /></el-icon><span>积分记录</span></el-menu-item>
         </el-sub-menu>
         <el-sub-menu v-if="auth.user?.role !== 'child'" index="system-management">
           <template #title>

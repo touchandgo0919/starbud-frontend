@@ -75,7 +75,7 @@ const router = createRouter({
           path: "rewards/:tab(settings|records)?",
           name: "Rewards",
           component: RewardManagementView,
-          meta: { title: "积分兑换", description: "设置奖励并确认儿童的兑换申请", familyOnly: true }
+          meta: { title: "积分兑换", description: "设置奖励并查看儿童的积分记录", familyOnly: true }
         },
         {
           path: "users",
