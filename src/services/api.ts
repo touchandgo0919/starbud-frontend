@@ -12,7 +12,8 @@ import type {
   User,
   AccessEvent,
   ReminderRecord,
-  AiHomeOverview
+  AiHomeOverview,
+  RewardCenter
 } from "../types/task";
 
 const apiBaseUrls = {
@@ -228,6 +229,23 @@ export async function removeFamilyMember(familyId: string, memberId: string) {
   await request<{ removed: true }>(`/api/families/${familyId}/members/${memberId}`, {
     method: "DELETE"
   });
+}
+
+export async function getRewardCenter(childId?: string) {
+  const suffix = childId ? `?childId=${encodeURIComponent(childId)}` : "";
+  return (await request<{ center: RewardCenter }>(`/api/rewards${suffix}`)).center;
+}
+
+export async function updateRewardSettings(familyId: string, input: { taskPoints: number; streakDays: number; streakBonusPoints: number }) {
+  await request("/api/rewards/settings", { method: "PUT", body: JSON.stringify({ familyId, ...input }) });
+}
+
+export async function createFamilyReward(familyId: string, input: { title: string; pointCost: number; description: string }) {
+  await request("/api/rewards/catalog", { method: "POST", body: JSON.stringify({ familyId, ...input }) });
+}
+
+export async function confirmRewardRedemption(id: string, approved: boolean) {
+  await request(`/api/rewards/redemptions/${id}/confirm`, { method: "POST", body: JSON.stringify({ approved }) });
 }
 
 export async function getTodayTasks(childId?: string) {

@@ -251,6 +251,15 @@ export interface AiHomeOverview {
     averageClaimDelayMinutes: number | null;
     revisionRate: number | null;
   };
+  weeklyReport: {
+    completedTasks: number;
+    totalTasks: number;
+    completionStreakDays: number;
+    reviewedTasks: number;
+    pendingReviewTasks: number;
+    needsRevisionTasks: number;
+    nextWeekSuggestions: string[];
+  };
   trend: Array<{ date: string; completed: number; total: number }>;
   insights: AiOverviewInsight[];
   learningIssues: LearningIssueOverview;
@@ -285,4 +294,12 @@ export interface Family {
   canDelete: boolean;
   members: FamilyMember[];
   createdAt: string;
+}
+
+export interface RewardCenter {
+  childId: string;
+  balance: number;
+  settings: { taskPoints: number; streakDays: number; streakBonusPoints: number };
+  rewards: Array<{ id: string; title: string; pointCost: number; description: string; active: boolean }>;
+  redemptions: Array<{ id: string; title: string; pointCost: number; status: "pending" | "approved" | "rejected"; requestedAt: string; confirmedAt: string | null; note: string; childName: string }>;
 }

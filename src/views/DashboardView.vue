@@ -34,7 +34,7 @@ const trendPeriod = ref<TrendPeriod>("week");
 const aiOverview = ref<AiHomeOverview | null>(null);
 const aiLoading = ref(false);
 const aiError = ref("");
-const aiPeriod = ref<7 | 28>(28);
+const aiPeriod = ref<7 | 28>(7);
 const evidenceInsight = ref<AiOverviewInsight | null>(null);
 const trialInsight = ref<AiOverviewInsight | null>(null);
 
@@ -361,6 +361,23 @@ onMounted(load);
           </div>
           <div class="ai-confidence"><strong>{{ confidenceLabel }}</strong><span>更新于 {{ formatGeneratedAt(displayedAiGeneratedAt) }}</span></div>
         </div>
+
+        <section v-if="aiPeriod === 7" class="weekly-growth-report" aria-label="本周成长报告">
+          <div class="weekly-growth-heading">
+            <div><span>本周成长报告</span><strong>{{ aiOverview.scope.childName }} · {{ aiOverview.period.from.slice(5).replace('-', '月') }}日—{{ aiOverview.period.to.slice(5).replace('-', '月') }}日</strong></div>
+            <small>基于任务、提交和批改记录自动生成</small>
+          </div>
+          <div class="weekly-growth-metrics">
+            <div><span>任务完成</span><strong>{{ aiOverview.weeklyReport.completedTasks }}/{{ aiOverview.weeklyReport.totalTasks }}</strong><small>{{ aiOverview.metrics.completionRate }}% 完成率</small></div>
+            <div><span>连续达成</span><strong>{{ aiOverview.weeklyReport.completionStreakDays }} 天</strong><small>按有安排任务的日期统计</small></div>
+            <div><span>已批改</span><strong>{{ aiOverview.weeklyReport.reviewedTasks }} 项</strong><small>家长已给出反馈</small></div>
+            <div><span>待处理</span><strong>{{ aiOverview.weeklyReport.pendingReviewTasks + aiOverview.weeklyReport.needsRevisionTasks }} 项</strong><small>{{ aiOverview.weeklyReport.pendingReviewTasks }} 项待批改 · {{ aiOverview.weeklyReport.needsRevisionTasks }} 项待修改</small></div>
+          </div>
+          <div class="weekly-growth-next">
+            <div><span>下周建议</span><strong>一次只调整一个习惯</strong></div>
+            <ul><li v-for="suggestion in aiOverview.weeklyReport.nextWeekSuggestions" :key="suggestion">{{ suggestion }}</li></ul>
+          </div>
+        </section>
 
         <div class="ai-metric-strip" aria-label="成长观察关键指标">
           <div><span>周期任务</span><strong>{{ aiOverview.metrics.totalTasks }}</strong><small>实际计划任务</small></div>
