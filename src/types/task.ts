@@ -238,7 +238,7 @@ export interface LearningIssueOverview {
 export interface AiHomeOverview {
   generatedAt: string;
   analysisMode: "deterministic";
-  period: { days: 7 | 28; from: string; to: string };
+  period: { days: number; from: string; to: string };
   scope: { childId: string | null; childName: string };
   dataStatus: "ready" | "insufficient";
   confidence: "high" | "medium" | "low";

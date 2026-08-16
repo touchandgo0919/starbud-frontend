@@ -8,6 +8,7 @@ import TaskTrendChart from "../components/TaskTrendChart.vue";
 import type { AiHomeOverview, AiOverviewInsight, Child, Family, LearningIssueOverview, ManagedUser, Task } from "../types/task";
 
 type TrendPeriod = "week" | "month";
+type AiPeriod = "currentWeek" | "previousWeek" | "month" | "custom";
 type DashboardSection = "today" | "insights";
 
 interface TrendPoint {
@@ -34,7 +35,8 @@ const trendPeriod = ref<TrendPeriod>("week");
 const aiOverview = ref<AiHomeOverview | null>(null);
 const aiLoading = ref(false);
 const aiError = ref("");
-const aiPeriod = ref<7 | 28>(7);
+const aiPeriod = ref<AiPeriod>("currentWeek");
+const aiCustomRange = ref<[string, string] | null>(null);
 const evidenceInsight = ref<AiOverviewInsight | null>(null);
 const trialInsight = ref<AiOverviewInsight | null>(null);
 
@@ -95,6 +97,16 @@ const learningIssueOverview = computed(() => aiOverview.value?.learningIssues ||
 const dashboardSection = computed<DashboardSection>(() =>
   route.query.view === "insights" && auth.user?.role !== "child" ? "insights" : "today"
 );
+const aiPeriodRange = computed(() => {
+  const today = parseDateKey(todayDate);
+  if (aiPeriod.value === "custom" && aiCustomRange.value) return { from: aiCustomRange.value[0], to: aiCustomRange.value[1] };
+  if (aiPeriod.value === "month") return { from: dateKey(new Date(today.getFullYear(), today.getMonth(), 1)), to: dateKey(new Date(today.getFullYear(), today.getMonth() + 1, 0)) };
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay() - (aiPeriod.value === "previousWeek" ? 7 : 0));
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  return { from: dateKey(sunday), to: dateKey(saturday) };
+});
 
 function isCompleted(task: Task) {
   // 已完成的任务再次补交照片，仍按已完成统计；本轮批改状态单独展示。
@@ -178,7 +190,8 @@ async function loadAiOverview() {
   try {
     aiOverview.value = await getAiHomeOverview({
       childId: selectedChildId.value || undefined,
-      days: aiPeriod.value
+      from: aiPeriodRange.value.from,
+      to: aiPeriodRange.value.to
     });
   } catch (cause) {
     aiError.value = cause instanceof Error ? cause.message : "成长观察加载失败。";
@@ -230,10 +243,15 @@ function selectChild(childId: string) {
   load({ preserveLoading: true });
 }
 
-function updateAiPeriod(period: 7 | 28) {
+function updateAiPeriod(period: AiPeriod) {
   if (aiPeriod.value === period) return;
   aiPeriod.value = period;
-  loadAiOverview();
+  if (period !== "custom" || aiCustomRange.value) loadAiOverview();
+}
+
+function updateAiCustomRange(value: [string, string] | null) {
+  aiCustomRange.value = value;
+  if (value) loadAiOverview();
 }
 
 function selectDashboardSection(section: DashboardSection) {
@@ -344,9 +362,12 @@ onMounted(load);
         </div>
         <div class="ai-heading-actions">
           <div class="trend-period-switch" aria-label="AI 分析周期">
-            <button :class="{ 'is-active': aiPeriod === 7 }" type="button" @click="updateAiPeriod(7)">近 7 天</button>
-            <button :class="{ 'is-active': aiPeriod === 28 }" type="button" @click="updateAiPeriod(28)">近 28 天</button>
+            <button :class="{ 'is-active': aiPeriod === 'currentWeek' }" type="button" @click="updateAiPeriod('currentWeek')">本周</button>
+            <button :class="{ 'is-active': aiPeriod === 'previousWeek' }" type="button" @click="updateAiPeriod('previousWeek')">上周</button>
+            <button :class="{ 'is-active': aiPeriod === 'month' }" type="button" @click="updateAiPeriod('month')">本月</button>
+            <button :class="{ 'is-active': aiPeriod === 'custom' }" type="button" @click="updateAiPeriod('custom')">自定义</button>
           </div>
+          <el-date-picker v-if="aiPeriod === 'custom'" v-model="aiCustomRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" @change="updateAiCustomRange" />
           <el-button plain :loading="aiLoading" aria-label="刷新成长观察" @click="loadAiOverview"><el-icon><Refresh /></el-icon>刷新</el-button>
         </div>
       </div>
@@ -362,7 +383,7 @@ onMounted(load);
           <div class="ai-confidence"><strong>{{ confidenceLabel }}</strong><span>更新于 {{ formatGeneratedAt(displayedAiGeneratedAt) }}</span></div>
         </div>
 
-        <section v-if="aiPeriod === 7" class="weekly-growth-report" aria-label="本周成长报告">
+        <section v-if="aiOverview.period.days === 7" class="weekly-growth-report" aria-label="本周成长报告">
           <div class="weekly-growth-heading">
             <div><span>本周成长报告</span><strong>{{ aiOverview.scope.childName }} · {{ aiOverview.period.from.slice(5).replace('-', '月') }}日—{{ aiOverview.period.to.slice(5).replace('-', '月') }}日</strong></div>
             <small>基于任务、提交和批改记录自动生成</small>

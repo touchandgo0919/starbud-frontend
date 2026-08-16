@@ -267,10 +267,13 @@ export async function getTodayTasks(childId?: string) {
   return body.tasks;
 }
 
-export async function getAiHomeOverview(options: { childId?: string; days?: 7 | 28 } = {}) {
+export async function getAiHomeOverview(options: { childId?: string; days?: number; from?: string; to?: string } = {}) {
   const query = new URLSearchParams();
   if (options.childId) query.set("childId", options.childId);
-  query.set("days", String(options.days || 28));
+  if (options.from && options.to) {
+    query.set("from", options.from);
+    query.set("to", options.to);
+  } else query.set("days", String(options.days || 7));
   const body = await request<{ overview: AiHomeOverview }>(`/api/ai/home-overview?${query.toString()}`);
   return body.overview;
 }
