@@ -9,7 +9,7 @@ const loading = ref(false);
 const total = ref(0);
 const filters = reactive({ clientType: "", userName: "", timeRange: [] as string[] });
 const currentPage = ref(1);
-const pageSize = 50;
+const pageSize = 10;
 const eventLabels: Record<string, string> = {
   login_succeeded: "登录成功", login_attempt: "登录失败", logout: "退出登录", parent_registered: "注册家长账号",
   task_searched: "搜索任务", task_detail_viewed: "查看任务详情", task_claimed: "领取任务", task_completed: "完成任务",

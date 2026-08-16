@@ -113,6 +113,7 @@ export async function getReminderRecords(filters: {
   childId?: string;
   reminderType?: string;
   status?: string;
+  keyword?: string;
   from?: string;
   to?: string;
   page?: number;
@@ -236,6 +237,10 @@ export async function getRewardCenter(childId?: string) {
   return (await request<{ center: RewardCenter }>(`/api/rewards${suffix}`)).center;
 }
 
+export async function getRewardBalances() {
+  return (await request<{ balances: Array<{ childId: string; balance: number }> }>("/api/rewards/balances")).balances;
+}
+
 export async function updateRewardSettings(familyId: string, input: { taskPoints: number; streakDays: number; streakBonusPoints: number }) {
   await request("/api/rewards/settings", { method: "PUT", body: JSON.stringify({ familyId, ...input }) });
 }
@@ -349,6 +354,8 @@ export async function getSubmissions(options: {
   childId?: string;
   status?: string;
   reviewStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
 } = {}) {
   const query = new URLSearchParams();
   Object.entries(options).forEach(([key, value]) => {

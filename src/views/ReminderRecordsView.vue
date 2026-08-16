@@ -9,8 +9,8 @@ const children = ref<Child[]>([]);
 const loading = ref(false);
 const total = ref(0);
 const currentPage = ref(1);
-const pageSize = 20;
-const filters = reactive({ childId: "", reminderType: "", status: "", timeRange: [] as string[] });
+const pageSize = 10;
+const filters = reactive({ childId: "", keyword: "", timeRange: [] as string[] });
 
 const typeLabels: Record<string, string> = {
   claim_reminder: "领取提醒",
@@ -32,8 +32,7 @@ async function loadRecords(page = currentPage.value) {
     const [from, to] = filters.timeRange;
     const result = await getReminderRecords({
       childId: filters.childId,
-      reminderType: filters.reminderType,
-      status: filters.status,
+      keyword: filters.keyword.trim(),
       from,
       to,
       page,
@@ -47,7 +46,7 @@ async function loadRecords(page = currentPage.value) {
 }
 
 function resetFilters() {
-  Object.assign(filters, { childId: "", reminderType: "", status: "", timeRange: [] });
+  Object.assign(filters, { childId: "", keyword: "", timeRange: [] });
   void loadRecords(1);
 }
 
@@ -78,13 +77,12 @@ onMounted(async () => {
 
 <template>
   <div class="page-stack">
-    <section class="content-panel filter-panel">
-      <form class="filter-grid reminder-filter-grid" @submit.prevent="loadRecords(1)">
-        <el-select v-model="filters.childId" clearable placeholder="全部儿童" aria-label="筛选提醒对象"><el-option v-for="child in children" :key="child.id" :label="child.name" :value="child.id" /></el-select>
-        <el-select v-model="filters.reminderType" clearable placeholder="全部类型" aria-label="筛选提醒类型"><el-option v-for="(label, value) in typeLabels" :key="value" :label="label" :value="value" /></el-select>
-        <el-select v-model="filters.status" clearable placeholder="全部状态" aria-label="筛选执行状态"><el-option label="提醒成功" value="success" /><el-option label="提醒失败" value="failed" /><el-option label="设备离线" value="offline" /><el-option label="等待处理" value="pending" /></el-select>
-        <el-date-picker v-model="filters.timeRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" aria-label="筛选提醒时间范围" />
-        <div class="filter-actions"><el-button :icon="Refresh" @click="resetFilters">重置</el-button><el-button type="primary" :icon="Search" native-type="submit">查询</el-button></div>
+    <section class="content-panel filter-panel record-filter-panel">
+      <form class="record-filter-form" @submit.prevent="loadRecords(1)">
+        <div class="record-child-switch-list" role="list" aria-label="选择儿童"><button type="button" class="record-child-switch-item" :class="{ 'is-active': !filters.childId }" @click="filters.childId = ''">全部</button><button v-for="child in children" :key="child.id" type="button" class="record-child-switch-item" :class="{ 'is-active': filters.childId === child.id }" @click="filters.childId = child.id">{{ child.name }}</button></div>
+        <el-input v-model="filters.keyword" clearable placeholder="搜索提醒标题或内容" aria-label="搜索提醒" />
+        <el-date-picker v-model="filters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选提醒时间范围" />
+        <el-button type="primary" :icon="Search" native-type="submit">查询</el-button><el-button :icon="Refresh" @click="resetFilters">重置</el-button>
       </form>
     </section>
 

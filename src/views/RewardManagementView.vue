@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { confirmRewardRedemption, createFamilyReward, getChildren, getFamilies, getRewardCenter, updateRewardSettings } from "../services/api";
+import { confirmRewardRedemption, createFamilyReward, getChildren, getFamilies, getRewardBalances, getRewardCenter, updateRewardSettings } from "../services/api";
 import type { Child, Family, RewardCenter } from "../types/task";
 
 const route = useRoute();
@@ -18,6 +18,19 @@ const rewardForm = reactive({ title: "", pointCost: 10, description: "" });
 const activeTab = computed(() => route.path.endsWith("/records") ? "records" : "settings");
 const recordTab = ref<"earned" | "redemptions">("earned");
 const rulesSaved = ref(false);
+const recordFilters = reactive({ keyword: "", timeRange: [] as string[] });
+const appliedRecordFilters = reactive({ keyword: "", timeRange: [] as string[] });
+const rewardPage = ref(1);
+const earnedPage = ref(1);
+const redemptionPage = ref(1);
+const rewardPageSize = 10;
+const currentFamilyName = computed(() => families.value.find((family) => family.id === selectedFamilyId.value)?.name || "当前家庭");
+const earnedEntries = computed(() => (center.value?.entries || []).filter((entry) => entry.points > 0 && recordMatches(entry.description, entry.createdAt)));
+const visibleRedemptions = computed(() => (center.value?.redemptions || []).filter((item) => recordMatches(`${item.title} ${item.note} ${item.childName}`, item.requestedAt)));
+const pagedRewards = computed(() => (center.value?.rewards || []).slice((rewardPage.value - 1) * rewardPageSize, rewardPage.value * rewardPageSize));
+const pagedEarnedEntries = computed(() => earnedEntries.value.slice((earnedPage.value - 1) * rewardPageSize, earnedPage.value * rewardPageSize));
+const pagedRedemptions = computed(() => visibleRedemptions.value.slice((redemptionPage.value - 1) * rewardPageSize, redemptionPage.value * rewardPageSize));
+let centerRequestId = 0;
 
 async function load() {
   loading.value = true;
@@ -27,17 +40,26 @@ async function load() {
     children.value = childData;
     if (!selectedFamilyId.value) selectedFamilyId.value = families.value[0]?.id || "";
     if (!selectedChildId.value) selectedChildId.value = children.value[0]?.id || "";
-    const centers = await Promise.all(children.value.map(async (child) => [child.id, await getRewardCenter(child.id)] as const));
-    childBalances.value = Object.fromEntries(centers.map(([childId, childCenter]) => [childId, childCenter.balance]));
-    await loadCenter();
+    const [balances, selectedCenter] = await Promise.all([
+      getRewardBalances(),
+      selectedChildId.value ? getRewardCenter(selectedChildId.value) : Promise.resolve(null)
+    ]);
+    childBalances.value = Object.fromEntries(balances.map((item) => [item.childId, item.balance]));
+    if (selectedCenter) {
+      center.value = selectedCenter;
+      Object.assign(settings, selectedCenter.settings);
+    }
   } catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "积分数据加载失败。"); }
   finally { loading.value = false; }
 }
 
 async function loadCenter() {
   if (!selectedChildId.value) return;
-  center.value = await getRewardCenter(selectedChildId.value);
-  Object.assign(settings, center.value.settings);
+  const requestId = ++centerRequestId;
+  const nextCenter = await getRewardCenter(selectedChildId.value);
+  if (requestId !== centerRequestId) return;
+  center.value = nextCenter;
+  Object.assign(settings, nextCenter.settings);
 }
 
 async function saveSettings() {
@@ -61,27 +83,45 @@ async function confirm(id: string, approved: boolean) {
   catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "处理失败。"); }
 }
 
-watch(selectedChildId, () => loadCenter());
+function recordMatches(text: string, dateTime: string) {
+  const keyword = appliedRecordFilters.keyword.trim().toLocaleLowerCase();
+  const date = dateTime.slice(0, 10);
+  const [from, to] = appliedRecordFilters.timeRange;
+  return (!keyword || text.toLocaleLowerCase().includes(keyword)) && (!from || date >= from) && (!to || date <= to);
+}
+
+function applyRecordFilters() { Object.assign(appliedRecordFilters, { keyword: recordFilters.keyword, timeRange: [...recordFilters.timeRange] }); earnedPage.value = 1; redemptionPage.value = 1; }
+function resetRecordFilters() { Object.assign(recordFilters, { keyword: "", timeRange: [] }); Object.assign(appliedRecordFilters, { keyword: "", timeRange: [] }); earnedPage.value = 1; redemptionPage.value = 1; }
+
+watch(selectedChildId, (childId, previousChildId) => {
+  earnedPage.value = 1;
+  redemptionPage.value = 1;
+  if (childId && previousChildId) void loadCenter();
+});
 onMounted(load);
 </script>
 
 <template>
   <div class="page-stack" v-loading="loading">
-    <section class="content-panel reward-management">
-      <div class="panel-heading"><div><h2>{{ activeTab === "settings" ? "奖励设置" : "积分记录" }}</h2><p>{{ activeTab === "settings" ? "设置完成任务积分、连续奖励及可兑换的生活小奖励。" : "查看每次积分获取来源和儿童的兑换申请。" }}</p></div></div>
-      <div class="reward-child-selector"><div class="reward-child-selector-copy"><strong>选择儿童</strong><span>{{ activeTab === "records" ? "查看该儿童的获取与兑换记录" : "查看并设置该儿童所在家庭的奖励规则" }}</span></div><div class="reward-child-switch-list" role="list" aria-label="选择儿童">
-        <button v-for="child in children" :key="child.id" type="button" class="reward-child-switch-item" :class="{ 'is-active': selectedChildId === child.id }" role="listitem" @click="selectedChildId = child.id"><span class="reward-child-switch-name">{{ child.name }}</span><b>{{ childBalances[child.id] ?? 0 }} 分</b><span class="reward-child-switch-progress"><i :style="{ width: `${Math.min(100, ((childBalances[child.id] || 0) % 20) * 5 || 12)}%` }" /></span></button>
-      </div></div>
-
-      <template v-if="activeTab === 'settings'">
+    <template v-if="activeTab === 'settings'">
+      <section class="content-panel reward-management">
+        <div class="reward-family-scope"><span>家庭共享规则</span><strong>{{ currentFamilyName }} · 全部儿童</strong><p>积分规则和可兑换奖励由家长统一设置；每位儿童的积分余额与兑换记录独立计算。</p></div>
         <section class="reward-rule-panel"><div><h3>积分规则</h3><p>规则按家庭生效，儿童完成任务后自动记入积分。</p><span v-if="rulesSaved" class="rules-saved">✓ 规则已保存</span></div><el-form class="reward-settings" label-position="top" inline><el-form-item label="完成任务积分"><el-input-number v-model="settings.taskPoints" :min="1" :max="100" /></el-form-item><el-form-item label="连续完成天数"><el-input-number v-model="settings.streakDays" :min="2" :max="30" /></el-form-item><el-form-item label="连续奖励积分"><el-input-number v-model="settings.streakBonusPoints" :min="1" :max="500" /></el-form-item><el-button type="primary" @click="saveSettings">{{ rulesSaved ? "已保存" : "保存规则" }}</el-button></el-form></section>
-        <div class="reward-grid"><div class="reward-box"><h3>当前可兑换奖励</h3><div class="reward-list"><div v-for="reward in center?.rewards" :key="reward.id"><div><strong>{{ reward.title }}</strong><small>{{ reward.description || "家长自定义奖励" }}</small></div><span>{{ reward.pointCost }} 分</span></div><span v-if="!center?.rewards.length" class="muted">还没有设置兑换奖励。</span></div></div><div class="reward-box"><h3>添加可兑换奖励</h3><el-input v-model="rewardForm.title" placeholder="例如：周末电影" maxlength="40" /><div class="reward-form-line"><el-input-number v-model="rewardForm.pointCost" :min="1" /><el-input v-model="rewardForm.description" placeholder="奖励说明（选填）" maxlength="120" /></div><el-button type="primary" @click="addReward">添加奖励</el-button></div></div>
-      </template>
-      <template v-else>
+        <div class="reward-grid"><div class="reward-box"><h3>当前可兑换奖励 <small>共 {{ center?.rewards.length || 0 }} 项</small></h3><div class="reward-list"><div v-for="reward in pagedRewards" :key="reward.id"><div><strong>{{ reward.title }}</strong><small>{{ reward.description || "家长自定义奖励" }}</small></div><span>{{ reward.pointCost }} 分</span></div><span v-if="!center?.rewards.length" class="muted">还没有设置兑换奖励。</span></div><div v-if="(center?.rewards.length || 0) > rewardPageSize" class="table-pagination"><el-pagination background layout="prev, pager, next" :current-page="rewardPage" :page-size="rewardPageSize" :total="center?.rewards.length || 0" @current-change="rewardPage = $event" /></div></div><div class="reward-box"><h3>添加可兑换奖励</h3><el-input v-model="rewardForm.title" placeholder="例如：周末电影" maxlength="40" /><div class="reward-form-line"><el-input-number v-model="rewardForm.pointCost" :min="1" /><el-input v-model="rewardForm.description" placeholder="奖励说明（选填）" maxlength="120" /></div><el-button type="primary" @click="addReward">添加奖励</el-button></div></div>
+      </section>
+    </template>
+    <template v-else>
+      <section class="content-panel reward-management reward-record-filter-card">
+        <div class="reward-record-controls"><div class="reward-child-selector"><div class="reward-child-switch-list" role="list" aria-label="选择儿童">
+          <button v-for="child in children" :key="child.id" type="button" class="reward-child-switch-item" :class="{ 'is-active': selectedChildId === child.id }" role="listitem" @click="selectedChildId = child.id"><span class="reward-child-switch-name">{{ child.name }}</span><b>{{ childBalances[child.id] ?? 0 }} 分</b><span class="reward-child-switch-progress"><i :style="{ width: `${Math.min(100, ((childBalances[child.id] || 0) % 20) * 5 || 12)}%` }" /></span></button>
+        </div></div>
+        <form class="record-filter-form reward-record-filter" @submit.prevent="applyRecordFilters"><el-input v-model="recordFilters.keyword" clearable placeholder="搜索积分来源或兑换奖励" aria-label="搜索积分记录" /><el-date-picker v-model="recordFilters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选积分记录时间范围" /><el-button type="primary" native-type="submit">查询</el-button><el-button @click="resetRecordFilters">重置</el-button></form></div>
+      </section>
+      <section class="content-panel reward-management reward-record-list-card">
         <div class="record-tabs"><button :class="{ active: recordTab === 'earned' }" @click="recordTab = 'earned'">获取记录</button><button :class="{ active: recordTab === 'redemptions' }" @click="recordTab = 'redemptions'">兑换记录</button></div>
-        <div v-if="recordTab === 'earned'" class="reward-box redemption-records"><h3>获取记录 <small>共 {{ center?.entries.filter((item) => item.points > 0).length || 0 }} 笔</small></h3><div class="redemption-list"><div v-for="entry in center?.entries.filter((item) => item.points > 0)" :key="`${entry.type}-${entry.createdAt}`"><div><strong>{{ entry.description }}</strong><span><b class="entry-type">{{ entry.type === 'streak_bonus' ? '连续奖励' : '完成任务' }}</b>{{ entry.createdAt }}</span></div><strong class="point-income">+{{ entry.points }} 分</strong></div><span v-if="!center?.entries.filter((item) => item.points > 0).length" class="muted">暂无积分获取记录。</span></div></div>
-        <div v-else class="reward-box redemption-records"><h3>兑换记录</h3><div class="redemption-list"><div v-for="item in center?.redemptions" :key="item.id"><div><strong>{{ item.childName }} · {{ item.title }}</strong><span>{{ item.pointCost }} 分 · {{ item.requestedAt }}{{ item.note ? ` · ${item.note}` : '' }}</span></div><div v-if="item.status === 'pending'" class="row-actions"><el-button type="primary" size="small" @click="confirm(item.id, true)">确认兑换</el-button><el-button size="small" @click="confirm(item.id, false)">拒绝</el-button></div><span v-else :class="`redemption-status ${item.status}`">{{ item.status === 'approved' ? '已确认' : '已拒绝' }}</span></div><span v-if="!center?.redemptions.length" class="muted">暂无兑换申请。</span></div></div>
-      </template>
-    </section>
+        <div v-if="recordTab === 'earned'" class="reward-box redemption-records"><h3>获取记录 <small>共 {{ earnedEntries.length }} 笔</small></h3><div class="redemption-list"><div v-for="entry in pagedEarnedEntries" :key="`${entry.type}-${entry.createdAt}`"><div><strong>{{ entry.description }}</strong><span><b class="entry-type">{{ entry.type === 'streak_bonus' ? '连续奖励' : '完成任务' }}</b>{{ entry.createdAt }}</span></div><strong class="point-income">+{{ entry.points }} 分</strong></div><span v-if="!earnedEntries.length" class="muted">暂无积分获取记录。</span></div><div v-if="earnedEntries.length > rewardPageSize" class="table-pagination"><el-pagination background layout="prev, pager, next" :current-page="earnedPage" :page-size="rewardPageSize" :total="earnedEntries.length" @current-change="earnedPage = $event" /></div></div>
+        <div v-else class="reward-box redemption-records"><h3>兑换记录 <small>共 {{ visibleRedemptions.length }} 笔</small></h3><div class="redemption-list"><div v-for="item in pagedRedemptions" :key="item.id"><div><strong>{{ item.childName }} · {{ item.title }}</strong><span>{{ item.pointCost }} 分 · {{ item.requestedAt }}{{ item.note ? ` · ${item.note}` : '' }}</span></div><div v-if="item.status === 'pending'" class="row-actions"><el-button type="primary" size="small" @click="confirm(item.id, true)">确认兑换</el-button><el-button size="small" @click="confirm(item.id, false)">拒绝</el-button></div><span v-else :class="`redemption-status ${item.status}`">{{ item.status === 'approved' ? '已确认' : '已拒绝' }}</span></div><span v-if="!visibleRedemptions.length" class="muted">暂无兑换申请。</span></div><div v-if="visibleRedemptions.length > rewardPageSize" class="table-pagination"><el-pagination background layout="prev, pager, next" :current-page="redemptionPage" :page-size="rewardPageSize" :total="visibleRedemptions.length" @current-change="redemptionPage = $event" /></div></div>
+      </section>
+    </template>
   </div>
 </template>
