@@ -60,3 +60,9 @@ npm install
 npm run build
 npx wrangler pages deploy dist --project-name starbud-frontend
 ```
+
+## License
+
+This project is available for personal learning, research, and other
+non-commercial use only. Commercial use requires prior written permission. See
+[LICENSE](LICENSE) for details.
