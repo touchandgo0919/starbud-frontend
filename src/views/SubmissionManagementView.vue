@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Refresh, Search } from "@element-plus/icons-vue";
+import SubmissionAudioPlayer from "../components/SubmissionAudioPlayer.vue";
 import { deleteSubmission, getChildren, getSubmissions } from "../services/api";
 import type { Child, Submission } from "../types/task";
 
@@ -15,14 +16,6 @@ const total = ref(0);
 
 function formatDateTime(value: string | null) {
   return value || "—";
-}
-
-function formatAudioDuration(durationMs: number | null | undefined) {
-  const totalSeconds = Math.max(0, Math.round((durationMs || 0) / 1000));
-  if (!totalSeconds) return "时长未知";
-  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-  return `时长 ${minutes}:${seconds}`;
 }
 
 function childName(childId: string) {
@@ -115,7 +108,7 @@ onMounted(() => {
         <el-table-column prop="taskTitle" label="任务名称" min-width="170" />
         <el-table-column label="提交人" width="110"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="提交状态" width="100"><template #default="scope"><span :class="scope.row.status === 'submitted' ? 'reviewed-label' : 'task-photo-empty'">{{ scope.row.status === "submitted" ? "已提交" : "提交中" }}</span></template></el-table-column>
-        <el-table-column label="提交附件" min-width="230"><template #default="scope"><div v-if="scope.row.photos.length || scope.row.audio" class="submission-attachments"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><div v-if="scope.row.audio" class="submission-audio-attachment"><audio class="submission-audio-player" controls preload="metadata" :src="scope.row.audio.url">当前浏览器不支持播放录音。</audio><span class="submission-audio-duration">{{ formatAudioDuration(scope.row.audio.durationMs) }}</span></div></div><span v-else class="task-photo-empty">—</span></template></el-table-column>
+        <el-table-column label="提交附件" min-width="230"><template #default="scope"><div v-if="scope.row.photos.length || scope.row.audio" class="submission-attachments"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><SubmissionAudioPlayer v-if="scope.row.audio" :src="scope.row.audio.url" :duration-ms="scope.row.audio.durationMs" /></div><span v-else class="task-photo-empty">—</span></template></el-table-column>
         <el-table-column label="批改状态" width="110"><template #default="scope"><span :class="scope.row.finalizedAt || scope.row.reviewedAt ? 'reviewed-label' : 'task-photo-empty'">{{ reviewStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="操作" width="90" fixed="right"><template #default="scope"><el-button link type="danger" @click="removeSubmission(scope.row)">删除</el-button></template></el-table-column>
       </el-table>
@@ -142,23 +135,4 @@ onMounted(() => {
   min-width: 0;
 }
 
-.submission-audio-player {
-  display: block;
-  height: 32px;
-  max-width: 100%;
-  width: 170px;
-}
-
-.submission-audio-attachment {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.submission-audio-duration {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
 </style>

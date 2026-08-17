@@ -13,7 +13,7 @@ const selectedChildId = ref("");
 const center = ref<RewardCenter | null>(null);
 const childBalances = ref<Record<string, number>>({});
 const loading = ref(false);
-const settings = reactive({ taskPoints: 1, streakDays: 3, streakBonusPoints: 2, sameDayCompletionRequired: true });
+const settings = reactive({ taskPoints: 1, streakDays: 3, streakBonusPoints: 2 });
 const rewardForm = reactive({ title: "", pointCost: 10, description: "" });
 const editingRewardId = ref("");
 const activeTab = computed(() => route.path.endsWith("/records") ? "records" : "settings");
@@ -132,7 +132,7 @@ onMounted(load);
   <div class="page-stack" v-loading="loading">
     <template v-if="activeTab === 'settings'">
       <section class="content-panel reward-management">
-        <section class="reward-rule-panel"><el-form class="reward-settings" label-position="top" inline><el-form-item label="完成任务积分"><el-input-number v-model="settings.taskPoints" :min="1" :max="100" /></el-form-item><el-form-item label="连续完成天数"><el-input-number v-model="settings.streakDays" :min="2" :max="30" /></el-form-item><el-form-item label="连续奖励积分"><el-input-number v-model="settings.streakBonusPoints" :min="1" :max="500" /></el-form-item><el-form-item class="reward-rule-toggle"><el-checkbox v-model="settings.sameDayCompletionRequired">仅任务当天完成可获得积分和连续奖励</el-checkbox></el-form-item><el-button type="primary" @click="saveSettings">{{ rulesSaved ? "已保存" : "保存规则" }}</el-button></el-form></section>
+        <section class="reward-rule-panel"><el-form class="reward-settings" label-position="top" inline><el-form-item label="完成任务积分"><el-input-number v-model="settings.taskPoints" :min="1" :max="100" /></el-form-item><el-form-item label="连续完成天数"><el-input-number v-model="settings.streakDays" :min="2" :max="30" /></el-form-item><el-form-item label="连续奖励积分"><el-input-number v-model="settings.streakBonusPoints" :min="1" :max="500" /></el-form-item><span class="reward-rule-note">任务须在执行日当天或提前完成，逾期完成不获得积分。</span><el-button type="primary" @click="saveSettings">{{ rulesSaved ? "已保存" : "保存规则" }}</el-button></el-form></section>
         <div class="reward-grid">
           <div class="reward-box"><h3>当前可兑换奖励 <small>共 {{ center?.rewards.length || 0 }} 项</small></h3>
             <div class="reward-list"><div v-for="reward in pagedRewards" :key="reward.id"><div><strong>{{ reward.title }}</strong><small>{{ reward.description || "家长自定义奖励" }}</small></div><div class="reward-item-actions"><span>{{ reward.pointCost }} 分</span><button type="button" class="reward-list-action reward-list-action--edit" @click="editReward(reward)">编辑</button><button type="button" class="reward-list-action reward-list-action--delete" @click="removeReward(reward)">删除</button></div></div><span v-if="!center?.rewards.length" class="muted">还没有设置兑换奖励。</span></div>

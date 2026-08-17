@@ -134,15 +134,14 @@ describe("web API client", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ taskDate: "2026-08-14", reminderType: "revision" });
   });
 
-  it("saves the family same-day completion reward rule", async () => {
+  it("saves the family reward settings without allowing late-completion overrides", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ updated: true }));
     const api = await import("../src/services/api");
 
     await api.updateRewardSettings("family-1", {
       taskPoints: 2,
       streakDays: 3,
-      streakBonusPoints: 5,
-      sameDayCompletionRequired: true
+      streakBonusPoints: 5
     });
 
     const [url, init] = fetchMock.mock.calls[0];
@@ -151,8 +150,7 @@ describe("web API client", () => {
       familyId: "family-1",
       taskPoints: 2,
       streakDays: 3,
-      streakBonusPoints: 5,
-      sameDayCompletionRequired: true
+      streakBonusPoints: 5
     });
   });
 
