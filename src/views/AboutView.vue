@@ -4,13 +4,16 @@ import {
   ArrowRight,
   BellRing,
   BrainCircuit,
+  CalendarDays,
   ChartNoAxesCombined,
   Camera,
   CheckCircle2,
   ClipboardCheck,
+  Gift,
   History,
   Mic2,
   MonitorSmartphone,
+  PenTool,
   Route,
   RefreshCw,
   ShieldCheck,
@@ -22,7 +25,7 @@ import IcpRecord from "../components/IcpRecord.vue";
 const previousTitle = document.title;
 
 onMounted(() => {
-  document.title = "星星芽AI助手 - 家庭任务与习惯协作";
+  document.title = "星星芽AI助手 - 家庭任务、提醒与成长协作";
 });
 
 onBeforeUnmount(() => {
@@ -58,14 +61,29 @@ const features = [
   {
     icon: BellRing,
     title: "到点提醒",
-    description: "桌面 App 到点弹窗、置顶并语音播报，任务同步后断网也能按时提醒。"
+    description: "桌面 App 到点弹窗、置顶并语音播报；可配置催领，提醒结果会留存记录。"
+  },
+  {
+    icon: CalendarDays,
+    title: "日历与状态",
+    description: "按日期查看任务，待领取、待完成、待批改、待修改和已完成状态一目了然。"
+  },
+  {
+    icon: PenTool,
+    title: "图片批注",
+    description: "家长可在作业原图上添加矩形、箭头、画笔、文字和表情，逐张批改更具体。"
+  },
+  {
+    icon: Gift,
+    title: "星芽积分",
+    description: "按规则为按时或提前完成的任务记分，孩子可在小程序查看积分并申请兑换奖励。"
   }
 ];
 
 const steps = [
   { number: "01", title: "家长安排", description: "创建家庭，为孩子设置任务和提醒时间。" },
   { number: "02", title: "孩子行动", description: "在小程序领取任务，用照片或录音提交。" },
-  { number: "03", title: "家长反馈", description: "查看附件并批改，需要时发起下一轮提交。" }
+  { number: "03", title: "家长反馈", description: "查看附件、图片批注或评价录音，需要时发起重新提交。" }
 ];
 
 function scrollToSection(event: MouseEvent, sectionId: string) {
@@ -140,7 +158,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
           <div class="about-section-heading about-section-heading--center">
             <p>核心功能</p>
             <h2>围绕家庭真实协作设计</h2>
-            <span>任务、附件、批改和提醒各司其职，不让信息散落在聊天记录里。</span>
+            <span>任务、附件、批改、提醒和积分各司其职，不让信息散落在聊天记录里。</span>
           </div>
           <div class="about-feature-grid">
             <article v-for="feature in features" :key="feature.title">
@@ -247,11 +265,11 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
           <div class="about-reminder-copy">
             <p class="about-kicker">桌面 App 到点提醒</p>
             <h2>不等孩子想起来，时间到了主动提醒</h2>
-            <p>App 登录儿童账号后自动同步今日任务，并在本地安排提醒。到点时系统通知、桌面窗口置顶与离线语音同时执行。</p>
+            <p>App 登录儿童账号后自动同步今日任务，并在本地安排提醒。到点时系统通知、桌面窗口置顶与离线语音同时执行；未领取时可按家长配置继续催领。</p>
             <ul>
               <li><RefreshCw :size="19" /><span><strong>实时同步</strong> 自动获取家长新增和修改的任务</span></li>
               <li><BellRing :size="19" /><span><strong>准时弹出</strong> 系统通知与窗口置顶共同提醒</span></li>
-              <li><Volume2 :size="19" /><span><strong>离线语音</strong> 每项任务可设置 1 至 3 次播报</span></li>
+              <li><Volume2 :size="19" /><span><strong>离线语音</strong> 每项任务可设置多次播报，语音完成后再开始催领</span></li>
             </ul>
           </div>
         </div>
@@ -261,12 +279,12 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
         <div class="about-shell about-submission-layout">
           <div class="about-submission-copy">
             <p class="about-kicker">家长批改与反馈</p>
-            <h2>不只确认完成，还能认真听、具体评</h2>
-            <p>家长可以在网页端查看照片、完整试听录音，并针对内容、表达或完成情况给出评价；需要修改时直接发起重新提交。</p>
+            <h2>不只确认完成，还能逐张批改、具体反馈</h2>
+            <p>家长可以在网页端查看多张照片、完整试听录音，并针对内容、表达或完成情况给出评价；在照片上直接批注，需要修改时发起重新提交。</p>
             <ul>
-              <li><Camera :size="19" aria-hidden="true" />照片和录音互不覆盖</li>
-              <li><Mic2 :size="19" aria-hidden="true" />录音结束后可试听、删除</li>
-              <li><History :size="19" aria-hidden="true" />重新提交仍保留历史轮次</li>
+              <li><Camera :size="19" aria-hidden="true" />每轮最多 8 张照片，照片和录音互不覆盖</li>
+              <li><PenTool :size="19" aria-hidden="true" />矩形、箭头、画笔、文字和表情可直接标注原图</li>
+              <li><History :size="19" aria-hidden="true" />重新提交与重新批改均保留历史轮次</li>
             </ul>
           </div>
           <figure class="about-review-screen">
@@ -286,6 +304,33 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
             <div><MonitorSmartphone :size="25" /><strong>家长网页</strong><span>创建、查看、批改</span></div>
             <div><ClipboardCheck :size="25" /><strong>儿童小程序</strong><span>领取、提交、查看反馈</span></div>
             <div><BellRing :size="25" /><strong>桌面 App</strong><span>同步、通知、离线语音</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-management-band">
+        <div class="about-shell">
+          <div class="about-section-heading about-section-heading--center">
+            <p>记录与激励</p>
+            <h2>完成过程可看见，认真投入也有回应</h2>
+            <span>家长不只看到结果，也能回看提醒、提交和积分如何形成。</span>
+          </div>
+          <div class="about-management-grid">
+            <article>
+              <Gift :size="28" aria-hidden="true" />
+              <h3>星芽积分与兑换</h3>
+              <p>任务在执行日当天或提前完成即可记分；连续完成可获得额外奖励。孩子在小程序查看积分、提交兑换申请，家长统一确认。</p>
+            </article>
+            <article>
+              <BellRing :size="28" aria-hidden="true" />
+              <h3>提醒与提交记录</h3>
+              <p>网页端可按成员和时间查看提醒推送、App 接收与播放结果，以及照片、录音、批改和多轮提交记录。</p>
+            </article>
+            <article>
+              <ChartNoAxesCombined :size="28" aria-hidden="true" />
+              <h3>家庭成长观察</h3>
+              <p>首页按成员汇总任务趋势；AI 基于可追溯的任务和批改数据，提供供家长判断的成长观察与下一步建议。</p>
+            </article>
           </div>
         </div>
       </section>
@@ -507,6 +552,13 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
 .about-platform-list strong { margin-top: 8px; color: #243c33; font-size: 14px; }
 .about-platform-list span { color: #76837e; font-size: 12px; line-height: 1.6; }
 
+.about-management-band { padding: 90px 0; background: #edf4f0; }
+.about-management-grid { display: grid; margin-top: 44px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.about-management-grid article { min-height: 220px; padding: 28px; border: 1px solid #d4e1da; border-radius: 8px; background: #fff; box-shadow: 0 12px 34px rgba(22, 63, 46, .06); }
+.about-management-grid svg { color: #009b5c; }
+.about-management-grid h3 { margin-top: 24px; color: #203a30; font-size: 17px; }
+.about-management-grid p { margin-top: 10px; color: #687971; font-size: 14px; line-height: 1.75; }
+
 .about-trust { padding: 42px 0; background: #dcece4; }
 .about-trust-layout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; }
 .about-trust-layout > svg { color: #087c50; }
@@ -540,6 +592,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-reminder-layout { gap: 48px; }
   .about-submission-layout { gap: 54px; }
   .about-platform-layout { grid-template-columns: 1fr; gap: 34px; }
+  .about-management-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {
@@ -562,7 +615,7 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-button { min-height: 44px; padding: 0 16px; }
   .about-hero-preview figcaption { min-height: 58px; padding: 12px 14px; }
   .about-hero-preview figcaption strong { max-width: 65%; font-size: 12px; }
-  .about-workflow, .about-features, .about-ai-band, .about-child-experience, .about-reminder-band, .about-platforms { padding: 64px 0; }
+  .about-workflow, .about-features, .about-ai-band, .about-child-experience, .about-reminder-band, .about-platforms, .about-management-band { padding: 64px 0; }
   .about-section-heading h2, .about-cta h2 { font-size: 28px; }
   .about-steps { grid-template-columns: 1fr; gap: 28px; }
   .about-steps li { padding-right: 0; }
@@ -595,6 +648,8 @@ function scrollToSection(event: MouseEvent, sectionId: string) {
   .about-platform-list > div:last-child { border-bottom: 0; }
   .about-platform-list strong { margin: 0; }
   .about-platform-list span { grid-column: 2; }
+  .about-management-grid { grid-template-columns: 1fr; }
+  .about-management-grid article { min-height: 0; padding: 24px; }
   .about-trust-layout { grid-template-columns: auto minmax(0, 1fr); }
   .about-trust a { grid-column: 2; }
   .about-cta { padding: 70px 0; }
