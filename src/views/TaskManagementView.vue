@@ -1490,7 +1490,9 @@ async function sendReminder(task: Task) {
 
 async function removeTask(task: Task) {
   deleteTaskTarget.value = task;
-  deleteScope.value = task.repeatType === "once" ? "all" : "future";
+  // A single-occurrence override may render as "仅一次" even when its source
+  // task is recurring. Default to the non-destructive future scope in either case.
+  deleteScope.value = "future";
   deleteDialogVisible.value = true;
 }
 
@@ -1498,6 +1500,13 @@ async function confirmDeleteTask() {
   const task = deleteTaskTarget.value;
   if (!task) return;
   try {
+    if (deleteScope.value === "all") {
+      await ElMessageBox.confirm(
+        "这会隐藏该任务的全部历史任务。提交、照片、录音和批改记录仍会保留，但不再出现在任务列表中。",
+        "确认删除全部任务",
+        { confirmButtonText: "删除全部", cancelButtonText: "取消", type: "warning" }
+      );
+    }
     await deleteTask(task.id, deleteScope.value, task.occurrenceDate);
     ElMessage.success("任务已删除");
     await refreshTaskData();
@@ -1685,9 +1694,9 @@ onBeforeUnmount(() => {
     <el-dialog v-model="deleteDialogVisible" title="删除任务" width="420px" class="form-dialog">
       <p class="dialog-hint">提交、照片、录音和批改记录会保留，不会被物理删除。</p>
       <el-radio-group v-model="deleteScope" class="delete-scope-options">
-        <el-radio value="all">全部任务</el-radio>
-        <el-radio v-if="deleteTaskTarget?.repeatType !== 'once'" value="future">今天及以后未开始的任务</el-radio>
-        <el-radio v-if="deleteTaskTarget?.repeatType !== 'once'" value="single">仅删除本次（{{ deleteTaskTarget?.occurrenceDate }}）</el-radio>
+        <el-radio value="all">删除全部任务（含历史任务）</el-radio>
+        <el-radio value="future">今天及以后未开始的任务</el-radio>
+        <el-radio value="single">仅删除本次（{{ deleteTaskTarget?.occurrenceDate }}）</el-radio>
       </el-radio-group>
       <template #footer><el-button @click="deleteDialogVisible = false">取消</el-button><el-button type="danger" @click="confirmDeleteTask">确认删除</el-button></template>
     </el-dialog>
