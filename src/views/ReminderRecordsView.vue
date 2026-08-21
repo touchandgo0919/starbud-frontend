@@ -10,7 +10,7 @@ const loading = ref(false);
 const total = ref(0);
 const currentPage = ref(1);
 const pageSize = 10;
-const filters = reactive({ childId: "", timeRange: [] as string[] });
+const filters = reactive({ childId: "", keyword: "", timeRange: [] as string[] });
 
 const typeLabels: Record<string, string> = {
   claim_reminder: "领取提醒",
@@ -32,6 +32,7 @@ async function loadRecords(page = currentPage.value) {
     const [from, to] = filters.timeRange;
     const result = await getReminderRecords({
       childId: filters.childId,
+      keyword: filters.keyword.trim(),
       from,
       to,
       page,
@@ -45,7 +46,7 @@ async function loadRecords(page = currentPage.value) {
 }
 
 function resetFilters() {
-  Object.assign(filters, { childId: "", timeRange: [] });
+  Object.assign(filters, { childId: "", keyword: "", timeRange: [] });
   void loadRecords(1);
 }
 
@@ -79,6 +80,7 @@ onMounted(async () => {
     <section class="content-panel filter-panel record-filter-panel">
       <form class="record-filter-form" @submit.prevent="loadRecords(1)">
         <div class="record-child-switch-list" role="list" aria-label="选择儿童"><button type="button" class="record-child-switch-item" :class="{ 'is-active': !filters.childId }" @click="filters.childId = ''">全部</button><button v-for="child in children" :key="child.id" type="button" class="record-child-switch-item" :class="{ 'is-active': filters.childId === child.id }" @click="filters.childId = child.id">{{ child.name }}</button></div>
+        <el-input v-model="filters.keyword" :prefix-icon="Search" clearable placeholder="搜索提醒内容、接收人或账号" aria-label="搜索提醒记录" />
         <el-date-picker v-model="filters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选提醒时间范围" />
         <el-button type="primary" :icon="Search" native-type="submit">查询</el-button><el-button :icon="Refresh" @click="resetFilters">重置</el-button>
       </form>

@@ -41,28 +41,35 @@ describe("web API client", () => {
   });
 
   it("encodes filters and normalizes protected submission file URLs", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({
-      submissions: [{
-        id: "submission-1",
-        photos: [{ id: "photo-1", url: "/api/submission-files/photo-1?token=x" }],
-        audio: { id: "audio-1", url: "/api/submission-audio/audio-1?token=x" },
-        reviewImageUrl: "/api/review-files/review-1?token=x",
-        reviewRounds: [{
-          id: "round-1",
-          photos: [],
-          audios: [],
-          reviewImages: [],
-          reviewImageUrl: "",
-          reviewedAt: "2026-08-06 10:00:00"
-        }]
-      }],
-      pagination: { page: 2, pageSize: 10, total: 11, hasMore: false }
-    }));
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({
+        submissions: [{
+          id: "submission-1",
+          photos: [{ id: "photo-1", url: "/api/submission-files/photo-1?token=x" }],
+          audio: { id: "audio-1", url: "/api/submission-audio/audio-1?token=x" },
+          reviewImageUrl: "/api/review-files/review-1?token=x",
+          reviewRounds: [{
+            id: "round-1",
+            photos: [],
+            audios: [],
+            reviewImages: [],
+            reviewImageUrl: "",
+            reviewedAt: "2026-08-06 10:00:00"
+          }]
+        }],
+        pagination: { page: 2, pageSize: 10, total: 11, hasMore: false }
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        records: [],
+        pagination: { page: 1, pageSize: 10, total: 0, hasMore: false }
+      }));
     const api = await import("../src/services/api");
 
     const result = await api.getSubmissions({ page: 2, pageSize: 10, keyword: "数学 作业", status: "submitted" });
+    await api.getReminderRecords({ page: 1, pageSize: 10, keyword: "完成提醒" });
 
     expect(String(fetchMock.mock.calls[0][0])).toContain("keyword=%E6%95%B0%E5%AD%A6+%E4%BD%9C%E4%B8%9A");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("keyword=%E5%AE%8C%E6%88%90%E6%8F%90%E9%86%92");
     expect(result.submissions[0].photos[0].url).toMatch(/^https?:\/\//);
     expect(result.submissions[0].audio?.url).toMatch(/^https?:\/\//);
     expect(result.submissions[0].reviewImageUrl).toMatch(/^https?:\/\//);
