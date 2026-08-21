@@ -123,6 +123,11 @@ function routeQueryValue(value: unknown) {
 
 const routedTaskDate = routeQueryValue(route.query.taskDate);
 const selectedDate = ref(/^\d{4}-\d{2}-\d{2}$/.test(routedTaskDate) ? routedTaskDate : dateKey(new Date()));
+const deleteFutureStartDate = computed(() => {
+  const occurrenceDate = deleteTaskTarget.value?.occurrenceDate || dateKey(new Date());
+  const today = dateKey(new Date());
+  return occurrenceDate > today ? occurrenceDate : today;
+});
 const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, endDate: null, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
@@ -1695,7 +1700,7 @@ onBeforeUnmount(() => {
       <p class="dialog-hint">提交、照片、录音和批改记录会保留，不会被物理删除。</p>
       <el-radio-group v-model="deleteScope" class="delete-scope-options">
         <el-radio value="all">删除全部任务（含历史任务）</el-radio>
-        <el-radio value="future">今天及以后未开始的任务</el-radio>
+        <el-radio value="future">{{ deleteFutureStartDate }} 及以后未开始的任务</el-radio>
         <el-radio value="single">仅删除本次（{{ deleteTaskTarget?.occurrenceDate }}）</el-radio>
       </el-radio-group>
       <template #footer><el-button @click="deleteDialogVisible = false">取消</el-button><el-button type="danger" @click="confirmDeleteTask">确认删除</el-button></template>
