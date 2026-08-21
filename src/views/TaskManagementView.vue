@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, ArrowRight, Delete, FullScreen, Loading, Plus, QuestionFilled, Refresh, RefreshLeft, RefreshRight } from "@element-plus/icons-vue";
 import { ArrowUpRight, Pencil, Play, Smile, Square, Type, Undo2, ZoomIn, ZoomOut } from "@lucide/vue";
@@ -20,6 +21,8 @@ type ReviewResizeHandle = "top-left" | "top" | "top-right" | "left" | "right" | 
 type ReviewSelectionHandle = { x: number; y: number; handle: ReviewResizeHandle };
 
 const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 const tasks = ref<Task[]>([]);
 const allTasksForSelectedDate = ref<Task[]>([]);
 const children = ref<Child[]>([]);
@@ -114,7 +117,12 @@ const editingHistoricalTask = ref(false);
 const editScope = ref<"single" | "future">("future");
 const saving = ref(false);
 const filters = reactive({ childId: "" });
-const selectedDate = ref(dateKey(new Date()));
+function routeQueryValue(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+const routedTaskDate = routeQueryValue(route.query.taskDate);
+const selectedDate = ref(/^\d{4}-\d{2}-\d{2}$/.test(routedTaskDate) ? routedTaskDate : dateKey(new Date()));
 const calendarRange = reactive(initialWeekRange());
 const form = reactive<CreateTaskForm>({ childIds: [], title: "", startDate: selectedDate.value, endDate: null, scheduleTime: currentTime(), repeatType: "daily", requiresPhotoUpload: true, voiceEnabled: true, claimReminderEnabled: false, revisionReminderEnabled: false, voiceContent: "", voiceReminderCount: 1 });
 const repeatLabels: Record<RepeatType, string> = { once: "仅一次", daily: "每天", weekdays: "工作日", weekly: "每周" };
@@ -359,6 +367,21 @@ async function openDetail(task: Task) {
   } finally {
     submissionPhotosLoading.value = false;
   }
+}
+
+async function openRoutedTaskDetail() {
+  const taskId = routeQueryValue(route.query.taskId);
+  const taskDate = routeQueryValue(route.query.taskDate);
+  if (!taskId || !taskDate) return;
+
+  const task = allTasksForSelectedDate.value.find((item) => item.id === taskId && (item.occurrenceDate || selectedDate.value) === taskDate);
+  if (!task) {
+    ElMessage.warning("未找到对应的任务详情。");
+    return;
+  }
+
+  await openDetail(task);
+  await router.replace({ name: "Tasks" });
 }
 
 async function openTaskReview(task: Task) {
@@ -1494,6 +1517,7 @@ onMounted(async () => {
     // selected day's rows here. Calling refreshTaskData would duplicate the
     // first calendar request.
     await loadTasks();
+    await openRoutedTaskDetail();
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : "任务数据加载失败。");
   }

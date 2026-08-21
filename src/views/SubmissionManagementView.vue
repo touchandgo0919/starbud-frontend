@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Refresh, Search } from "@element-plus/icons-vue";
 import SubmissionAudioPlayer from "../components/SubmissionAudioPlayer.vue";
 import { deleteSubmission, getChildren, getSubmissions } from "../services/api";
 import type { Child, Submission } from "../types/task";
 
+const router = useRouter();
 const submissions = ref<Submission[]>([]);
 const children = ref<Child[]>([]);
 const loading = ref(false);
@@ -24,6 +26,13 @@ function childName(childId: string) {
 
 function reviewStatusLabel(submission: Submission) {
   return submission.finalizedAt ? "已完成" : submission.reviewedAt ? "已批改" : "待批改";
+}
+
+function openTaskDetail(submission: Submission) {
+  void router.push({
+    name: "Tasks",
+    query: { taskId: submission.taskId, taskDate: submission.taskDate }
+  });
 }
 
 async function loadSubmissions(page = currentPage.value) {
@@ -107,7 +116,7 @@ onMounted(() => {
       <div class="panel-heading"><div><h2>提交记录</h2><p>共 {{ total }} 条提交记录</p></div></div>
       <el-table class="data-table" :data="submissions" empty-text="暂无提交记录">
         <el-table-column label="提交时间" min-width="176"><template #default="scope">{{ formatDateTime(scope.row.submittedAt) }}</template></el-table-column>
-        <el-table-column prop="taskTitle" label="任务名称" min-width="170" />
+        <el-table-column label="任务名称" min-width="170"><template #default="scope"><button type="button" class="submission-task-link" @click="openTaskDetail(scope.row)">{{ scope.row.taskTitle }}</button></template></el-table-column>
         <el-table-column label="提交人" width="110"><template #default="scope">{{ childName(scope.row.childId) }}</template></el-table-column>
         <el-table-column label="提交状态" width="100"><template #default="scope"><span :class="scope.row.status === 'submitted' ? 'reviewed-label' : 'task-photo-empty'">{{ scope.row.status === "submitted" ? "已提交" : "提交中" }}</span></template></el-table-column>
         <el-table-column label="提交附件" min-width="230"><template #default="scope"><div v-if="scope.row.photos.length || scope.row.audio" class="submission-attachments"><div v-if="scope.row.photos.length" class="submission-photo-preview" :title="`共 ${scope.row.photoCount} 张照片`"><img :src="scope.row.photos[0].url" alt="作业照片缩略图" /><span>{{ scope.row.photoCount }}</span></div><SubmissionAudioPlayer v-if="scope.row.audio" :src="scope.row.audio.url" :duration-ms="scope.row.audio.durationMs" /></div><span v-else class="task-photo-empty">—</span></template></el-table-column>
@@ -135,6 +144,24 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   min-width: 0;
+}
+
+.submission-task-link {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+}
+
+.submission-task-link:hover,
+.submission-task-link:focus-visible {
+  color: var(--el-color-primary);
+  outline: none;
+  text-decoration: underline;
 }
 
 </style>
