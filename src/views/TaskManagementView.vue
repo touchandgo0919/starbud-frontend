@@ -16,7 +16,8 @@ type ReviewTextAnnotation = { id: string; type: "text" | "emoji"; text: string; 
 type ReviewRectangleAnnotation = { id: string; type: "rectangle"; x: number; y: number; width: number; height: number; color: string; lineWidth: number };
 type ReviewPathAnnotation = { id: string; type: "path"; points: ReviewPoint[]; color: string; lineWidth: number; arrow?: boolean };
 type ReviewAnnotation = ReviewTextAnnotation | ReviewRectangleAnnotation | ReviewPathAnnotation;
-type ReviewTextEditor = { x: number; y: number; value: string };
+type ReviewTextEditor = { x: number; y: number; value: string; editingId?: string };
+type ReviewPhotoDraft = { annotations: ReviewAnnotation[]; rotation: number };
 type ReviewResizeHandle = "top-left" | "top" | "top-right" | "left" | "right" | "bottom-left" | "bottom" | "bottom-right" | "start" | "end";
 type ReviewSelectionHandle = { x: number; y: number; handle: ReviewResizeHandle };
 
@@ -65,9 +66,11 @@ const audioReviewSubmitting = ref(false);
 const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewPhotos = ref<SubmissionPhoto[]>([]);
 const reviewPhotoIndex = ref(0);
-const reviewedPhotoBlobs = ref<Record<string, Blob>>({});
+const reviewPhotoDrafts = ref<Record<string, ReviewPhotoDraft>>({});
+const submittedReviewPhotoIds = ref<Record<string, true>>({});
 const canReviewPreviousPhoto = computed(() => reviewPhotoIndex.value > 0);
 const canReviewNextPhoto = computed(() => reviewPhotoIndex.value < reviewPhotos.value.length - 1);
+const currentReviewPhotoSubmitted = computed(() => Boolean(reviewPhoto.value && submittedReviewPhotoIds.value[reviewPhoto.value.id]));
 const reviewCanvas = ref<HTMLCanvasElement | null>(null);
 const reviewCanvasShell = ref<HTMLElement | null>(null);
 const reviewStage = ref<HTMLElement | null>(null);
@@ -576,14 +579,19 @@ function resetReviewCanvas() {
 
 async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo], preserveStagedReviews = false) {
   const photoIndex = photos.findIndex((item) => item.id === photo.id);
-  if (!preserveStagedReviews) reviewedPhotoBlobs.value = {};
+  if (!preserveStagedReviews) {
+    reviewPhotoDrafts.value = {};
+    submittedReviewPhotoIds.value = {};
+  }
   reviewPhotos.value = photos;
   reviewPhotoIndex.value = photoIndex >= 0 ? photoIndex : 0;
   reviewPhoto.value = photo;
   reviewZoom.value = 100;
-  reviewRotation.value = 0;
   reviewTool.value = null;
   resetReviewCanvas();
+  const draft = reviewPhotoDrafts.value[photo.id];
+  reviewAnnotations.value = draft ? draft.annotations.map(copyReviewAnnotation) : [];
+  reviewRotation.value = draft?.rotation || 0;
   reviewVisible.value = true;
   await nextTick();
   loadReviewCanvas();
@@ -594,10 +602,10 @@ async function switchReviewPhoto(offset: number) {
   const photo = reviewPhotos.value[nextIndex];
   if (!photo) return;
   try {
-    await stashCurrentReviewedImage();
+    persistCurrentReviewDraft();
     await openReview(photo, reviewPhotos.value, true);
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "暂存当前批改图片失败。");
+    ElMessage.error(error instanceof Error ? error.message : "切换批改图片失败。");
   }
 }
 
@@ -608,20 +616,14 @@ function loadReviewCanvas() {
 
   const loadVersion = ++reviewImageLoadVersion;
   const image = new Image();
-  const stagedImage = reviewedPhotoBlobs.value[photo.id];
-  const sourceUrl = stagedImage ? URL.createObjectURL(stagedImage) : photo.url;
-  const releaseSourceUrl = () => {
-    if (stagedImage) URL.revokeObjectURL(sourceUrl);
-  };
+  const sourceUrl = photo.url;
   image.crossOrigin = "anonymous";
   image.onload = () => {
-    releaseSourceUrl();
     if (loadVersion !== reviewImageLoadVersion || reviewPhoto.value?.id !== photo.id) return;
     reviewSourceImage = image;
     renderReviewSourceImage();
   };
   image.onerror = () => {
-    releaseSourceUrl();
     ElMessage.error("批改图片加载失败。");
   };
   image.src = sourceUrl;
@@ -883,6 +885,10 @@ function startReviewPan(event: MouseEvent) {
 function startReviewTextEditor(point: ReviewPoint) {
   reviewTextEditor.value = { x: point.x, y: point.y, value: "" };
   selectedReviewAnnotationId.value = null;
+  focusReviewTextInput();
+}
+
+function focusReviewTextInput() {
   nextTick(() => {
     // 等输入框进入布局后的下一帧再聚焦，避免画布点击事件抢走焦点。
     requestAnimationFrame(() => {
@@ -894,10 +900,31 @@ function startReviewTextEditor(point: ReviewPoint) {
   });
 }
 
+function editReviewText(annotation: ReviewTextAnnotation) {
+  if (annotation.type !== "text") return;
+  stopMoveAnnotation();
+  reviewTool.value = "text";
+  reviewFontSize.value = annotation.fontSize;
+  reviewTextWithBackground.value = Boolean(annotation.backgroundColor);
+  reviewColor.value = annotation.backgroundColor || annotation.color;
+  selectedReviewAnnotationId.value = annotation.id;
+  reviewTextEditor.value = { x: annotation.x, y: annotation.y, value: annotation.text, editingId: annotation.id };
+  focusReviewTextInput();
+}
+
 function commitReviewText() {
   const editor = reviewTextEditor.value;
   if (!editor) return;
   const text = editor.value.trim();
+  if (editor.editingId) {
+    const previous = reviewAnnotations.value.find((annotation): annotation is ReviewTextAnnotation => annotation.id === editor.editingId && annotation.type === "text");
+    if (previous) {
+      if (text) replaceSelectedReviewAnnotation({ ...previous, text });
+      else reviewAnnotations.value = reviewAnnotations.value.filter((annotation) => annotation.id !== previous.id);
+    }
+    reviewTextEditor.value = null;
+    return;
+  }
   if (text) {
     const annotation: ReviewTextAnnotation = {
       id: reviewAnnotationId(),
@@ -1156,13 +1183,11 @@ function reviewTextEditorFrameStyle() {
   const scale = display.width / canvas.width;
   const fontSize = reviewFontSize.value;
   const layout = reviewTextLayout(fontSize, reviewTextWithBackground.value);
-  // 左边缘保持不动，宽度按最长一行扩展；高度随回车行数同步增加。
+  // 输入框固定宽度，只随换行增加高度，避免输入时向右挤压画面。
   const lines = reviewTextLines(editor.value);
-  const longestLineLength = Math.max(0, ...lines.map((line) => [...line].length));
-  const measuredWidth = reviewTextInput.value ? Math.ceil(reviewTextInput.value.scrollWidth / scale) : 0;
-  const estimatedWidth = 18 + longestLineLength * fontSize * .78;
-  const contentWidth = Math.min(420, Math.max(42, estimatedWidth, measuredWidth + 2));
-  const contentHeight = layout.contentHeight * Math.max(1, lines.length);
+  const contentWidth = Math.min(320, Math.max(160, canvas.width * .36));
+  const measuredHeight = reviewTextInput.value ? Math.ceil(reviewTextInput.value.scrollHeight / scale) : 0;
+  const contentHeight = Math.max(layout.contentHeight * Math.max(1, lines.length), measuredHeight);
   return {
     left: `${(editor.x - layout.paddingX) * scale}px`,
     top: `${(editor.y - layout.paddingY) * scale}px`,
@@ -1342,32 +1367,38 @@ async function reviewedImageBlob() {
   return new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, "image/png"));
 }
 
-async function stashCurrentReviewedImage() {
+function persistCurrentReviewDraft() {
   const photo = reviewPhoto.value;
   if (!photo) return;
-  const image = await reviewedImageBlob();
-  if (!image) throw new Error("生成批改图片失败。");
-  reviewedPhotoBlobs.value = { ...reviewedPhotoBlobs.value, [photo.id]: image };
+  commitReviewText();
+  reviewPhotoDrafts.value = {
+    ...reviewPhotoDrafts.value,
+    [photo.id]: {
+      annotations: reviewAnnotations.value.map(copyReviewAnnotation),
+      rotation: reviewRotation.value
+    }
+  };
 }
 
 async function submitReviewedImage() {
-  if (!selectedSubmissionId.value) {
+  const photo = reviewPhoto.value;
+  if (!selectedSubmissionId.value || !photo) {
     ElMessage.error("未找到对应的作业提交。");
+    return;
+  }
+  if (currentReviewPhotoSubmitted.value) {
+    ElMessage.info("本张图片已提交。需要修改时，请从批改记录中点击“重新批改”。");
     return;
   }
   reviewSubmitting.value = true;
   try {
-    await stashCurrentReviewedImage();
-    const reviewedEntries = reviewPhotos.value
-      .map((photo) => ({ photo, image: reviewedPhotoBlobs.value[photo.id] }))
-      .filter((entry): entry is { photo: SubmissionPhoto; image: Blob } => Boolean(entry.image));
-    if (!reviewedEntries.length) throw new Error("请至少批改一张图片。");
-    const replacementIds = reviewReplacementImageIds.value.length
-      ? reviewedEntries.map((entry) => entry.photo.id)
-      : [];
+    persistCurrentReviewDraft();
+    const image = await reviewedImageBlob();
+    if (!image) throw new Error("生成批改图片失败。");
+    const replacementIds = reviewReplacementImageIds.value.includes(photo.id) ? [photo.id] : [];
     const submission = await submitSubmissionReview(
       selectedSubmissionId.value,
-      reviewedEntries.map((entry) => entry.image),
+      [image],
       replacementIds
     );
     submissionPhotos.value = submission.photos;
@@ -1375,9 +1406,9 @@ async function submitReviewedImage() {
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
     submissionReviewRounds.value = submission.reviewRounds;
-    reviewReplacementImageIds.value = [];
-    reviewVisible.value = false;
-    ElMessage.success(replacementIds.length ? `已更新 ${replacementIds.length} 张批改图片，已通知小朋友。` : `已提交 ${reviewedEntries.length} 张批改图片，已通知小朋友。`);
+    submittedReviewPhotoIds.value = { ...submittedReviewPhotoIds.value, [photo.id]: true };
+    ElMessage.success(replacementIds.length ? "本张批改已更新，已通知小朋友。" : "本张批改已提交，已通知小朋友。");
+    if (canReviewNextPhoto.value) await switchReviewPhoto(1);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
   } finally {
@@ -1842,7 +1873,7 @@ onBeforeUnmount(() => {
               <el-tooltip content="清除所有批改" placement="bottom"><el-button class="review-tool-button" aria-label="清除所有批改" @click="clearAllReviewAnnotations"><el-icon><Delete /></el-icon></el-button></el-tooltip>
             </div>
           </div>
-          <el-button class="review-submit-button" type="primary" :loading="reviewSubmitting" @click="submitReviewedImage">提交批改</el-button>
+          <el-button class="review-submit-button" type="primary" :disabled="currentReviewPhotoSubmitted" :loading="reviewSubmitting" @click="submitReviewedImage">{{ currentReviewPhotoSubmitted ? "本张已提交" : "提交本张" }}</el-button>
         </div>
       </template>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
@@ -1857,10 +1888,10 @@ onBeforeUnmount(() => {
             </template>
           </svg>
           <div v-if="reviewTextEditor" class="review-text-editor-frame" :style="reviewTextEditorFrameStyle()" @mousedown.stop @click.stop>
-            <textarea ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" aria-label="图片批注文字" rows="1" wrap="off" @input="syncReviewTextEditor" @compositionupdate="syncReviewTextEditor" @keydown.stop="handleReviewTextEditorKeydown"></textarea>
+            <textarea ref="reviewTextInput" v-model="reviewTextEditor.value" class="review-text-editor" aria-label="图片批注文字" rows="1" wrap="soft" @input="syncReviewTextEditor" @compositionupdate="syncReviewTextEditor" @keydown.stop="handleReviewTextEditorKeydown"></textarea>
             <span v-for="corner in ['top-left', 'top-right', 'bottom-left', 'bottom-right']" :key="corner" class="review-text-editor-node" :class="`review-text-editor-node--${corner}`"></span>
           </div>
-          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji', 'review-text-annotation--with-background': !!annotation.backgroundColor }" :style="annotationStyle(annotation)" title="拖动调整位置；按 Delete 删除" @pointerdown.stop.prevent="startMoveAnnotation($event, annotation)" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)">{{ annotation.text }}</button>
+          <button v-for="annotation in reviewTextAnnotations" :key="annotation.id" type="button" class="review-text-annotation" :class="{ 'is-selected': selectedReviewAnnotationId === annotation.id, 'review-text-annotation--emoji': annotation.type === 'emoji', 'review-text-annotation--with-background': !!annotation.backgroundColor }" :style="annotationStyle(annotation)" :title="annotation.type === 'text' ? '拖动调整位置；双击编辑文字；按 Delete 删除' : '拖动调整位置；按 Delete 删除'" @pointerdown.stop.prevent="startMoveAnnotation($event, annotation)" @mousedown.stop.prevent="startMoveAnnotation($event, annotation)" @dblclick.stop.prevent="annotation.type === 'text' && editReviewText(annotation)">{{ annotation.text }}</button>
         </div>
       </div>
       <div v-if="reviewPhotos.length > 1" class="review-photo-navigation">
