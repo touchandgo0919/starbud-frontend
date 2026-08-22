@@ -1465,11 +1465,6 @@ async function saveStatusRepair() {
   const task = statusRepairTask.value;
   if (!task) return;
   try {
-    await ElMessageBox.confirm(`确认将“${task.title}”修正为该状态吗？`, "修正任务状态", {
-      type: "warning",
-      confirmButtonText: "确认修正",
-      cancelButtonText: "取消"
-    });
     statusRepairing.value = true;
     const updated = await repairTaskStatus(task.id, task.occurrenceDate, statusRepairValue.value);
     statusRepairVisible.value = false;
@@ -1477,7 +1472,7 @@ async function saveStatusRepair() {
     if (detailTask.value && taskRowKey(detailTask.value) === taskRowKey(task)) await openDetail(updated);
     ElMessage.success("任务状态已修正");
   } catch (cause) {
-    if (cause !== "cancel" && cause !== "close") ElMessage.error(cause instanceof Error ? cause.message : "任务状态修正失败。");
+    ElMessage.error(cause instanceof Error ? cause.message : "任务状态修正失败。");
   } finally {
     statusRepairing.value = false;
   }
