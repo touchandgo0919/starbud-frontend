@@ -60,6 +60,10 @@ export interface SubmissionPhoto {
   contentType: string;
   byteSize: number;
   createdAt: string;
+  /** The original submitted photo this reviewed image was produced from. */
+  sourcePhotoId?: string | null;
+  /** Persisted editor state for reopening a reviewed image. */
+  annotationJson?: string;
 }
 
 export interface SubmissionAudio {

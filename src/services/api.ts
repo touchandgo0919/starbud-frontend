@@ -408,10 +408,21 @@ export async function getTaskSubmission(taskId: string, taskDate: string) {
   return normalizeSubmissionUrls(body.submission);
 }
 
-export async function submitSubmissionReview(submissionId: string, images: Blob[], replaceReviewImageIds: string[] = []) {
+export type SubmissionReviewImageMetadata = {
+  sourcePhotoId?: string;
+  annotationJson?: string;
+};
+
+export async function submitSubmissionReview(
+  submissionId: string,
+  images: Blob[],
+  replaceReviewImageIds: string[] = [],
+  imageMetadata: SubmissionReviewImageMetadata[] = []
+) {
   const formData = new FormData();
   images.forEach((image, index) => formData.append("images", image, `review-${index + 1}.png`));
   replaceReviewImageIds.forEach((imageId) => formData.append("replaceReviewImageIds", imageId));
+  imageMetadata.forEach((metadata) => formData.append("imageMetadata", JSON.stringify(metadata)));
   const token = getStoredToken();
   const response = await fetch(apiUrl(`/api/submissions/${submissionId}/review`), {
     method: "POST",

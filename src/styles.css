@@ -171,6 +171,7 @@ h1, h2, h3, p { margin: 0; }
 .task-calendar-day > i { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 50%; background: #31ce87; }
 .task-calendar-day > i.task-calendar-dot--revision { background: #e5484d; }
 .task-calendar-day > i.task-calendar-dot--review { background: #3b82f6; }
+.task-calendar-day > i.task-calendar-dot--active { background: #f08a24; }
 .task-calendar-day > i.task-calendar-dot--pending { background: #ffc947; }
 .task-calendar-day > i.task-calendar-dot--completed { background: #8a9490; }
 .task-calendar-day:hover { background: #252930; }
@@ -529,6 +530,8 @@ h1, h2, h3, p { margin: 0; }
 .revision-label { color: #ff7279; font-size: 12px; font-weight: 700; }
 .task-state--pending { color: #d59b21; }
 .task-state--pending::before { background: #ffc947; }
+.task-state--active { color: #e07812; }
+.task-state--active::before { background: #f08a24; }
 .task-state--review { color: #60a5fa; }
 .task-state--review::before { background: #3b82f6; }
 .task-state--revision { color: #ff7279; }
@@ -542,7 +545,8 @@ h1, h2, h3, p { margin: 0; }
 .review-dialog-title { display: inline-flex; justify-self: start; align-items: center; gap: 6px; }
 .review-help { color: var(--muted); font-size: 15px; cursor: help; }
 .review-help:hover { color: var(--green); }
-.review-submit-button.el-button { justify-self: end; margin: 0; }
+.review-submit-actions { justify-self: end; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.review-submit-button.el-button, .review-submit-all-button.el-button { margin: 0; }
 .review-tool-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 6px; background: #181a1e; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); }
 .review-tool-group > * { display: inline-flex; flex: 0 0 32px; width: 32px; }
 .review-tool-button.el-button { width: 32px; min-width: 32px; height: 32px; margin: 0 !important; padding: 0; border-color: transparent; border-radius: 4px; background: transparent; color: #d4d8df; font-size: 17px; }

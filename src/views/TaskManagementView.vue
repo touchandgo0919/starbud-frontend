@@ -51,6 +51,7 @@ const selectedReviewPhoto = ref<SubmissionPhoto | null>(null);
 const selectedReviewPhotos = ref<SubmissionPhoto[]>([]);
 const selectedReviewPhotoIndex = ref(0);
 const reviewReplacementImageIds = ref<string[]>([]);
+const reviewReplacementBySourceId = ref<Record<string, string>>({});
 const canViewPreviousReviewedPhoto = computed(() => selectedReviewPhotoIndex.value > 0);
 const canViewNextReviewedPhoto = computed(() => selectedReviewPhotoIndex.value < selectedReviewPhotos.value.length - 1);
 const originalPreviewVisible = ref(false);
@@ -67,6 +68,8 @@ const reviewPhoto = ref<SubmissionPhoto | null>(null);
 const reviewPhotos = ref<SubmissionPhoto[]>([]);
 const reviewPhotoIndex = ref(0);
 const reviewPhotoDrafts = ref<Record<string, ReviewPhotoDraft>>({});
+// Exported images are only a submission staging area; the editable draft remains separate.
+const reviewPhotoBlobs = ref<Record<string, Blob>>({});
 const submittedReviewPhotoIds = ref<Record<string, true>>({});
 const canReviewPreviousPhoto = computed(() => reviewPhotoIndex.value > 0);
 const canReviewNextPhoto = computed(() => reviewPhotoIndex.value < reviewPhotos.value.length - 1);
@@ -207,6 +210,7 @@ function taskStateClass(task: Task) {
   if (task.reviewStatus === "needs_revision") return "task-state--revision";
   if (task.reviewStatus === "pending_review") return "task-state--review";
   if (task.status === "completed" || task.reviewStatus === "completed") return "task-state--completed";
+  if (task.claimedAt) return "task-state--active";
   return "task-state--pending";
 }
 
@@ -350,6 +354,7 @@ async function openDetail(task: Task) {
   selectedReviewPhotos.value = [];
   selectedReviewPhotoIndex.value = 0;
   reviewReplacementImageIds.value = [];
+  reviewReplacementBySourceId.value = {};
   originalPreviewUrl.value = null;
   originalPreviewPhotos.value = [];
   originalPreviewPhotoIndex.value = 0;
@@ -403,6 +408,8 @@ async function openTaskReview(task: Task) {
     if (submissionAudio.value) openAudioReview();
     return;
   }
+  reviewReplacementImageIds.value = [];
+  reviewReplacementBySourceId.value = {};
   await openReview(
     submissionReviewImageUrl.value ? { ...original, url: submissionReviewImageUrl.value } : original,
     submissionReviewImageUrl.value ? undefined : submissionPhotos.value
@@ -467,7 +474,16 @@ async function restartReview() {
   selectedReviewPhoto.value = null;
   if (reviewedPhoto) {
     reviewReplacementImageIds.value = reviewedPhotos.map((photo) => photo.id);
-    await openReview(reviewedPhoto, reviewedPhotos);
+    reviewReplacementBySourceId.value = Object.fromEntries(reviewedPhotos.map((photo) => [photo.sourcePhotoId || photo.id, photo.id]));
+    const sourcePhoto = submissionPhotos.value.find((photo) => photo.id === (reviewedPhoto.sourcePhotoId || reviewedPhoto.id)) || reviewedPhoto;
+    await openReview(sourcePhoto, submissionPhotos.value.length ? submissionPhotos.value : [sourcePhoto]);
+    const savedDraft = parseReviewPhotoDraft(reviewedPhoto.annotationJson);
+    if (savedDraft) {
+      reviewPhotoDrafts.value = { ...reviewPhotoDrafts.value, [sourcePhoto.id]: savedDraft };
+      reviewAnnotations.value = savedDraft.annotations.map(copyReviewAnnotation);
+      reviewRotation.value = savedDraft.rotation;
+      if (reviewSourceImage) renderReviewSourceImage();
+    }
     return;
   }
   if (task) await openTaskReview(task);
@@ -483,6 +499,7 @@ async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPho
     return;
   }
   reviewReplacementImageIds.value = [];
+  reviewReplacementBySourceId.value = {};
   await openReview(photo, photos);
 }
 
@@ -523,9 +540,22 @@ async function reReviewImage(image: SubmissionPhoto, images: SubmissionPhoto[] =
   }
   selectReviewedPhoto(image, images);
   selectedReviewImageUrl.value = null;
+  const sourcePhotos = submissionPhotos.value.length ? submissionPhotos.value : [image];
+  const sourcePhotoId = image.sourcePhotoId || image.id;
+  const sourcePhoto = sourcePhotos.find((photo) => photo.id === sourcePhotoId) || image;
   reviewReplacementImageIds.value = images.map((item) => item.id);
+  reviewReplacementBySourceId.value = Object.fromEntries(
+    images.map((item) => [item.sourcePhotoId || item.id, item.id])
+  );
   reviewResultVisible.value = false;
-  await openReview(image, images);
+  await openReview(sourcePhoto, sourcePhotos);
+  const savedDraft = parseReviewPhotoDraft(image.annotationJson);
+  if (savedDraft) {
+    reviewPhotoDrafts.value = { ...reviewPhotoDrafts.value, [sourcePhoto.id]: savedDraft };
+    reviewAnnotations.value = savedDraft.annotations.map(copyReviewAnnotation);
+    reviewRotation.value = savedDraft.rotation;
+    if (reviewSourceImage) renderReviewSourceImage();
+  }
 }
 
 async function finalizeCurrentReview() {
@@ -581,6 +611,7 @@ async function openReview(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [p
   const photoIndex = photos.findIndex((item) => item.id === photo.id);
   if (!preserveStagedReviews) {
     reviewPhotoDrafts.value = {};
+    reviewPhotoBlobs.value = {};
     submittedReviewPhotoIds.value = {};
   }
   reviewPhotos.value = photos;
@@ -602,7 +633,7 @@ async function switchReviewPhoto(offset: number) {
   const photo = reviewPhotos.value[nextIndex];
   if (!photo) return;
   try {
-    persistCurrentReviewDraft();
+    await stageCurrentReviewPhoto();
     await openReview(photo, reviewPhotos.value, true);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "切换批改图片失败。");
@@ -753,6 +784,27 @@ function copyReviewAnnotation(annotation: ReviewAnnotation): ReviewAnnotation {
     return { ...annotation, points: annotation.points.map((point) => ({ ...point })) };
   }
   return { ...annotation };
+}
+
+function parseReviewPhotoDraft(annotationJson?: string): ReviewPhotoDraft | null {
+  if (!annotationJson) return null;
+  try {
+    const parsed = JSON.parse(annotationJson) as Partial<ReviewPhotoDraft>;
+    if (!Array.isArray(parsed.annotations)) return null;
+    return {
+      annotations: parsed.annotations.filter((annotation): annotation is ReviewAnnotation => Boolean(annotation && typeof annotation === "object")).map(copyReviewAnnotation),
+      rotation: typeof parsed.rotation === "number" ? parsed.rotation : 0
+    };
+  } catch {
+    return null;
+  }
+}
+
+function serializeReviewPhotoDraft(draft: ReviewPhotoDraft) {
+  return JSON.stringify({
+    annotations: draft.annotations.map(copyReviewAnnotation),
+    rotation: draft.rotation
+  });
 }
 
 function rotateReviewPoint(point: ReviewPoint, width: number, height: number, clockwise: boolean): ReviewPoint {
@@ -1380,6 +1432,29 @@ function persistCurrentReviewDraft() {
   };
 }
 
+async function stageCurrentReviewPhoto() {
+  const photo = reviewPhoto.value;
+  if (!photo) return null;
+  persistCurrentReviewDraft();
+  const image = await reviewedImageBlob();
+  if (!image) return null;
+  reviewPhotoBlobs.value = { ...reviewPhotoBlobs.value, [photo.id]: image };
+  return image;
+}
+
+async function submitReviewPhoto(photo: SubmissionPhoto, image: Blob) {
+  if (!selectedSubmissionId.value) throw new Error("未找到对应的作业提交。");
+  const draft = reviewPhotoDrafts.value[photo.id] || { annotations: [], rotation: 0 };
+  const replacementId = reviewReplacementBySourceId.value[photo.id]
+    || (reviewReplacementImageIds.value.includes(photo.id) ? photo.id : "");
+  return submitSubmissionReview(
+    selectedSubmissionId.value,
+    [image],
+    replacementId ? [replacementId] : [],
+    [{ sourcePhotoId: photo.id, annotationJson: serializeReviewPhotoDraft(draft) }]
+  );
+}
+
 async function submitReviewedImage() {
   const photo = reviewPhoto.value;
   if (!selectedSubmissionId.value || !photo) {
@@ -1392,25 +1467,63 @@ async function submitReviewedImage() {
   }
   reviewSubmitting.value = true;
   try {
-    persistCurrentReviewDraft();
-    const image = await reviewedImageBlob();
+    const image = await stageCurrentReviewPhoto();
     if (!image) throw new Error("生成批改图片失败。");
-    const replacementIds = reviewReplacementImageIds.value.includes(photo.id) ? [photo.id] : [];
-    const submission = await submitSubmissionReview(
-      selectedSubmissionId.value,
-      [image],
-      replacementIds
-    );
+    const replacementId = reviewReplacementBySourceId.value[photo.id]
+      || (reviewReplacementImageIds.value.includes(photo.id) ? photo.id : "");
+    const submission = await submitReviewPhoto(photo, image);
     submissionPhotos.value = submission.photos;
     submissionSubmittedAt.value = submission.submittedAt;
     submissionNote.value = submission.note.trim();
     submissionReviewImageUrl.value = submission.reviewImageUrl;
     submissionReviewRounds.value = submission.reviewRounds;
     submittedReviewPhotoIds.value = { ...submittedReviewPhotoIds.value, [photo.id]: true };
-    ElMessage.success(replacementIds.length ? "本张批改已更新，已通知小朋友。" : "本张批改已提交，已通知小朋友。");
+    ElMessage.success(replacementId ? "本张批改已更新，已通知小朋友。" : "本张批改已提交，已通知小朋友。");
     if (canReviewNextPhoto.value) await switchReviewPhoto(1);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "提交批改失败。");
+  } finally {
+    reviewSubmitting.value = false;
+  }
+}
+
+const stagedReviewPhotos = computed(() => reviewPhotos.value.filter((photo) => Boolean(reviewPhotoBlobs.value[photo.id]) && !submittedReviewPhotoIds.value[photo.id]));
+const pendingReviewPhotoCount = computed(() => {
+  const ids = new Set(stagedReviewPhotos.value.map((photo) => photo.id));
+  if (reviewPhoto.value && !submittedReviewPhotoIds.value[reviewPhoto.value.id]) ids.add(reviewPhoto.value.id);
+  return ids.size;
+});
+
+async function submitAllReviewedImages() {
+  if (!selectedSubmissionId.value) {
+    ElMessage.error("未找到对应的作业提交。");
+    return;
+  }
+  reviewSubmitting.value = true;
+  try {
+    await stageCurrentReviewPhoto();
+    const pendingPhotos = stagedReviewPhotos.value;
+    if (!pendingPhotos.length) {
+      ElMessage.info("没有待提交的批改图片。");
+      return;
+    }
+    let latestSubmission: Awaited<ReturnType<typeof submitReviewPhoto>> | null = null;
+    for (const photo of pendingPhotos) {
+      const image = reviewPhotoBlobs.value[photo.id];
+      if (!image) continue;
+      latestSubmission = await submitReviewPhoto(photo, image);
+      submittedReviewPhotoIds.value = { ...submittedReviewPhotoIds.value, [photo.id]: true };
+    }
+    if (latestSubmission) {
+      submissionPhotos.value = latestSubmission.photos;
+      submissionSubmittedAt.value = latestSubmission.submittedAt;
+      submissionNote.value = latestSubmission.note.trim();
+      submissionReviewImageUrl.value = latestSubmission.reviewImageUrl;
+      submissionReviewRounds.value = latestSubmission.reviewRounds;
+    }
+    ElMessage.success(`已批量提交 ${pendingPhotos.length} 张批改图片，并通知小朋友。`);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "批量提交批改失败。");
   } finally {
     reviewSubmitting.value = false;
   }
@@ -1873,7 +1986,10 @@ onBeforeUnmount(() => {
               <el-tooltip content="清除所有批改" placement="bottom"><el-button class="review-tool-button" aria-label="清除所有批改" @click="clearAllReviewAnnotations"><el-icon><Delete /></el-icon></el-button></el-tooltip>
             </div>
           </div>
-          <el-button class="review-submit-button" type="primary" :disabled="currentReviewPhotoSubmitted" :loading="reviewSubmitting" @click="submitReviewedImage">{{ currentReviewPhotoSubmitted ? "本张已提交" : "提交本张" }}</el-button>
+          <div class="review-submit-actions">
+            <el-button v-if="pendingReviewPhotoCount > 1" class="review-submit-all-button" :loading="reviewSubmitting" @click="submitAllReviewedImages">批量提交 {{ pendingReviewPhotoCount }} 张</el-button>
+            <el-button class="review-submit-button" type="primary" :disabled="currentReviewPhotoSubmitted" :loading="reviewSubmitting" @click="submitReviewedImage">{{ currentReviewPhotoSubmitted ? "本张已提交" : "提交本张" }}</el-button>
+          </div>
         </div>
       </template>
       <div ref="reviewCanvasShell" class="review-canvas-shell">
