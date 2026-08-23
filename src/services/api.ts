@@ -417,12 +417,14 @@ export async function submitSubmissionReview(
   submissionId: string,
   images: Blob[],
   replaceReviewImageIds: string[] = [],
-  imageMetadata: SubmissionReviewImageMetadata[] = []
+  imageMetadata: SubmissionReviewImageMetadata[] = [],
+  notify = true
 ) {
   const formData = new FormData();
   images.forEach((image, index) => formData.append("images", image, `review-${index + 1}.png`));
   replaceReviewImageIds.forEach((imageId) => formData.append("replaceReviewImageIds", imageId));
   imageMetadata.forEach((metadata) => formData.append("imageMetadata", JSON.stringify(metadata)));
+  formData.append("notify", String(notify));
   const token = getStoredToken();
   const response = await fetch(apiUrl(`/api/submissions/${submissionId}/review`), {
     method: "POST",

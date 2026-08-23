@@ -480,18 +480,41 @@ async function restartReview() {
   if (reviewedPhoto) {
     reviewReplacementImageIds.value = reviewedPhotos.map((photo) => photo.id);
     reviewReplacementBySourceId.value = Object.fromEntries(reviewedPhotos.map((photo) => [photo.sourcePhotoId || photo.id, photo.id]));
-    const sourcePhoto = submissionPhotos.value.find((photo) => photo.id === (reviewedPhoto.sourcePhotoId || reviewedPhoto.id)) || reviewedPhoto;
-    await openReview(sourcePhoto, submissionPhotos.value.length ? submissionPhotos.value : [sourcePhoto]);
-    const savedDraft = parseReviewPhotoDraft(reviewedPhoto.annotationJson);
-    if (savedDraft) {
-      reviewPhotoDrafts.value = { ...reviewPhotoDrafts.value, [sourcePhoto.id]: savedDraft };
-      reviewAnnotations.value = savedDraft.annotations.map(copyReviewAnnotation);
-      reviewRotation.value = savedDraft.rotation;
-      if (reviewSourceImage) renderReviewSourceImage();
-    }
+    await openExistingReviewImages(reviewedPhoto, reviewedPhotos);
     return;
   }
   if (task) await openTaskReview(task);
+}
+
+function reviewSourcePhoto(image: SubmissionPhoto) {
+  const sourcePhotoId = image.sourcePhotoId || image.id;
+  return submissionPhotos.value.find((photo) => photo.id === sourcePhotoId) || image;
+}
+
+function reviewSourcePhotos(images: SubmissionPhoto[]) {
+  return images.map(reviewSourcePhoto);
+}
+
+function reviewDraftsFromImages(images: SubmissionPhoto[]) {
+  return Object.fromEntries(images.flatMap((image) => {
+    const draft = parseReviewPhotoDraft(image.annotationJson);
+    return draft ? [[image.sourcePhotoId || image.id, draft]] : [];
+  }));
+}
+
+async function openExistingReviewImages(selectedImage: SubmissionPhoto, images: SubmissionPhoto[]) {
+  const sources = reviewSourcePhotos(images);
+  const selectedSourceId = selectedImage.sourcePhotoId || selectedImage.id;
+  const selectedSource = sources.find((photo) => photo.id === selectedSourceId) || reviewSourcePhoto(selectedImage);
+  const drafts = reviewDraftsFromImages(images);
+  await openReview(selectedSource, sources);
+  reviewPhotoDrafts.value = { ...reviewPhotoDrafts.value, ...drafts };
+  const savedDraft = drafts[selectedSource.id];
+  if (savedDraft) {
+    reviewAnnotations.value = savedDraft.annotations.map(copyReviewAnnotation);
+    reviewRotation.value = savedDraft.rotation;
+    if (reviewSourceImage) renderReviewSourceImage();
+  }
 }
 
 async function reviewRoundOriginal(photo: SubmissionPhoto, photos: SubmissionPhoto[] = [photo]) {
@@ -545,22 +568,12 @@ async function reReviewImage(image: SubmissionPhoto, images: SubmissionPhoto[] =
   }
   selectReviewedPhoto(image, images);
   selectedReviewImageUrl.value = null;
-  const sourcePhotos = submissionPhotos.value.length ? submissionPhotos.value : [image];
-  const sourcePhotoId = image.sourcePhotoId || image.id;
-  const sourcePhoto = sourcePhotos.find((photo) => photo.id === sourcePhotoId) || image;
   reviewReplacementImageIds.value = images.map((item) => item.id);
   reviewReplacementBySourceId.value = Object.fromEntries(
     images.map((item) => [item.sourcePhotoId || item.id, item.id])
   );
   reviewResultVisible.value = false;
-  await openReview(sourcePhoto, sourcePhotos);
-  const savedDraft = parseReviewPhotoDraft(image.annotationJson);
-  if (savedDraft) {
-    reviewPhotoDrafts.value = { ...reviewPhotoDrafts.value, [sourcePhoto.id]: savedDraft };
-    reviewAnnotations.value = savedDraft.annotations.map(copyReviewAnnotation);
-    reviewRotation.value = savedDraft.rotation;
-    if (reviewSourceImage) renderReviewSourceImage();
-  }
+  await openExistingReviewImages(image, images);
 }
 
 async function finalizeCurrentReview() {
@@ -1447,7 +1460,7 @@ async function stageCurrentReviewPhoto() {
   return image;
 }
 
-async function submitReviewPhoto(photo: SubmissionPhoto, image: Blob) {
+async function submitReviewPhoto(photo: SubmissionPhoto, image: Blob, notify = true) {
   if (!selectedSubmissionId.value) throw new Error("未找到对应的作业提交。");
   const draft = reviewPhotoDrafts.value[photo.id] || { annotations: [], rotation: 0 };
   const replacementId = reviewReplacementBySourceId.value[photo.id]
@@ -1456,7 +1469,8 @@ async function submitReviewPhoto(photo: SubmissionPhoto, image: Blob) {
     selectedSubmissionId.value,
     [image],
     replacementId ? [replacementId] : [],
-    [{ sourcePhotoId: photo.id, annotationJson: serializeReviewPhotoDraft(draft) }]
+    [{ sourcePhotoId: photo.id, annotationJson: serializeReviewPhotoDraft(draft) }],
+    notify
   );
 }
 
@@ -1512,11 +1526,18 @@ async function submitAllReviewedImages() {
       ElMessage.info("没有待提交的批改图片。");
       return;
     }
-    let latestSubmission: Awaited<ReturnType<typeof submitReviewPhoto>> | null = null;
-    for (const photo of pendingPhotos) {
+    const readyPhotos = pendingPhotos.flatMap((photo) => {
       const image = reviewPhotoBlobs.value[photo.id];
-      if (!image) continue;
-      latestSubmission = await submitReviewPhoto(photo, image);
+      return image ? [{ photo, image }] : [];
+    });
+    if (!readyPhotos.length) {
+      throw new Error("没有可提交的批改图片。");
+    }
+    let latestSubmission: Awaited<ReturnType<typeof submitReviewPhoto>> | null = null;
+    for (let index = 0; index < readyPhotos.length; index += 1) {
+      const { photo, image } = readyPhotos[index];
+      // A batch remains image-by-image in storage, but only its final request emits the child notification/reminder.
+      latestSubmission = await submitReviewPhoto(photo, image, index === readyPhotos.length - 1);
       submittedReviewPhotoIds.value = { ...submittedReviewPhotoIds.value, [photo.id]: true };
     }
     if (latestSubmission) {
@@ -1526,7 +1547,7 @@ async function submitAllReviewedImages() {
       submissionReviewImageUrl.value = latestSubmission.reviewImageUrl;
       submissionReviewRounds.value = latestSubmission.reviewRounds;
     }
-    ElMessage.success(`已批量提交 ${pendingPhotos.length} 张批改图片，并通知小朋友。`);
+    ElMessage.success(`已批量提交 ${readyPhotos.length} 张批改图片，并通知小朋友一次。`);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "批量提交批改失败。");
   } finally {
