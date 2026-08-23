@@ -203,7 +203,12 @@ function canComplete(task: Task) {
 function taskStatusLabel(task: Task) {
   if (task.reviewStatus === "needs_revision") return "待修改";
   if (task.reviewStatus === "pending_review") return "待批改";
+  if (isUnclaimedClaimTask(task)) return "待领取";
   return task.status === "completed" ? "已完成" : "待完成";
+}
+
+function isUnclaimedClaimTask(task: Task) {
+  return !task.requiresPhotoUpload && !task.claimedAt && task.status !== "completed" && task.reviewStatus !== "completed";
 }
 
 function taskStateClass(task: Task) {
@@ -1726,7 +1731,7 @@ onBeforeUnmount(() => {
         <el-table-column label="提醒" width="82"><template #default="scope">{{ scope.row.voiceEnabled ? `语音 ${scope.row.voiceReminderCount} 次` : "静默" }}</template></el-table-column>
         <el-table-column label="状态" width="82"><template #default="scope"><span class="status-dot task-state" :class="taskStateClass(scope.row)">{{ taskStatusLabel(scope.row) }}</span></template></el-table-column>
         <el-table-column label="附件" width="78"><template #default="scope"><span v-if="loading" class="task-attachment-loading" aria-label="正在加载附件"><el-icon class="is-loading"><Loading /></el-icon></span><button v-else-if="scope.row.attachmentPhotoCount" type="button" class="task-photo-preview" :title="`已上传 ${scope.row.attachmentPhotoCount} 张照片`" @click="openDetail(scope.row)"><img :src="scope.row.attachmentPreviewUrl" alt="作业缩略图" /><span>{{ scope.row.attachmentPhotoCount }}</span></button><button v-else-if="scope.row.hasAudioAttachment" type="button" class="task-photo-preview task-audio-preview" title="播放录音附件" aria-label="播放录音附件" @click="openDetail(scope.row)"><Play :size="19" fill="currentColor" aria-hidden="true" /></button><span v-else class="task-photo-empty">—</span></template></el-table-column>
-        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="scope.row.reviewStatus === 'not_required'" class="task-photo-empty">—</span><span v-else-if="scope.row.reviewStatus === 'completed'" class="task-photo-empty">已完成</span><span v-else-if="scope.row.reviewStatus === 'needs_revision'" class="task-photo-empty">待修改</span><el-button v-else-if="scope.row.reviewStatus === 'pending_review'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="scope.row.reviewStatus === 'submitting'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
+        <el-table-column v-if="auth.user?.role !== 'child'" label="批改" width="88"><template #default="scope"><span v-if="isUnclaimedClaimTask(scope.row)" class="task-photo-empty">待领取</span><span v-else-if="scope.row.reviewStatus === 'not_required'" class="task-photo-empty">—</span><span v-else-if="scope.row.reviewStatus === 'completed'" class="task-photo-empty">已完成</span><span v-else-if="scope.row.reviewStatus === 'needs_revision'" class="task-photo-empty">待修改</span><el-button v-else-if="scope.row.reviewStatus === 'pending_review'" type="success" size="small" @click="openTaskReview(scope.row)">去批改</el-button><span v-else-if="scope.row.reviewStatus === 'submitting'" class="task-photo-empty">提交中</span><span v-else class="task-photo-empty">待提交</span></template></el-table-column>
         <el-table-column label="操作" width="92" fixed="right"><template #default="scope"><div v-if="auth.user?.role === 'child'" class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" :disabled="!canComplete(scope.row)" @click="markComplete(scope.row)">完成</el-button></div></div><div v-else class="task-table-actions"><div class="task-table-actions__row"><el-button link type="primary" @click="openEdit(scope.row)">编辑</el-button><el-button link type="danger" @click="removeTask(scope.row)">删除</el-button></div><div class="task-table-actions__row"><el-button link type="primary" @click="sendReminder(scope.row)">提醒</el-button><el-button link @click="openDetail(scope.row)">详情</el-button></div></div></template></el-table-column>
       </el-table>
       <div v-loading="loading" class="mobile-data-list">
