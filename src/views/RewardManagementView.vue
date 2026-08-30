@@ -17,7 +17,7 @@ const settings = reactive({ taskPoints: 1, streakDays: 3, streakBonusPoints: 2 }
 const rewardForm = reactive({ title: "", pointCost: 10, description: "" });
 const editingRewardId = ref("");
 const activeTab = computed(() => route.path.endsWith("/records") ? "records" : "settings");
-const recordTab = ref<"earned" | "redemptions">("earned");
+const recordTab = ref<"earned" | "redemptions">(route.query.tab === "redemptions" ? "redemptions" : "earned");
 const rulesSaved = ref(false);
 const recordFilters = reactive({ timeRange: [] as string[] });
 const appliedRecordFilters = reactive({ timeRange: [] as string[] });
@@ -30,6 +30,7 @@ const visibleRedemptions = computed(() => (center.value?.redemptions || []).filt
 const pagedRewards = computed(() => (center.value?.rewards || []).slice((rewardPage.value - 1) * rewardPageSize, rewardPage.value * rewardPageSize));
 const pagedEarnedEntries = computed(() => earnedEntries.value.slice((earnedPage.value - 1) * rewardPageSize, earnedPage.value * rewardPageSize));
 const pagedRedemptions = computed(() => visibleRedemptions.value.slice((redemptionPage.value - 1) * rewardPageSize, redemptionPage.value * rewardPageSize));
+const pendingRedemptions = computed(() => (center.value?.redemptions || []).filter((item) => item.status === "pending"));
 let centerRequestId = 0;
 
 async function load() {
@@ -125,6 +126,9 @@ watch(selectedChildId, (childId, previousChildId) => {
   redemptionPage.value = 1;
   if (childId && previousChildId) void loadCenter();
 });
+watch(() => route.query.tab, (tab) => {
+  if (tab === "redemptions") recordTab.value = "redemptions";
+});
 onMounted(load);
 </script>
 
@@ -150,7 +154,8 @@ onMounted(load);
         <form class="record-filter-form reward-record-filter" @submit.prevent="applyRecordFilters"><el-date-picker v-model="recordFilters.timeRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" aria-label="筛选积分记录时间范围" /><el-button type="primary" native-type="submit">查询</el-button><el-button @click="resetRecordFilters">重置</el-button></form></div>
       </section>
       <section class="content-panel reward-management reward-record-list-card">
-        <div class="record-tabs"><button :class="{ active: recordTab === 'earned' }" @click="recordTab = 'earned'">获取记录</button><button :class="{ active: recordTab === 'redemptions' }" @click="recordTab = 'redemptions'">兑换记录</button></div>
+        <section v-if="pendingRedemptions.length" class="pending-redemption-review"><div class="pending-redemption-review__heading"><div><h3>待审核兑换 <small>共 {{ pendingRedemptions.length }} 项</small></h3><p>确认后将扣除相应积分；拒绝不会扣分。</p></div></div><div class="redemption-list"><div v-for="item in pendingRedemptions" :key="item.id"><div><strong>{{ item.childName }} · {{ item.title }}</strong><span>{{ item.pointCost }} 分 · {{ item.requestedAt }}{{ item.note ? ` · ${item.note}` : '' }}</span></div><div class="row-actions"><el-button type="primary" size="small" @click="confirm(item.id, true)">确认兑换</el-button><el-button size="small" @click="confirm(item.id, false)">拒绝</el-button></div></div></div></section>
+        <div class="record-tabs"><button :class="{ active: recordTab === 'earned' }" @click="recordTab = 'earned'">获取记录</button><button :class="{ active: recordTab === 'redemptions' }" @click="recordTab = 'redemptions'">兑换记录 <b v-if="pendingRedemptions.length" class="record-tab-badge">待审核 {{ pendingRedemptions.length }}</b></button></div>
         <div v-if="recordTab === 'earned'" class="reward-box redemption-records"><h3>获取记录 <small>共 {{ earnedEntries.length }} 笔</small></h3><div class="redemption-list"><div v-for="entry in pagedEarnedEntries" :key="`${entry.type}-${entry.createdAt}`"><div><strong>{{ entry.description }}</strong><span><b class="entry-type">{{ entry.type === 'streak_bonus' ? '连续奖励' : '完成任务' }}</b>{{ entry.createdAt }}</span></div><strong class="point-income">+{{ entry.points }} 分</strong></div><span v-if="!earnedEntries.length" class="muted">暂无积分获取记录。</span></div><div v-if="earnedEntries.length > rewardPageSize" class="table-pagination"><el-pagination background layout="prev, pager, next" :current-page="earnedPage" :page-size="rewardPageSize" :total="earnedEntries.length" @current-change="earnedPage = $event" /></div></div>
         <div v-else class="reward-box redemption-records"><h3>兑换记录 <small>共 {{ visibleRedemptions.length }} 笔</small></h3><div class="redemption-list"><div v-for="item in pagedRedemptions" :key="item.id"><div><strong>{{ item.childName }} · {{ item.title }}</strong><span>{{ item.pointCost }} 分 · {{ item.requestedAt }}{{ item.note ? ` · ${item.note}` : '' }}</span></div><div v-if="item.status === 'pending'" class="row-actions"><el-button type="primary" size="small" @click="confirm(item.id, true)">确认兑换</el-button><el-button size="small" @click="confirm(item.id, false)">拒绝</el-button></div><span v-else :class="`redemption-status ${item.status}`">{{ item.status === 'approved' ? '已确认' : '已拒绝' }}</span></div><span v-if="!visibleRedemptions.length" class="muted">暂无兑换申请。</span></div><div v-if="visibleRedemptions.length > rewardPageSize" class="table-pagination"><el-pagination background layout="prev, pager, next" :current-page="redemptionPage" :page-size="rewardPageSize" :total="visibleRedemptions.length" @current-change="redemptionPage = $event" /></div></div>
       </section>
