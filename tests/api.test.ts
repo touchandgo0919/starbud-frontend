@@ -170,4 +170,20 @@ describe("web API client", () => {
     await expect(api.getFamilies()).rejects.toThrow("账号无权限");
     await expect(api.trackAccessEvent({ eventName: "view_opened" })).resolves.toBeUndefined();
   });
+  it("updates the family AI image setting and loads pending redemptions for the parent inbox", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ family: { id: "family-1", aiMediaAnalysisEnabled: true } }))
+      .mockResolvedValueOnce(jsonResponse({ redemptions: [{ id: "redemption-1", title: "周末电影", pointCost: 5 }] }));
+    const api = await import("../src/services/api");
+
+    await expect(api.updateFamilyAiSettings("family-1", true)).resolves.toMatchObject({ aiMediaAnalysisEnabled: true });
+    await expect(api.getPendingRedemptions()).resolves.toHaveLength(1);
+
+    const [settingsUrl, settingsInit] = fetchMock.mock.calls.at(-2)!;
+    const [inboxUrl] = fetchMock.mock.calls.at(-1)!;
+    expect(String(settingsUrl)).toMatch(/\/api\/families\/family-1\/ai-settings$/);
+    expect(settingsInit?.method).toBe("PATCH");
+    expect(JSON.parse(String(settingsInit?.body))).toEqual({ allowMediaAnalysis: true });
+    expect(String(inboxUrl)).toMatch(/\/api\/rewards\/redemptions\?status=pending$/);
+  });
 });

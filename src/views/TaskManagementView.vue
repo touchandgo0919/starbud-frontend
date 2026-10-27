@@ -8,6 +8,7 @@ import { completeTask, createTask, deleteTask, finalizeSubmissionReview, getChil
 import { useAuthStore } from "../store/auth";
 import type { Child, CreateTaskPayload, RepeatType, SubmissionAudio, SubmissionPhoto, SubmissionReviewRound, Task } from "../types/task";
 import { nextEditableOccurrence } from "../utils/task-edit";
+import { taskStateClass, taskStatusLabel } from "../utils/task-status";
 import TaskCalendar from "../components/TaskCalendar.vue";
 
 type CreateTaskForm = Omit<CreateTaskPayload, "childId"> & { childIds: string[] };
@@ -200,23 +201,8 @@ function canComplete(task: Task) {
   return task.status !== "completed" && task.occurrenceDate === dateKey(new Date());
 }
 
-function taskStatusLabel(task: Task) {
-  if (task.reviewStatus === "needs_revision") return "待修改";
-  if (task.reviewStatus === "pending_review") return "待批改";
-  if (isUnclaimedClaimTask(task)) return "待领取";
-  return task.status === "completed" ? "已完成" : "待完成";
-}
-
 function isUnclaimedClaimTask(task: Task) {
   return !task.requiresPhotoUpload && !task.claimedAt && task.status !== "completed" && task.reviewStatus !== "completed";
-}
-
-function taskStateClass(task: Task) {
-  if (task.reviewStatus === "needs_revision") return "task-state--revision";
-  if (task.reviewStatus === "pending_review") return "task-state--review";
-  if (task.status === "completed" || task.reviewStatus === "completed") return "task-state--completed";
-  if (task.claimedAt) return "task-state--active";
-  return "task-state--pending";
 }
 
 function hasSubmission(task: Task) {

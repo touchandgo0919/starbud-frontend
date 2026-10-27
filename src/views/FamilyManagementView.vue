@@ -10,6 +10,7 @@ import {
   getFamilies,
   removeFamilyMember,
   updateFamily,
+  updateFamilyAiSettings,
   updateFamilyMember
 } from "../services/api";
 import { useAuthStore } from "../store/auth";
@@ -25,6 +26,7 @@ const activeFamily = ref<Family | null>(null);
 const familyForm = reactive({ name: "" });
 const memberForm = reactive({ username: "", relationship: "" });
 const childForm = reactive({ username: "", displayName: "", password: "", relationship: "孩子" });
+const savingAiFamilyId = ref("");
 
 async function loadFamilies() {
   loading.value = true;
@@ -135,6 +137,26 @@ async function removeFamily(family: Family) {
   }
 }
 
+async function toggleMediaAnalysis(family: Family, enabled: boolean) {
+  try {
+    if (enabled) {
+      await ElMessageBox.confirm(
+        "开启后，家长完成批改时，最多 4 张批改图片（没有批改图时为孩子提交的作业照片）会以低分辨率发送给 AI 模型，用于整理历史学习问题。模型服务商不保存请求内容。可以随时关闭。",
+        "允许 AI 分析作业图片？",
+        { type: "warning", confirmButtonText: "允许", cancelButtonText: "暂不开启" }
+      );
+    }
+    savingAiFamilyId.value = family.id;
+    const updated = await updateFamilyAiSettings(family.id, enabled);
+    families.value = families.value.map((item) => item.id === updated.id ? updated : item);
+    ElMessage.success(enabled ? "已允许 AI 分析作业图片" : "已关闭 AI 图片分析，后续仅使用家长文字评价");
+  } catch (cause) {
+    if (cause !== "cancel" && cause !== "close") ElMessage.error(cause instanceof Error ? cause.message : "AI 隐私设置更新失败。");
+  } finally {
+    savingAiFamilyId.value = "";
+  }
+}
+
 onMounted(loadFamilies);
 </script>
 
@@ -164,6 +186,19 @@ onMounted(loadFamilies);
                 <el-button v-if="!member.isOwner && member.id !== auth.user?.id" link type="danger" @click="removeMember(family, member)">移除</el-button>
               </div>
             </div>
+          </div>
+          <div class="family-ai-privacy" :class="{ 'is-enabled': family.aiMediaAnalysisEnabled }">
+            <div class="family-ai-privacy__copy">
+              <strong>AI 分析作业图片</strong>
+              <span>{{ family.aiMediaAnalysisEnabled ? "已开启：批改图片会用于整理历史学习问题" : "未开启：AI 只使用家长的文字评价，不读取照片和批改图" }}</span>
+            </div>
+            <el-switch
+              :model-value="family.aiMediaAnalysisEnabled"
+              :disabled="!family.canManage"
+              :loading="savingAiFamilyId === family.id"
+              aria-label="允许 AI 分析作业图片"
+              @change="(value: string | number | boolean) => toggleMediaAnalysis(family, Boolean(value))"
+            />
           </div>
           <div v-if="family.canManage" class="family-card-actions">
             <el-button type="primary" plain @click="openChild(family)">创建子女</el-button>

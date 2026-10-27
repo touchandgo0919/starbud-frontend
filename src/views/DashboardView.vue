@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from "vue";
 import { ArrowRight, Check, CircleCheck, Clock, Collection, DataAnalysis, House, List, MagicStick, Refresh, Timer } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
-import { getAiHomeOverview, getChildren, getFamilies, getTasks, getTodayTasks, getUsers } from "../services/api";
+import { ElMessage } from "element-plus";
+import { confirmRewardRedemption, getAiHomeOverview, getChildren, getFamilies, getPendingRedemptions, getSubmissions, getTasks, getTodayTasks, getUsers, remindTask } from "../services/api";
 import { useAuthStore } from "../store/auth";
 import TaskTrendChart from "../components/TaskTrendChart.vue";
-import type { AiHomeOverview, AiOverviewInsight, Child, Family, LearningIssueOverview, ManagedUser, Task } from "../types/task";
+import type { AiHomeOverview, AiOverviewInsight, Child, Family, LearningIssueOverview, ManagedUser, PendingRedemption, Submission, Task } from "../types/task";
+import { taskStateClass, taskStatusLabel, taskStateTone } from "../utils/task-status";
 
 type TrendPeriod = "week" | "month";
 type AiPeriod = "currentWeek" | "previousWeek" | "month" | "custom";
@@ -39,12 +41,29 @@ const aiPeriod = ref<AiPeriod>("currentWeek");
 const aiCustomRange = ref<[string, string] | null>(null);
 const evidenceInsight = ref<AiOverviewInsight | null>(null);
 const trialInsight = ref<AiOverviewInsight | null>(null);
+const pendingReviews = ref<Submission[]>([]);
+const pendingReviewTotal = ref(0);
+const pendingRedemptions = ref<PendingRedemption[]>([]);
+const inboxError = ref("");
+const remindingTaskId = ref("");
+const confirmingRedemptionId = ref("");
+const remindedTaskIds = ref<string[]>([]);
+const currentTime = ref(currentTimeKey());
 
 const todayDate = dateKey(new Date());
 const completed = computed(() => todayTasks.value.filter(isCompleted).length);
 const pending = computed(() => todayTasks.value.length - completed.value);
 const completionRate = computed(() => todayTasks.value.length ? Math.round((completed.value / todayTasks.value.length) * 100) : 0);
 const nextTask = computed(() => todayTasks.value.find((task) => !isCompleted(task)));
+const canSeeInbox = computed(() => auth.user?.role === "parent" || auth.user?.role === "admin");
+// 已过提醒时间仍未领取的任务：家长可以在首页直接催领，不必进入任务管理。
+const overdueTasks = computed(() => todayTasks.value.filter((task) =>
+  !task.isPersonalTodo && taskStateTone(task) === "pending" && task.scheduleTime < currentTime.value
+));
+const visibleRedemptions = computed(() => selectedChildId.value
+  ? pendingRedemptions.value.filter((item) => item.childId === selectedChildId.value)
+  : pendingRedemptions.value);
+const inboxCount = computed(() => pendingReviewTotal.value + visibleRedemptions.value.length + overdueTasks.value.length);
 const familyMemberCount = computed(() => {
   const memberIds = new Set<string>();
   families.value.forEach((family) => family.members.forEach((member) => memberIds.add(member.id)));
@@ -111,6 +130,56 @@ const aiPeriodRange = computed(() => {
 function isCompleted(task: Task) {
   // 已完成的任务再次补交照片，仍按已完成统计；本轮批改状态单独展示。
   return task.status === "completed" || task.reviewStatus === "completed" || Boolean(task.finalizedAt);
+}
+
+function currentTimeKey(date = new Date()) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+async function loadInbox() {
+  if (!canSeeInbox.value) return;
+  inboxError.value = "";
+  try {
+    const [reviews, redemptions] = await Promise.all([
+      getSubmissions({ page: 1, pageSize: 5, status: "submitted", reviewStatus: "pending", childId: selectedChildId.value || undefined }),
+      getPendingRedemptions()
+    ]);
+    pendingReviews.value = reviews.submissions;
+    pendingReviewTotal.value = reviews.pagination.total;
+    pendingRedemptions.value = redemptions;
+  } catch (cause) {
+    inboxError.value = cause instanceof Error ? cause.message : "待处理事项加载失败。";
+  }
+}
+
+function openSubmissionReview(submission: Submission) {
+  void router.push({ name: "Tasks", query: { taskId: submission.taskId, taskDate: submission.taskDate } });
+}
+
+async function sendClaimReminder(task: Task) {
+  remindingTaskId.value = task.id;
+  try {
+    await remindTask(task.id, task.occurrenceDate, "claim");
+    remindedTaskIds.value = [...remindedTaskIds.value, task.id];
+    ElMessage.success(`已提醒${childName(task.childId)}领取「${task.title}」`);
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "提醒发送失败。");
+  } finally {
+    remindingTaskId.value = "";
+  }
+}
+
+async function handleRedemption(redemption: PendingRedemption, approved: boolean) {
+  confirmingRedemptionId.value = redemption.id;
+  try {
+    await confirmRewardRedemption(redemption.id, approved);
+    pendingRedemptions.value = pendingRedemptions.value.filter((item) => item.id !== redemption.id);
+    ElMessage.success(approved ? `已同意兑换「${redemption.title}」` : `已拒绝兑换「${redemption.title}」`);
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : "兑换处理失败。");
+  } finally {
+    confirmingRedemptionId.value = "";
+  }
 }
 
 function childName(childId: string) {
@@ -204,8 +273,10 @@ async function load(options: { preserveLoading?: boolean } = {}) {
   if (options.preserveLoading) refreshing.value = true;
   else loading.value = true;
   error.value = "";
+  currentTime.value = currentTimeKey();
   try {
     const aiOverviewRequest = loadAiOverview();
+    const inboxRequest = loadInbox();
     const [loadedTodayTasks, loadedTrendTasks, loadedChildren, loadedFamilies, loadedUsers] = await Promise.all([
       getTodayTasks(selectedChildId.value || undefined),
       getTasks({
@@ -222,7 +293,7 @@ async function load(options: { preserveLoading?: boolean } = {}) {
     children.value = loadedChildren;
     families.value = loadedFamilies;
     users.value = loadedUsers;
-    await aiOverviewRequest;
+    await Promise.all([aiOverviewRequest, inboxRequest]);
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "总览加载失败。";
   } finally {
@@ -274,6 +345,35 @@ onMounted(load);
     </div>
 
     <template v-if="dashboardSection === 'today'">
+    <section v-if="canSeeInbox" class="content-panel parent-inbox" aria-label="待你处理">
+      <div class="panel-heading">
+        <div><h2>待你处理<span v-if="inboxCount" class="parent-inbox__count">{{ inboxCount }}</span></h2><p>批改作业、确认兑换和催促领取，都可以从这里直接开始</p></div>
+      </div>
+      <p v-if="inboxError" class="form-error">{{ inboxError }}</p>
+      <div v-if="inboxCount" class="parent-inbox__list">
+        <div v-for="submission in pendingReviews" :key="submission.id" class="parent-inbox__row">
+          <span class="parent-inbox__kind parent-inbox__kind--review">待批改</span>
+          <div class="overview-copy"><strong>{{ submission.taskTitle }}</strong><span>{{ childName(submission.childId) }} · {{ submission.taskDate }} 提交{{ submission.photoCount ? ` ${submission.photoCount} 张照片` : "" }}{{ submission.audio ? " · 含录音" : "" }}</span></div>
+          <el-button type="success" size="small" @click="openSubmissionReview(submission)">去批改</el-button>
+        </div>
+        <router-link v-if="pendingReviewTotal > pendingReviews.length" to="/submissions" class="parent-inbox__more">还有 {{ pendingReviewTotal - pendingReviews.length }} 份待批改，查看全部提交 <el-icon><ArrowRight /></el-icon></router-link>
+        <div v-for="redemption in visibleRedemptions" :key="redemption.id" class="parent-inbox__row">
+          <span class="parent-inbox__kind parent-inbox__kind--reward">待确认兑换</span>
+          <div class="overview-copy"><strong>{{ redemption.title }} · {{ redemption.pointCost }} 分</strong><span>{{ redemption.childName }}{{ redemption.note ? ` · “${redemption.note}”` : "" }}</span></div>
+          <div class="parent-inbox__actions">
+            <el-button size="small" :disabled="confirmingRedemptionId === redemption.id" @click="handleRedemption(redemption, false)">拒绝</el-button>
+            <el-button type="primary" size="small" :loading="confirmingRedemptionId === redemption.id" @click="handleRedemption(redemption, true)">同意</el-button>
+          </div>
+        </div>
+        <div v-for="task in overdueTasks" :key="`${task.id}-${task.occurrenceDate}`" class="parent-inbox__row">
+          <span class="parent-inbox__kind parent-inbox__kind--overdue">超时未领取</span>
+          <div class="overview-copy"><strong>{{ task.title }}</strong><span>{{ childName(task.childId) }} · 计划 {{ task.scheduleTime }}</span></div>
+          <el-button size="small" :loading="remindingTaskId === task.id" :disabled="remindedTaskIds.includes(task.id)" @click="sendClaimReminder(task)">{{ remindedTaskIds.includes(task.id) ? "已提醒" : "催领" }}</el-button>
+        </div>
+      </div>
+      <div v-else-if="!inboxError" class="empty-state">目前没有需要你处理的事项。</div>
+    </section>
+
     <section class="metric-grid" aria-label="今日任务概览">
       <article class="metric-card metric-card--primary">
         <div class="metric-icon"><el-icon><List /></el-icon></div>
@@ -347,7 +447,7 @@ onMounted(load);
         <div v-for="task in todayTasks.slice(0, 8)" :key="task.id" class="overview-row">
           <time>{{ task.scheduleTime }}</time>
           <div class="overview-copy"><strong>{{ task.title }}</strong><span>{{ childName(task.childId) }}</span></div>
-          <span class="status-dot" :class="`status-dot--${isCompleted(task) ? 'completed' : 'pending'}`">{{ isCompleted(task) ? "已完成" : "待完成" }}</span>
+          <span class="status-dot task-state" :class="taskStateClass(task)">{{ taskStatusLabel(task) }}</span>
         </div>
       </div>
       <div v-else class="empty-state">今天暂无任务，前往任务管理创建第一项任务。</div>

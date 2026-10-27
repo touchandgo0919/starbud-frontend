@@ -13,6 +13,7 @@ import type {
   AccessEvent,
   ReminderRecord,
   AiHomeOverview,
+  PendingRedemption,
   RewardCenter
 } from "../types/task";
 
@@ -185,6 +186,14 @@ export async function updateFamily(familyId: string, name: string) {
   return body.family;
 }
 
+export async function updateFamilyAiSettings(familyId: string, allowMediaAnalysis: boolean) {
+  const body = await request<{ family: Family }>(`/api/families/${familyId}/ai-settings`, {
+    method: "PATCH",
+    body: JSON.stringify({ allowMediaAnalysis })
+  });
+  return body.family;
+}
+
 export async function deleteFamily(familyId: string) {
   await request<{ deleted: true }>(`/api/families/${familyId}`, {
     method: "DELETE"
@@ -255,6 +264,10 @@ export async function updateFamilyReward(id: string, familyId: string, input: { 
 
 export async function deleteFamilyReward(id: string, familyId: string) {
   await request(`/api/rewards/catalog/${id}?familyId=${encodeURIComponent(familyId)}`, { method: "DELETE" });
+}
+
+export async function getPendingRedemptions() {
+  return (await request<{ redemptions: PendingRedemption[] }>("/api/rewards/redemptions?status=pending")).redemptions;
 }
 
 export async function confirmRewardRedemption(id: string, approved: boolean) {

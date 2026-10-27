@@ -32,6 +32,8 @@ export interface Task {
   startDate: string;
   endDate: string | null;
   createdAt: string;
+  /** Parent personal to-dos reuse the task list but never need a child action. */
+  isPersonalTodo?: boolean;
 }
 
 export interface CreateTaskPayload {
@@ -297,7 +299,19 @@ export interface Family {
   canManage: boolean;
   canDelete: boolean;
   members: FamilyMember[];
+  /** Whether homework and review images may be sent to the AI model. Off by default. */
+  aiMediaAnalysisEnabled: boolean;
   createdAt: string;
+}
+
+export interface PendingRedemption {
+  id: string;
+  childId: string;
+  childName: string;
+  title: string;
+  pointCost: number;
+  requestedAt: string;
+  note: string;
 }
 
 export interface RewardCenter {
